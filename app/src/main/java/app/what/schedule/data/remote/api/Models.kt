@@ -17,3 +17,8 @@ data class Lesson(
     val startDate: LocalTime,
     val endDate: LocalTime
 )
+
+enum class ParseMode {
+    TEACHER,
+    GROUP
+}

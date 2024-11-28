@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import app.what.schedule.data.remote.api.DaySchedule
 import app.what.schedule.data.remote.api.Lesson
+import app.what.schedule.data.remote.api.ParseMode
 import app.what.schedule.data.remote.api.ScheduleApi
 import app.what.schedule.data.remote.utils.parseMonth
 import app.what.schedule.data.remote.utils.parseTime
@@ -44,11 +45,6 @@ class RKSIScheduleApi(
     override suspend fun getGroupSchedule(
         group: String
     ): List<DaySchedule> = getAndParseSchedule(group, ParseMode.GROUP)
-
-    private enum class ParseMode {
-        TEACHER,
-        GROUP
-    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun getAndParseSchedule(
