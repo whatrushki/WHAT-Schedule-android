@@ -1,0 +1,41 @@
+package app.what.schedule.features.schedule.presentation.components
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import app.what.foundation.ui.applyIf
+import java.time.LocalDate
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DayChip(modifier: Modifier = Modifier, date: LocalDate, selected: Boolean, onClick: () -> Unit) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    Box(
+        modifier
+            .size(48.dp)
+            .clickable(onClick = onClick)
+            .applyIf(selected,
+                elseBlock = { border(1.dp, primaryColor, CircleShape) },
+                block = { background(primaryColor).clip(CircleShape) }
+            )
+    ) {
+        Text(
+            modifier = Modifier.padding(8.dp).align(Alignment.Center),
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else primaryColor,
+            text = date.dayOfMonth.toString()
+        )
+    }
+}

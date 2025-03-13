@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -11,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "app.what.schedule"
-        minSdk = 24
+        minSdk = 26
         versionCode = 1
         versionName = "1.0"
 
@@ -37,13 +39,26 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
+    }
+
+    packaging {
+        resources.pickFirsts.add("META-INF/*")
+    }
 }
 
 dependencies {
+    implementation(project(":core:foundation"))
+    implementation(project(":core:navigation"))
 
-    implementation("com.fleeksoft.ksoup:ksoup-lite:0.2.0")
+    implementation(libs.poi)
+    implementation(libs.poi.ooxml)
+    implementation(libs.ksoup.lite)
     implementation(libs.bundles.ktor)
+    implementation(libs.bundles.koin)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

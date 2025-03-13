@@ -1,0 +1,256 @@
+package app.what.schedule.data.remote.impl.rksi.official
+
+import android.util.Log
+import app.what.schedule.data.remote.api.DaySchedule
+import app.what.schedule.data.remote.api.Group
+import app.what.schedule.data.remote.api.Lesson
+import app.what.schedule.data.remote.api.LessonState
+import app.what.schedule.data.remote.api.LessonTime
+import app.what.schedule.data.remote.api.LessonType
+import app.what.schedule.data.remote.api.LessonsScheduleType
+import app.what.schedule.data.remote.api.OneTimeUnit
+import app.what.schedule.data.remote.api.ParseMode
+import app.what.schedule.data.remote.api.ScheduleApi
+import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule
+import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule.getByNumber
+import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule.numberOf
+import app.what.schedule.data.remote.impl.rksi.ReplacementsRepository
+import app.what.schedule.data.remote.utils.parseMonth
+import app.what.schedule.data.remote.utils.parseTime
+import com.fleeksoft.ksoup.Ksoup
+import io.ktor.client.HttpClient
+import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.parameters
+import java.time.LocalDate
+import java.time.LocalTime
+
+
+class RKSIScheduleApi(
+    private val client: HttpClient,
+    private val replacementsRepository: ReplacementsRepository
+) : ScheduleApi {
+    override val lessonsSchedule = RKSILessonsSchedule
+
+    private companion object {
+        const val BASE_URL = "https://www.rksi.ru"
+    }
+
+    override suspend fun getTeachers(): List<Teacher> {
+        val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
+        val document = Ksoup.parse(response)
+        return document.getElementById("teacher")!!.getElementsByTag("option")
+            .map { Teacher(it.text(), it.attr("value")) }
+    }
+
+    override suspend fun getGroups(): List<Group> {
+        val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
+        val document = Ksoup.parse(response)
+        return document.getElementById("group")!!.getElementsByTag("option")
+            .map { Group(it.text(), it.attr("value")) }
+    }
+
+    override suspend fun getTeacherSchedule(
+        teacher: String, showReplacements: Boolean
+    ): List<DaySchedule> = getAndParseSchedule(teacher, ParseMode.TEACHER, showReplacements)
+
+    override suspend fun getGroupSchedule(
+        group: String, showReplacements: Boolean
+    ): List<DaySchedule> = getAndParseSchedule(group, ParseMode.GROUP, showReplacements)
+
+
+    private suspend fun getAndParseSchedule(
+        value: String,
+        parseMode: ParseMode,
+        showReplacements: Boolean
+    ): List<DaySchedule> {
+        val response = client.submitForm(
+            url = "$BASE_URL/mobile_schedule",
+            formParameters = parameters {
+                if (parseMode == ParseMode.GROUP) {
+                    append("group", value)
+                    append("stt", "Показать!")
+                } else {
+                    append("teacher", value)
+                    append("stp", "Показать!")
+                }
+            }
+        ).bodyAsText()
+
+        val document = Ksoup.parse(response)
+        var dataRaw: List<String>
+
+        val daySchedulesRaw = document.getElementsByClass("schedule_item")
+
+        val daySchedules = daySchedulesRaw.mapIndexed { index, it ->
+            dataRaw = it.getElementsByTag("b").text().split(" ")
+
+            val dateDescription = it.getElementsByTag("b").first()!!.text()
+            val date = LocalDate.now()
+                .withDayOfMonth(dataRaw.first().toInt())
+                .withMonth(parseMonth(dataRaw[1].substring(0, dataRaw[1].length - 1)))
+
+            var lessons: List<Lesson>
+            lessons = it.getElementsByTag("p").mapNotNull { lessonRaw ->
+                if (lessonRaw.html().contains("href")) return@mapNotNull null
+                val content = lessonRaw.html().split("<br>")
+
+                dataRaw = content.first().split(" — ")
+                val startDate = parseTime(dataRaw.first())
+                val endDate = parseTime(dataRaw.last())
+                val subject = content[1].substring(3, content[1].length - 4)
+
+                dataRaw = content.last().split(", ")
+                val teacherOrGroup = dataRaw.first().substring(1)
+
+                dataRaw = dataRaw.last().split(" ").last().split("/")
+
+                val auditory = if (dataRaw.size == 1) dataRaw.first() else dataRaw.dropLast(1)
+                    .joinToString("/")
+                val building = dataRaw.last()
+
+                val otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group(if (parseMode == ParseMode.GROUP) value else teacherOrGroup),
+                        teacher = Teacher(if (parseMode == ParseMode.TEACHER) value else teacherOrGroup),
+                        building = building,
+                        auditory = auditory
+                    )
+                )
+
+                Lesson(
+                    number = 0,
+                    otUnits = otUnits,
+                    startTime = startDate,
+                    endTime = endDate,
+                    subject = subject,
+                    type = when {
+                        "Доп." in subject -> LessonType.ADDITIONAL
+                        "Классный" in subject -> LessonType.CLASS_HOUR
+                        else -> LessonType.COMMON
+                    }
+                )
+            }.toMutableList().apply {
+                val groupedLessons = groupBy { it.startTime }
+                clear()
+
+                groupedLessons.forEach { (_, l) ->
+                    var unionLesson = l.first()
+                    l.forEachIndexed { index, it -> if (index != 0) unionLesson += it }
+                    add(unionLesson)
+                }
+            }
+
+            var schedule = lessonsSchedule.COMMON
+
+            lessons = if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null) {
+                schedule = lessonsSchedule.WITH_CLASS_HOUR
+                lessons.map { it.copy(number = schedule.numberOf(it.startTime) ?: 0) }
+            } else {
+                val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
+                    schedule.numberOf(time) ?: let { schedule = change; null }
+                }
+
+                lessons.map { lesson ->
+                    val number =
+                        getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.WITH_CLASS_HOUR)
+                            ?: getNumberOrChangeSchedule(
+                                lesson.startTime,
+                                lessonsSchedule.SHORTENED
+                            )
+                            ?: getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.COMMON)
+                            ?: 0
+
+                    lesson.copy(number = number)
+                }
+            }
+
+            if (showReplacements && index < 2) {
+                lessons = lessons.withReplacements(
+                    replacementsRepository,
+                    date,
+                    schedule,
+                    when (parseMode) {
+                        ParseMode.GROUP -> ScheduleSearch.Group(value)
+                        ParseMode.TEACHER -> ScheduleSearch.Teacher(value)
+                    }
+                ).sortedBy { it.startTime }
+            }
+
+            DaySchedule(
+                date = date,
+                dateDescription = dateDescription,
+                lessons = lessons,
+                scheduleType = when (schedule) {
+                    lessonsSchedule.COMMON -> LessonsScheduleType.COMMON
+                    lessonsSchedule.SHORTENED -> LessonsScheduleType.SHORTENED
+                    lessonsSchedule.WITH_CLASS_HOUR -> LessonsScheduleType.WITH_CLASS_HOUR
+                    else -> LessonsScheduleType.COMMON
+                }
+            )
+        }
+
+        return daySchedules
+    }
+}
+
+suspend fun List<Lesson>.withReplacements(
+    replacementsRepository: ReplacementsRepository,
+    date: LocalDate,
+    schedule: List<LessonTime>,
+    scheduleSearch: ScheduleSearch
+): List<Lesson> {
+    val replacements = replacementsRepository
+        .getReplacements(date, scheduleSearch)
+
+    val unionSchedule = mutableMapOf<Int, List<Lesson?>>()
+
+    Log.d("d", replacements?.joinToString("\n").toString())
+
+    replacements?.forEach {
+        unionSchedule[it.number] = listOf(it, null)
+    }
+
+    this.forEach {
+        unionSchedule[it.number] = listOf(unionSchedule[it.number]?.first(), it)
+    }
+
+    return unionSchedule.map {
+        val replacement = it.value.first()
+        val lesson = it.value.last()
+
+        Log.d("d", it.toString())
+        Log.d("d", replacement.toString())
+        Log.d("d", lesson.toString())
+
+        return@map if (replacements != null) {
+            if (replacement == null && lesson != null)
+                lesson.copy(state = LessonState.REMOVED)
+            else if (replacement != null && lesson == null) {
+                val lessonTime = schedule.getByNumber(replacement.number)
+                replacement.copy(
+                    state = LessonState.ADDED,
+                    startTime = lessonTime!!.startTime,
+                    endTime = lessonTime.endTime,
+                    subject = if (replacement.type == LessonType.CLASS_HOUR) "Классный час"
+                    else replacement.subject
+                )
+            } else if (!lesson!!.equalsWithReplacement(replacement!!)) {
+                val lessonTeachers = lesson.otUnits.map { it.teacher }
+
+                replacement.copy(
+                    number = lesson.number,
+                    startTime = lesson.startTime,
+                    endTime = lesson.endTime,
+                    type = lesson.type,
+                    state = LessonState.CHANGED,
+                    subject = if (replacement.otUnits.all { it.teacher !in lessonTeachers }) ""
+                    else lesson.subject
+                )
+            } else lesson
+        } else lesson!!
+    }
+}

@@ -1,0 +1,8 @@
+package app.what.schedule.features.settings.domain.models
+
+import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.remote.api.DaySchedule
+
+data class SettingsState(
+    val showRestartMessage: Boolean = false
+)
