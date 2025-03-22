@@ -2,7 +2,10 @@ package app.what.foundation.utils
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
@@ -16,12 +19,22 @@ fun suspendCall(
 fun suspendCall(dispatcher: CoroutineDispatcher = IO, block: SE<CoroutineScope>) =
     CoroutineScope(dispatcher).launch(block = block)
 
-fun suspendCall(scope: CoroutineScope, dispatcher: CoroutineDispatcher = IO, block: SE<CoroutineScope>) =
+fun suspendCall(
+    scope: CoroutineScope,
+    dispatcher: CoroutineDispatcher = IO,
+    block: SE<CoroutineScope>
+) =
     scope.launch(context = dispatcher, block = block)
 
 fun doAfter(millis: Long = 3000L, block: SE<CoroutineScope>) =
     suspendCall { delay(millis); block() }
 
+fun <T> asyncLazy(
+    scope: CoroutineScope = CoroutineScope(IO),
+    block: suspend () -> T
+): Lazy<Deferred<T>> = lazy {
+    scope.async(start = CoroutineStart.LAZY) { block() }
+}
 
 fun safeExecute(
     context: CoroutineContext = IO,

@@ -1,26 +1,21 @@
 package app.what.schedule.features.schedule.presentation.components
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.useState
@@ -33,9 +28,10 @@ import app.what.schedule.features.schedule.domain.models.ScheduleState
 import app.what.schedule.presentation.theme.icons.WHATIcons
 import app.what.schedule.presentation.theme.icons.filled.Group
 import app.what.schedule.presentation.theme.icons.filled.Person
+import app.what.schedule.ui.components.SearchBox
 
 
-val SearchSheet = @Composable { state: ScheduleState, listener: (ScheduleEvent) -> Unit ->
+val SearchSheet = @Composable { state: ScheduleState, listener: Listener<ScheduleEvent> ->
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxHeight()
@@ -53,23 +49,7 @@ val SearchSheet = @Composable { state: ScheduleState, listener: (ScheduleEvent) 
             state.groups.size
         ) { state.groups.filter { query.lowercase() in it.id.lowercase() } }
 
-        TextField(
-            query,
-            setQuery,
-            modifier = Modifier
-                .focusable(true)
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp),
-            singleLine = true,
-            placeholder = { Text("Поиск...") },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    contentDescription = "search"
-                )
-            }
-        )
+        SearchBox(query, setQuery, Modifier.padding(horizontal = 12.dp))
 
         Gap(12)
 
@@ -83,7 +63,7 @@ val SearchSheet = @Composable { state: ScheduleState, listener: (ScheduleEvent) 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 28.dp)
+                .padding(horizontal = 12.dp)
         ) {
             SegmentTab(
                 0,
@@ -109,7 +89,7 @@ val SearchSheet = @Composable { state: ScheduleState, listener: (ScheduleEvent) 
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            modifier = Modifier.padding(horizontal = 20.dp)
+            modifier = Modifier.padding(horizontal = 4.dp)
         ) {
             items(
                 list.size,

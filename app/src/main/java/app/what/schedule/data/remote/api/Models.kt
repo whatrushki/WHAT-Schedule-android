@@ -24,18 +24,8 @@ data class Lesson(
     operator fun plus(other: Lesson) = copy(otUnits = otUnits + other.otUnits)
 
     fun equalsWithReplacement(other: Lesson): Boolean {
-        return otUnits == other.otUnits
+        return otUnits.toSet() == other.otUnits.toSet()
     }
-
-    fun inflate(other: Lesson, changed: Boolean = true) = copy(
-        number = other.number,
-        startTime = other.startTime,
-        endTime = other.endTime,
-        subject = other.subject,
-        type = other.type,
-        state = if (changed) LessonState.CHANGED
-        else LessonState.COMMON
-    )
 }
 
 enum class LessonsScheduleType {
@@ -62,7 +52,11 @@ data class OneTimeUnit(
     val teacher: Teacher,
     val auditory: String,
     val building: String,
-)
+) {
+    companion object {
+        fun empty() = OneTimeUnit(Group("-"), Teacher("-"), "-", "-")
+    }
+}
 
 data class Group(
     val name: String,

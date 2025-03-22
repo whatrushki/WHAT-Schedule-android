@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 
 @Composable
-fun Modifier.blcik(enabled: Boolean = true, block: () -> Unit): Modifier = this.clickable(
+fun Modifier.bclick(enabled: Boolean = true, block: () -> Unit): Modifier = this.clickable(
     indication = LocalIndication.current,
     interactionSource = remember { MutableInteractionSource() },
     enabled = enabled,

@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,12 +37,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.core.Listener
-import app.what.foundation.core.UIComponent
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.applyIf
-import app.what.foundation.ui.blcik
+import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useState
-import app.what.foundation.utils.clazy
 import app.what.foundation.utils.remember
 import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.Lesson
@@ -64,378 +61,450 @@ enum class ViewType {
     TEACHER, STUDENT
 }
 
-class LessonUI(
-    private val data: Lesson,
-    private val viewType: ViewType,
-    private val currentTime: LocalTime? = null,
-    private val listener: Listener<ScheduleEvent>
-) : UIComponent {
-    private val nonStandard = data.type != LessonType.COMMON
+@Composable
+fun LessonUI(
+    modifier: Modifier = Modifier,
+    data: Lesson,
+    viewType: ViewType,
+    currentTime: LocalTime? = null,
+    listener: Listener<ScheduleEvent>
+) = when (data.type) {
+    LessonType.CLASS_HOUR -> EventView(
+        data,
+        currentTime,
+        viewType,
+        listener,
+        modifier
+    )
 
-    @Composable
-    override fun content(modifier: Modifier) = when (data.type) {
-        LessonType.CLASS_HOUR -> EventView(modifier)
-        else -> CommonView(modifier)
-    }
+    else -> CommonView(
+        data,
+        viewType,
+        currentTime,
+        listener,
+        modifier
+    )
+}
 
+@Composable
+private fun getCommonViewAccentColor(state: LessonState, type: LessonType) = when (state) {
+    LessonState.REMOVED -> colorScheme.secondary
+    else -> if (type != LessonType.COMMON) colorScheme.tertiary
+    else colorScheme.primary
+}
 
-    @Composable
-    private fun EventView(modifier: Modifier = Modifier, expandable: Boolean = true) {
-        commonViewAccentColor.calculate()
-        val (expanded, setExpanded) = useState(false)
+@Composable
+private fun EventView(
+    data: Lesson,
+    currentTime: LocalTime?,
+    viewType: ViewType,
+    listener: Listener<ScheduleEvent>,
+    modifier: Modifier = Modifier,
+    expandable: Boolean = true
+) {
+    val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
 
-        val expandedShape = shapes.medium
+    val (expanded, setExpanded) = useState(currentTime != null && currentTime in data.startTime..data.endTime)
 
-        val expandedTitleBoxBackground by animateColorAsState(
-            if (expanded) commonViewAccentColor.get().copy(alpha = .2f)
-            else colorScheme.surfaceContainer
-        )
+    val expandedShape = shapes.medium
 
-        val backgroundColor by animateColorAsState(
-            if (data.state.isRemoved) colorScheme.surfaceVariant
-            else if (expanded) colorScheme.surfaceContainer
-            else commonViewAccentColor.get()
-        )
+    val expandedTitleBoxBackground by animateColorAsState(
+        if (expanded) commonViewAccentColor.copy(alpha = .2f)
+        else colorScheme.surfaceContainer
+    )
 
-        val titleColor by animateColorAsState(
-            if (expanded) commonViewAccentColor.get()
-            else if (data.state.isRemoved) commonViewAccentColor.get()
-            else colorScheme.onTertiary
-        )
+    val backgroundColor by animateColorAsState(
+        if (data.state.isRemoved) colorScheme.surfaceVariant
+        else if (expanded) colorScheme.surfaceContainer
+        else commonViewAccentColor
+    )
 
-        Box(
-            modifier = modifier
-                .animateContentSize()
-                .fillMaxWidth()
-                .applyIf(expanded) {
-                    height(134.dp)
-                        .padding(12.dp, 0.dp)
-                        .clip(expandedShape)
-                }
-                .background(backgroundColor)
-                .blcik(enabled = expandable) {
-                    setExpanded(!expanded)
-                }
-        ) {
-            AnimatedVisibility(expanded) { TimeLine() }
+    val titleColor by animateColorAsState(
+        if (expanded) commonViewAccentColor
+        else if (data.state.isRemoved) commonViewAccentColor
+        else colorScheme.onTertiary
+    )
 
-            Tag(
-                Modifier
-                    .align(
-                        if (expanded) Alignment.BottomEnd
-                        else Alignment.CenterEnd
-                    )
-                    .padding(
-                        end = if (expanded) 12.dp
-                        else 20.dp,
-                        bottom = if (expanded) 12.dp
-                        else 0.dp
-                    )
+    Box(
+        modifier = modifier
+            .animateContentSize()
+            .fillMaxWidth()
+            .applyIf(expanded) {
+                height(134.dp)
+                    .padding(12.dp, 0.dp)
+                    .clip(expandedShape)
+            }
+            .background(backgroundColor)
+            .bclick(enabled = expandable) {
+                setExpanded(!expanded)
+            }
+    ) {
+        AnimatedVisibility(expanded) {
+            TimeLine(
+                currentTime,
+                data.startTime,
+                data.endTime,
+                commonViewAccentColor
             )
+        }
 
-            Column(
+        Tag(
+            accentColor = commonViewAccentColor,
+            state = data.state,
+            modifier = Modifier
+                .align(
+                    if (expanded) Alignment.BottomEnd
+                    else Alignment.CenterEnd
+                )
+                .padding(
+                    end = if (expanded) 12.dp
+                    else 20.dp,
+                    bottom = if (expanded) 12.dp
+                    else 0.dp
+                )
+        )
+
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
                 Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .animateContentSize()
+                    .applyIf(expanded) {
+                        clip(CircleShape)
+                            .background(expandedTitleBoxBackground)
+                            .padding(8.dp, 4.dp)
+                    },
+                horizontalArrangement = if (expanded)
+                    Arrangement.spacedBy(8.dp) else Arrangement.Center
             ) {
-                Row(
-                    Modifier
-                        .animateContentSize()
-                        .applyIf(expanded) {
-                            clip(CircleShape)
-                                .background(expandedTitleBoxBackground)
-                                .padding(8.dp, 4.dp)
-                        },
-                    horizontalArrangement = if (expanded)
-                        Arrangement.spacedBy(8.dp) else Arrangement.Center
-                ) {
-                    AnimatedVisibility(expanded) {
-                        Text(
-                            text = "${formatTime(data.startTime)} - ${formatTime(data.endTime)}",
-                            color = titleColor,
-                            style = typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    }
-
+                AnimatedVisibility(expanded) {
                     Text(
-                        text = data.subject,
+                        text = "${formatTime(data.startTime)} - ${formatTime(data.endTime)}",
                         color = titleColor,
-                        textDecoration = if (data.state == LessonState.REMOVED) TextDecoration.LineThrough
-                        else TextDecoration.None,
                         style = typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold
                         )
                     )
                 }
 
-                if (expanded) Gap(8)
-
-                AnimatedVisibility(expanded) {
-                    OtUnitsView(
-                        commonViewAccentColor.get(),
-                        Arrangement.SpaceEvenly
+                Text(
+                    text = data.subject,
+                    color = titleColor,
+                    textDecoration = if (data.state == LessonState.REMOVED) TextDecoration.LineThrough
+                    else TextDecoration.None,
+                    style = typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
                     )
-                }
+                )
+            }
+
+            if (expanded) Gap(8)
+
+            AnimatedVisibility(expanded) {
+                OtUnitsView(
+                    viewType = viewType,
+                    otUnits = data.otUnits,
+                    listener = listener,
+                    commonViewAccentColor,
+                    Arrangement.SpaceEvenly
+                )
             }
         }
     }
+}
 
-    @Composable
-    private fun CommonView(modifier: Modifier = Modifier) {
-        commonViewAccentColor.calculate()
-        val (expanded, setExpanded) = useState(false)
-        val (expandable, setExpandable) = useState(true)
+@Composable
+private fun CommonView(
+    data: Lesson,
+    viewType: ViewType,
+    currentTime: LocalTime? = null,
+    listener: Listener<ScheduleEvent>,
+    modifier: Modifier = Modifier
+) {
+    val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
+    val (expanded, setExpanded) = useState(false)
+    val (expandable, setExpandable) = useState(true)
 
-        Box(modifier
-            .padding(horizontal = 12.dp)
-            .fillMaxWidth()
-            .applyIf(!expanded, elseBlock = {
-                height(IntrinsicSize.Min)
-            }) { height(146.dp) }
-            .clip(shapes.medium)
-            .background(
-                if (data.state == LessonState.REMOVED) colorScheme.surfaceVariant
-                else colorScheme.surfaceContainer
-            )
-            .blcik(expanded || expandable) {
-                setExpanded(!expanded)
-            }
-        ) {
-            Tag(
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 12.dp, end = 8.dp)
-            )
-
-            TimeLine()
-
-            Row(
-                Modifier.padding(8.dp, 12.dp)
-            ) {
-                Gap(4)
-
-                CommonViewLeftSegment()
-
-                Gap(12)
-
-                Column {
-                    CommonViewSubject(expanded, setExpandable)
-
-                    Gap(8)
-
-                    OtUnitsView()
-                }
-            }
+    Box(modifier
+        .padding(horizontal = 12.dp)
+        .fillMaxWidth()
+        .applyIf(!expanded, elseBlock = {
+            height(IntrinsicSize.Min)
+        }) { height(146.dp) }
+        .clip(shapes.medium)
+        .background(
+            if (data.state == LessonState.REMOVED) colorScheme.surfaceVariant
+            else colorScheme.surfaceContainer
+        )
+        .bclick(expanded || expandable) {
+            setExpanded(!expanded)
         }
-    }
-
-    // -- CommonView Segments --
-    private val commonViewAccentColor = clazy {
-        when (data.state) {
-            LessonState.REMOVED -> colorScheme.secondary
-            else -> if (nonStandard) colorScheme.tertiary
-            else colorScheme.primary
-        }
-    }
-
-    @Composable
-    private fun BoxScope.TimeLine() {
-        val passingPercent by useState(0f).apply {
-            if (currentTime != null) value = currentTime.percentOf(data.startTime, data.endTime)
-        }
-
-        if (currentTime != null) Box(
+    ) {
+        Tag(
+            state = data.state,
+            accentColor = commonViewAccentColor,
             modifier = Modifier
-                .animateContentSize()
-                .fillMaxHeight(passingPercent)
-                .align(Alignment.TopStart)
-                .width(4.dp)
-                .background(commonViewAccentColor.get())
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 12.dp, end = 8.dp)
         )
 
-    }
+        TimeLine(currentTime, data.startTime, data.endTime, commonViewAccentColor)
 
-    @Composable
-    private fun Tag(modifier: Modifier = Modifier) {
-        if (data.state != LessonState.COMMON) Box(
-            contentAlignment = Alignment.Center,
-            modifier = modifier
-                .clip(CircleShape)
-                .height(24.dp)
-                .background(commonViewAccentColor.get())
+        Row(
+            Modifier.padding(8.dp, 12.dp)
         ) {
-            Text(
-                modifier = Modifier.padding(8.dp, 4.dp),
-                text = when (data.state) {
-                    LessonState.ADDED -> "доб."
-                    LessonState.REMOVED -> "отм."
-                    LessonState.CHANGED -> "изм."
-                    else -> ""
-                },
-                color = colorScheme.onPrimary,
-                style = typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                )
-            )
-        }
-    }
-
-    @Composable
-    private fun OtUnitsView(
-        color: Color = colorScheme.secondary,
-        horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(
-            if (viewType == ViewType.TEACHER) 16.dp else 8.dp
-        )
-    ) = Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        horizontalArrangement = horizontalArrangement
-    ) {
-        data.otUnits.forEach {
-            Column {
-                AdditionalInfo(
-                    color = color,
-                    icon = if (viewType == ViewType.STUDENT) WHATIcons.Person
-                    else WHATIcons.Group,
-                    text = if (viewType == ViewType.TEACHER) it.group.name
-                    else it.teacher.name.replace("__", "_"),
-                    modifier = Modifier.blcik {
-                        if (viewType == ViewType.TEACHER)
-                            listener(ScheduleEvent.OnLessonItemGroupClicked(it.group.name))
-                        else listener(
-                            ScheduleEvent.OnLessonItemTeacherClicked(
-                                it.teacher.name
-                            )
-                        )
-                    }
-                )
-
-                AdditionalInfo(
-                    color = color,
-                    icon = WHATIcons.MeetingRoom,
-                    text = it.auditory
-                )
-
-                AdditionalInfo(
-                    color = color,
-                    icon = WHATIcons.Domain,
-                    text = it.building.ifEmpty { "_" }
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun CommonViewSubject(expanded: Boolean, setExpandable: (Boolean) -> Unit) = Box(
-        Modifier
-            .clip(CircleShape)
-            .fillMaxWidth()
-            .background(commonViewAccentColor.get().copy(alpha = .2f))
-    ) {
-        val isLongTitle =
-            remember(data.subject) { data.subject.split(" ").size > 3 }
-        val (subjectFontSize, setSubjectFontSize) = useState(if (isLongTitle) 12 else 16)
-
-        Text(modifier = Modifier.padding(16.dp, 8.dp),
-            text = data.subject,
-            color = when (data.state) {
-                LessonState.REMOVED -> colorScheme.secondary
-                else -> if (nonStandard) colorScheme.tertiary
-                else colorScheme.onPrimaryContainer
-            },
-            fontSize = subjectFontSize.sp,
-            overflow = TextOverflow.Ellipsis,
-            maxLines = if (expanded) Int.MAX_VALUE else 2,
-            style = typography.titleSmall.copy(
-                fontWeight = FontWeight.ExtraBold,
-                lineHeight = (subjectFontSize + 4).sp,
-                textDecoration = if (data.state == LessonState.REMOVED) TextDecoration.LineThrough
-                else TextDecoration.None
-            ),
-            onTextLayout = {
-                setExpandable(it.hasVisualOverflow)
-                if (it.lineCount > 1) setSubjectFontSize(12)
-            }
-        )
-    }
-
-    @Composable
-    private fun CommonViewLeftSegment() = Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(64.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
             Gap(4)
 
-            Text(
-                text = formatTime(data.startTime),
-                fontSize = 24.sp,
-                color = commonViewAccentColor.get(),
-                style = typography.headlineSmall.copy(
-                    fontWeight = FontWeight.ExtraBold
-                )
+            CommonViewLeftSegment(
+                data.startTime,
+                data.endTime,
+                data.state,
+                commonViewAccentColor,
+                data.number
             )
 
-            Text(
-                text = formatTime(data.endTime),
-                fontSize = 20.sp,
-                color = if (data.state == LessonState.REMOVED) colorScheme.secondary
-                else colorScheme.onPrimaryContainer,
-                style = typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Medium
-                )
-            )
-        }
+            Gap(12)
 
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .clip(CircleShape)
-                .size(24.dp)
-                .background(commonViewAccentColor.get())
-        ) {
-            Text(
-                text = data.number.toString(),
-                color = colorScheme.onPrimary,
-                style = typography.bodyLarge.copy(
-                    fontWeight = FontWeight.SemiBold
+            Column {
+                CommonViewSubject(
+                    data.subject,
+                    data.type,
+                    data.state,
+                    commonViewAccentColor,
+                    expanded,
+                    setExpandable
                 )
-            )
+
+                Gap(8)
+
+                OtUnitsView(viewType, data.otUnits, listener)
+            }
         }
     }
+}
 
-    @Composable
-    private fun AdditionalInfo(
-        icon: ImageVector,
-        text: String,
-        color: Color = colorScheme.secondary,
-        modifier: Modifier = Modifier
-    ) = Row(
-        modifier = modifier, verticalAlignment = Alignment.CenterVertically
+@Composable
+private fun BoxScope.TimeLine(
+    currentTime: LocalTime?,
+    startTime: LocalTime,
+    endTime: LocalTime,
+    accentColor: Color
+) {
+    val passingPercent by useState(0f).apply {
+        if (currentTime != null) value = currentTime.percentOf(startTime, endTime)
+    }
+
+    if (currentTime != null) Box(
+        modifier = Modifier
+            .animateContentSize()
+            .fillMaxHeight(passingPercent)
+            .align(Alignment.TopStart)
+            .width(4.dp)
+            .background(accentColor)
+    )
+
+}
+
+@Composable
+private fun Tag(
+    modifier: Modifier = Modifier,
+    state: LessonState,
+    accentColor: Color
+) {
+    if (state != LessonState.COMMON) Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .clip(CircleShape)
+            .height(24.dp)
+            .background(accentColor)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = color
-        )
-
-        Gap(8)
-
         Text(
-            text = text,
-            color = color,
-            style = typography.bodyMedium.copy(
+            modifier = Modifier.padding(8.dp, 4.dp),
+            text = when (state) {
+                LessonState.ADDED -> "доб."
+                LessonState.REMOVED -> "отм."
+                LessonState.CHANGED -> "изм."
+                else -> ""
+            },
+            color = colorScheme.onPrimary,
+            style = typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold
             )
         )
     }
+}
+
+@Composable
+private fun OtUnitsView(
+    viewType: ViewType,
+    otUnits: List<OneTimeUnit>,
+    listener: Listener<ScheduleEvent>,
+    color: Color = colorScheme.secondary,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(
+        if (viewType == ViewType.TEACHER) 16.dp else 8.dp
+    )
+) = Row(
+    modifier = Modifier
+        .fillMaxWidth()
+        .animateContentSize(),
+    horizontalArrangement = horizontalArrangement
+) {
+    otUnits.forEach {
+        Column {
+            AdditionalInfo(
+                color = color,
+                icon = if (viewType == ViewType.STUDENT) WHATIcons.Person
+                else WHATIcons.Group,
+                text = if (viewType == ViewType.TEACHER) it.group.name
+                else it.teacher.name.replace("__", "_"),
+                modifier = Modifier.bclick {
+                    if (viewType == ViewType.TEACHER)
+                        listener(ScheduleEvent.OnLessonItemGroupClicked(it.group.name))
+                    else listener(
+                        ScheduleEvent.OnLessonItemTeacherClicked(
+                            it.teacher.name
+                        )
+                    )
+                }
+            )
+
+            AdditionalInfo(
+                color = color,
+                icon = WHATIcons.MeetingRoom,
+                text = it.auditory
+            )
+
+            AdditionalInfo(
+                color = color,
+                icon = WHATIcons.Domain,
+                text = it.building.ifEmpty { "_" }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommonViewSubject(
+    subject: String,
+    type: LessonType,
+    state: LessonState,
+    accentColor: Color,
+    expanded: Boolean,
+    setExpandable: (Boolean) -> Unit
+) = Box(
+    Modifier
+        .clip(CircleShape)
+        .fillMaxWidth()
+        .background(accentColor.copy(alpha = .2f))
+) {
+    val isLongTitle = subject.split(" ").size > 3
+    val (subjectFontSize, setSubjectFontSize) = useState(if (isLongTitle) 12 else 16)
+
+    Text(modifier = Modifier.padding(16.dp, 8.dp),
+        text = subject,
+        color = when (state) {
+            LessonState.REMOVED -> colorScheme.secondary
+            else -> if (type != LessonType.COMMON) colorScheme.tertiary
+            else colorScheme.onPrimaryContainer
+        },
+        fontSize = subjectFontSize.sp,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = if (expanded) Int.MAX_VALUE else 2,
+        style = typography.titleSmall.copy(
+            fontWeight = FontWeight.ExtraBold,
+            lineHeight = (subjectFontSize + 4).sp,
+            textDecoration = if (state == LessonState.REMOVED) TextDecoration.LineThrough
+            else TextDecoration.None
+        ),
+        onTextLayout = {
+            setExpandable(it.hasVisualOverflow)
+            if (it.lineCount > 1) setSubjectFontSize(12)
+        }
+    )
+}
+
+@Composable
+private fun CommonViewLeftSegment(
+    startTime: LocalTime,
+    endTime: LocalTime,
+    state: LessonState,
+    accentColor: Color,
+    number: Int
+) = Column(
+    modifier = Modifier
+        .fillMaxHeight()
+        .width(64.dp),
+    verticalArrangement = Arrangement.SpaceBetween
+) {
+    Column {
+        Gap(4)
+
+        Text(
+            text = formatTime(startTime),
+            fontSize = 24.sp,
+            color = accentColor,
+            style = typography.headlineSmall.copy(
+                fontWeight = FontWeight.ExtraBold
+            )
+        )
+
+        Text(
+            text = formatTime(endTime),
+            fontSize = 20.sp,
+            color = if (state == LessonState.REMOVED) colorScheme.secondary
+            else colorScheme.onPrimaryContainer,
+            style = typography.headlineSmall.copy(
+                fontWeight = FontWeight.Medium
+            )
+        )
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clip(CircleShape)
+            .size(24.dp)
+            .background(accentColor)
+    ) {
+        Text(
+            text = number.toString(),
+            color = colorScheme.onPrimary,
+            style = typography.bodyLarge.copy(
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+    }
+}
+
+@Composable
+private fun AdditionalInfo(
+    icon: ImageVector,
+    text: String,
+    color: Color = colorScheme.secondary,
+    modifier: Modifier = Modifier
+) = Row(
+    modifier = modifier, verticalAlignment = Alignment.CenterVertically
+) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = Modifier.size(18.dp),
+        tint = color
+    )
+
+    Gap(8)
+
+    Text(
+        text = text,
+        color = color,
+        style = typography.bodyMedium.copy(
+            fontWeight = FontWeight.SemiBold
+        )
+    )
 }
 
 @Preview(showBackground = true)
@@ -445,145 +514,140 @@ fun LessonPreview() = Column {
         val currentTime = LocalTime.of(13, 40).remember()
         Gap(12)
 
-        val lesson = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Основы дискретной математики и философии науки",
-            type = LessonType.COMMON,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            state = LessonState.REMOVED,
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
-                ), OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Кузнецов А.В."),
-                    building = "2",
-                    auditory = "131"
+        val lesson = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Основы дискретной математики и философии науки",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                state = LessonState.REMOVED,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    ), OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Кузнецов А.В."),
+                        building = "2",
+                        auditory = "131"
+                    )
                 )
-            )
-        ), viewType = ViewType.STUDENT, currentTime, {}).remember()
-
-        lesson.content(Modifier)
-
+            ), viewType = ViewType.STUDENT, currentTime = currentTime
+        ) {}
         Gap(12)
 
-        val classHour = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Классный час",
-            type = LessonType.CLASS_HOUR,
-            state = LessonState.REMOVED,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
-                ),
-            )
-        ), viewType = ViewType.TEACHER, currentTime, {}).remember()
-
-        classHour.content(Modifier)
-
-        Gap(12)
-
-        val lesson2 = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Основы дискретной математики и философии науки",
-            type = LessonType.COMMON,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            state = LessonState.CHANGED,
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
-                ), OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Кузнецов А.В."),
-                    building = "2",
-                    auditory = "131"
+        val classHour = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Классный час",
+                type = LessonType.CLASS_HOUR,
+                state = LessonState.REMOVED,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    ),
                 )
-            )
-        ), viewType = ViewType.STUDENT, currentTime, {}).remember()
-
-        lesson2.content(Modifier)
-
+            ), viewType = ViewType.TEACHER, currentTime = currentTime
+        ) {}
         Gap(12)
 
-        val lesson3 = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Доп.занятие",
-            type = LessonType.COMMON,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            state = LessonState.ADDED,
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
+        val lesson2 = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Основы дискретной математики и философии науки",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                state = LessonState.CHANGED,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    ), OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Кузнецов А.В."),
+                        building = "2",
+                        auditory = "131"
+                    )
                 )
-            )
-        ), viewType = ViewType.STUDENT, currentTime, {}).remember()
-
-        lesson3.content(Modifier)
-
+            ), viewType = ViewType.STUDENT, currentTime = currentTime
+        ) {}
         Gap(12)
 
-        val classHour2 = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Классный час",
-            type = LessonType.CLASS_HOUR,
-            state = LessonState.CHANGED,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
-                ),
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
-                ),
-            )
-        ), viewType = ViewType.TEACHER, currentTime, {}).remember()
-
-        classHour2.content(Modifier)
-
-        Gap(12)
-
-        val lesson4 = LessonUI(data = Lesson(
-            number = 1,
-            subject = "Доп.занятие",
-            type = LessonType.ADDITIONAL,
-            startTime = LocalTime.of(13, 10),
-            endTime = LocalTime.of(14, 40),
-            state = LessonState.COMMON,
-            otUnits = listOf(
-                OneTimeUnit(
-                    group = Group("ИС-23"),
-                    teacher = Teacher("Савельев А.В."),
-                    building = "1",
-                    auditory = "101"
+        val lesson3 = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Доп.занятие",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                state = LessonState.ADDED,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    )
                 )
-            )
-        ), viewType = ViewType.STUDENT, currentTime, {}).remember()
+            ), viewType = ViewType.STUDENT, currentTime = currentTime
+        ) {}
+        Gap(12)
 
-        lesson4.content(Modifier)
+        val classHour2 = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Классный час",
+                type = LessonType.CLASS_HOUR,
+                state = LessonState.CHANGED,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    ),
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    ),
+                )
+            ), viewType = ViewType.TEACHER, currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        val lesson4 = LessonUI(
+            data = Lesson(
+                number = 1,
+                subject = "Доп.занятие",
+                type = LessonType.ADDITIONAL,
+                startTime = LocalTime.of(13, 10),
+                endTime = LocalTime.of(14, 40),
+                state = LessonState.COMMON,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-23"),
+                        teacher = Teacher("Савельев А.В."),
+                        building = "1",
+                        auditory = "101"
+                    )
+                )
+            ), viewType = ViewType.STUDENT, currentTime = currentTime
+        ) {}
 
         Gap(12)
     }

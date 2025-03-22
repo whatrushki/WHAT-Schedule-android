@@ -31,7 +31,12 @@ object RKSILessonsSchedule : LessonsSchedule {
         LessonTime(1, LocalTime.of(8, 0), LocalTime.of(9, 30)),
         LessonTime(2, LocalTime.of(9, 40), LocalTime.of(11, 10)),
         LessonTime(3, LocalTime.of(11, 30), LocalTime.of(13, 0)),
-        LessonTime(number = 0, LocalTime.of(13, 5), LocalTime.of(14, 5), type = LessonType.CLASS_HOUR),
+        LessonTime(
+            number = 0,
+            LocalTime.of(13, 5),
+            LocalTime.of(14, 5),
+            type = LessonType.CLASS_HOUR
+        ),
         LessonTime(4, LocalTime.of(14, 10), LocalTime.of(15, 40)),
         LessonTime(5, LocalTime.of(16, 0), LocalTime.of(17, 30)),
         LessonTime(6, LocalTime.of(17, 40), LocalTime.of(19, 10))

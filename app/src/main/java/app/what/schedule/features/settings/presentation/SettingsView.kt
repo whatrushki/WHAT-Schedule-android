@@ -24,11 +24,13 @@ import app.what.foundation.data.rememberEnumPreference
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.features.settings.domain.models.SettingsEvent
 import app.what.schedule.features.settings.domain.models.SettingsState
 import app.what.schedule.presentation.theme.icons.WHATIcons
 import app.what.schedule.presentation.theme.icons.filled.Domain
 import app.what.schedule.presentation.theme.icons.filled.MeetingRoom
+import org.koin.compose.koinInject
 
 @Composable
 fun SettingsView(
@@ -39,41 +41,22 @@ fun SettingsView(
     verticalArrangement = Arrangement.SpaceBetween,
     modifier = Modifier.fillMaxSize()
 ) {
-    val appServer = rememberEnumPreference(
-        AppSettingsRepository.Keys.USED_SERVER,
-        AppSettingsRepository.AppServers.RKSI
-    )
+    val im = koinInject<InstitutionManager>()
 
-    SingleChoiceSegmentedButtonRow(
+    Text("Провайдер ${im.getSavedProvider()?.metadata?.name}")
+    if (state.showRestartMessage) Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-    ) {
-        AppSettingsRepository.AppServers.entries.forEach {
-            SegmentTab(
-                it.ordinal,
-                AppSettingsRepository.AppServers.entries.size,
-                appServer == it,
-                icon = when (it) {
-                    AppSettingsRepository.AppServers.RKSI -> WHATIcons.Domain
-                    AppSettingsRepository.AppServers.TURTLE -> WHATIcons.MeetingRoom
-                },
-                label = it.name
-            ) {
-                listener(SettingsEvent.OnAppServerSelected(it))
-            }
-        }
-    }
-
-    if (state.showRestartMessage) Box(
-        Modifier.fillMaxWidth().padding(20.dp, 0.dp, 20.dp, 20.dp)
+            .padding(20.dp, 0.dp, 20.dp, 20.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(16.dp, 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp, 8.dp)
         ) {
             Text(
                 "Требуется перезапуск",

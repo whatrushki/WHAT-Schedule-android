@@ -1,0 +1,4 @@
+package app.what.schedule.libs
+
+class FileManager {
+}

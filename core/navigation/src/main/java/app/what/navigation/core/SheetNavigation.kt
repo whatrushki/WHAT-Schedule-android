@@ -17,14 +17,20 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.what.foundation.core.Monitor.Companion.monitored
+import app.what.foundation.ui.useState
 import app.what.foundation.utils.orThrow
+import app.what.foundation.utils.retry
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
@@ -125,18 +131,6 @@ class SheetGraphBuilder {
     }
 }
 
-val LocalSheetController = staticCompositionLocalOf<SheetController> { error("непон") }
-
-interface SheetController {
-    val opened: Boolean
-    var cancellable: Boolean
-    var content: @Composable () -> Unit
-
-    fun open()
-    fun close()
-    fun animateClose()
-}
-
 interface SheetProvider {
     val cancellable: Boolean
 }
@@ -152,18 +146,20 @@ fun ProvideGlobalSheet(
 ) = CompositionLocalProvider(
     LocalSheetController provides controller
 ) {
-    content()
-
     val state = rememberModalBottomSheetState {
         if (it != SheetValue.Hidden) true
         else controller.cancellable
     }
 
+    LaunchedEffect(Unit) { controller.setSheetState(state) }
+
+    content()
+
     if (controller.opened) ModalBottomSheet(
         onDismissRequest = controller::close,
         sheetState = state
     ) {
-        BackHandler(controller.opened) {}
+        BackHandler { controller.animateClose() }
 
         Column(
             verticalArrangement = Arrangement.Center,
@@ -181,32 +177,70 @@ fun ProvideGlobalSheet(
 @Composable
 fun rememberSheetController(): SheetController = LocalSheetController.current
 
-    @OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberSheetHostController(
     start: @Composable () -> Unit = {},
-    state: SheetState = rememberModalBottomSheetState(),
     scope: CoroutineScope = rememberCoroutineScope()
-): SheetController = remember {
-    object : SheetController {
+): SheetController {
+    var sheetState by useState<SheetState?>(null)
 
-        override var content by monitored(start)
+    return remember {
+        object : SheetController {
+            override var content by monitored(start)
+            override var cancellable by monitored(true)
+            override var opened by monitored(false)
 
-        override var cancellable by monitored(true)
+            override fun setSheetState(state: SheetState) {
+                sheetState = state
+            }
 
-        override var opened by monitored(false)
+            override fun open(
+                full: Boolean,
+                cancellable: Boolean,
+                content: @Composable () -> Unit
+            ) {
+                this.content = content
+                this.cancellable = cancellable
+                open(full)
+            }
 
-        override fun open() {
-            opened = true
-        }
+            override fun open(full: Boolean) {
+                opened = true
+                scope.launch {
+                    delay(300)
+                    // TODO: сумашедший костыль, исправить по возможности
+                    retry(9, 100) {
+                        if (full) sheetState?.expand()
+                    }
+                }
+            }
 
-        override fun close() {
-            opened = false
-        }
+            override fun close() {
+                opened = false
+            }
 
-        override fun animateClose() {
-            scope.launch { state.hide() }
-                .invokeOnCompletion { close() }
+            override fun animateClose() {
+                scope.launch { sheetState?.hide() }
+                    .invokeOnCompletion { close() }
+            }
         }
     }
+}
+
+
+val LocalSheetController = staticCompositionLocalOf<SheetController> { error("непон") }
+
+interface SheetController {
+    val opened: Boolean
+    var cancellable: Boolean
+    var content: @Composable () -> Unit
+
+    fun open(full: Boolean = false)
+    fun open(full: Boolean = false, cancellable: Boolean = true, content: @Composable () -> Unit)
+    fun close()
+    fun animateClose()
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    fun setSheetState(state: SheetState)
 }

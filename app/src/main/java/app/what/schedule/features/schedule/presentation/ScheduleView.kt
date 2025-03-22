@@ -3,6 +3,7 @@ package app.what.schedule.features.schedule.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,13 +21,12 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.useChange
 import app.what.foundation.ui.useState
-import app.what.foundation.utils.remember
+import androidx.compose.runtime.remember
 import app.what.navigation.core.rememberSheetController
 import app.what.schedule.data.remote.api.LessonsScheduleType
 import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.features.schedule.domain.models.ScheduleState
-import app.what.schedule.features.schedule.presentation.components.LessonPreview
 import app.what.schedule.features.schedule.presentation.components.LessonUI
 import app.what.schedule.features.schedule.presentation.components.ScheduleShimmer
 import app.what.schedule.features.schedule.presentation.components.SearchButton
@@ -64,11 +64,7 @@ fun ScheduleView(
     Gap(16)
 
     SearchButton(state.search, scheduleType) {
-        sheetController.apply {
-            content = sheet
-            cancellable = true
-            open()
-        }
+        sheetController.open(content = sheet)
     }
 
     Gap(8)
@@ -77,7 +73,9 @@ fun ScheduleView(
         RemoteState.Loading, RemoteState.Idle -> ScheduleShimmer()
         RemoteState.Success -> {
             SingleChoiceSegmentedButtonRow(
-                Modifier.padding(horizontal = 12.dp)
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
             ) {
                 state.schedules.forEachIndexed { index, it ->
                     val selected = pagerState.currentPage == index
@@ -102,6 +100,7 @@ fun ScheduleView(
             HorizontalPager(
                 state = pagerState,
                 verticalAlignment = Alignment.Top,
+                key = { state.schedules[it].date.toString() },
                 modifier = Modifier.fillMaxHeight()
             ) {
                 Column(
@@ -109,7 +108,7 @@ fun ScheduleView(
                     modifier = Modifier.fillMaxHeight()
                 ) {
                     state.schedules[it].lessons.forEach { lesson ->
-                        val lessonUI = LessonUI(
+                        LessonUI(
                             data = lesson,
                             listener = listener,
                             currentTime = if (state.schedules[it].date == currentDate.value)
@@ -118,9 +117,7 @@ fun ScheduleView(
                                 is ScheduleSearch.Teacher -> ViewType.TEACHER
                                 else -> ViewType.STUDENT
                             }
-                        ).remember()
-
-                        lessonUI.content(Modifier)
+                        )
                     }
                 }
             }

@@ -4,10 +4,11 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
+import app.what.foundation.utils.orThrow
 import app.what.foundation.utils.safeExecute
 import app.what.foundation.utils.suspendCall
 import app.what.schedule.data.local.settings.AppSettingsRepository
-import app.what.schedule.data.remote.api.ScheduleApi
+import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.features.schedule.domain.models.ScheduleAction
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
@@ -15,13 +16,15 @@ import app.what.schedule.features.schedule.domain.models.ScheduleState
 
 
 class ScheduleController(
-    private val api: ScheduleApi,
+    private val institutionManager: InstitutionManager,
     private val settings: AppSettingsRepository
 ) : UIController<ScheduleState, ScheduleAction, ScheduleEvent>(
     ScheduleState()
 ) {
+    private var api = institutionManager.getSavedProvider().orThrow { "No provider selected" }
+
     override fun obtainEvent(viewEvent: ScheduleEvent) = when (viewEvent) {
-        ScheduleEvent.Init -> {}
+        ScheduleEvent.Init -> updateApiProvider()
         ScheduleEvent.UpdateSchedule -> updateSchedule(viewState.search)
         is ScheduleEvent.OnSearchCompleted -> updateSchedule(viewEvent.query)
         is ScheduleEvent.OnLessonItemGroupClicked -> updateSchedule(ScheduleSearch.Group(viewEvent.value))
@@ -35,6 +38,10 @@ class ScheduleController(
         updateSchedule(if (lastSearchedGroup != null) ScheduleSearch.Group(lastSearchedGroup) else null)
         updateTeachers()
         updateGroups()
+    }
+
+    private fun updateApiProvider() {
+        api = institutionManager.getSavedProvider().orThrow { "No provider selected" }
     }
 
     private fun updateSchedule(search: ScheduleSearch?) {

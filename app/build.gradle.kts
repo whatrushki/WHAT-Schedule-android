@@ -1,6 +1,7 @@
-import com.android.build.api.dsl.Packaging
+import com.google.devtools.ksp.gradle.model.Ksp
 
 plugins {
+    id("com.google.devtools.ksp")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -52,11 +53,14 @@ dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
 
+    ksp(libs.room.compiler)
+
     implementation(libs.poi)
     implementation(libs.poi.ooxml)
     implementation(libs.ksoup.lite)
     implementation(libs.bundles.ktor)
     implementation(libs.bundles.koin)
+    implementation(libs.bundles.room)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.navigation.compose)
 

@@ -7,13 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 
 @Composable
-fun Modifier.applyComposableIf(
+fun Modifier.capplyIf(
     expression: Boolean,
     elseBlock: @Composable Modifier.() -> Modifier = { this },
     block: @Composable Modifier.() -> Modifier
 ): Modifier {
-    val exp by remember { derivedStateOf { expression } }
-    return if (exp) block() else elseBlock()
+    return if (expression) block() else elseBlock()
 }
 
 fun Modifier.applyIf(

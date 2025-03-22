@@ -1,0 +1,42 @@
+package app.what.schedule.data.local.database
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Embedded
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Relation
+import androidx.room.Update
+import app.what.schedule.data.local.database.models.LessonDBO
+import app.what.schedule.data.local.database.models.OneTimeUnitDBO
+import kotlinx.coroutines.flow.Flow
+
+data class LessonWithOtUnitsDBO(
+    @Embedded val lesson: LessonDBO,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "lessonId"
+    )
+    val otUnits: List<OneTimeUnitDBO>
+)
+
+@Dao
+interface LessonDAO {
+    @Insert
+    suspend fun insertLesson(lesson: LessonDBO)
+
+    @Insert
+    suspend fun insertLessons(lesson: List<LessonDBO>)
+
+    @Update
+    suspend fun updateLesson(lesson: LessonDBO)
+
+    @Query("""SELECT * FROM lessons
+            JOIN ot_units ON lessons.id = ot_units.lessonId
+            GROUP BY lessons.id
+            ORDER BY date ASC""")
+    suspend fun getAllLessons(): Flow<List<LessonWithOtUnitsDBO>>
+
+    @Delete
+    suspend fun deleteLesson(lesson: LessonDBO)
+}

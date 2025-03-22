@@ -16,12 +16,14 @@ fun keyboardAsState(): State<Boolean> {
 }
 
 @Composable
-fun OnKeyboardHiddenListener(onKeyboardHidden: () -> Unit) {
+fun KeyboardStateListener(
+    onExpanded: () -> Unit = {},
+    onHidden: () -> Unit = {}
+) {
     val keyboardVisible by keyboardAsState()
 
     LaunchedEffect(keyboardVisible) {
-        if (!keyboardVisible) {
-            onKeyboardHidden()
-        }
+        if (keyboardVisible) onExpanded()
+        else onHidden()
     }
 }
