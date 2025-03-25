@@ -1,13 +1,10 @@
 package app.what.schedule.presentation.theme.icons.filled
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.what.foundation.ui.Show
 import app.what.schedule.presentation.theme.icons.WHATIcons
 
 val WHATIcons.Domain: ImageVector

@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.impl.rksi.official
+package app.what.schedule.data.remote.providers.rksi.general
 
 import android.util.Log
 import app.what.foundation.utils.asyncLazy
@@ -17,9 +17,8 @@ import app.what.schedule.data.remote.api.ParseMode
 import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.data.remote.api.SourceType
 import app.what.schedule.data.remote.api.Teacher
-import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule
-import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule.getByNumber
-import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule.numberOf
+import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule.getByNumber
+import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule.numberOf
 import app.what.schedule.data.remote.utils.parseMonth
 import app.what.schedule.data.remote.utils.parseTime
 import app.what.schedule.libs.FileManager
@@ -45,7 +44,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 
-val RKSIProviderMetadata by lazy {
+private val RKSIProviderMetadata by lazy {
     MetaInfo(
         id = "rksi",
         name = "РКСИ",
@@ -74,11 +73,15 @@ class RKSIOfficialProvider(
         override val metadata: MetaInfo = RKSIProviderMetadata
     }
 
-    override val metadata: MetaInfo = RKSIOfficialProvider.metadata
+    override val metadata: MetaInfo = Factory.metadata
     override val lessonsSchedule = RKSILessonsSchedule
-    private val scheduleTabletGoogleDriveId by asyncLazy {
-        getScheduleTabletGoogleDriveId()
-    }
+    private val scheduleTabletGoogleDriveId by
+    asyncLazy { getScheduleTabletGoogleDriveId() }
+
+    private val files1 by
+    asyncLazy { googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await()) }
+    private val files2 by
+    asyncLazy { googleDriveApi.getFolderContent(files1.await().folders().first().id) }
 
     override suspend fun getTeachers(): List<Teacher> {
         val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
@@ -191,10 +194,10 @@ class RKSIOfficialProvider(
                 }
             }
 
-            var schedule = lessonsSchedule.COMMON
+            var schedule = RKSILessonsSchedule.COMMON
 
             lessons = if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null) {
-                schedule = lessonsSchedule.WITH_CLASS_HOUR
+                schedule = RKSILessonsSchedule.WITH_CLASS_HOUR
                 lessons.map { it.copy(number = schedule.numberOf(it.startTime) ?: 0) }
             } else {
                 val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
@@ -203,12 +206,18 @@ class RKSIOfficialProvider(
 
                 lessons.map { lesson ->
                     val number =
-                        getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.WITH_CLASS_HOUR)
+                        getNumberOrChangeSchedule(
+                            lesson.startTime,
+                            RKSILessonsSchedule.WITH_CLASS_HOUR
+                        )
                             ?: getNumberOrChangeSchedule(
                                 lesson.startTime,
-                                lessonsSchedule.SHORTENED
+                                RKSILessonsSchedule.SHORTENED
                             )
-                            ?: getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.COMMON)
+                            ?: getNumberOrChangeSchedule(
+                                lesson.startTime,
+                                RKSILessonsSchedule.COMMON
+                            )
                             ?: 0
 
                     lesson.copy(number = number)
@@ -231,9 +240,9 @@ class RKSIOfficialProvider(
                 dateDescription = dateDescription,
                 lessons = lessons,
                 scheduleType = when (schedule) {
-                    lessonsSchedule.COMMON -> LessonsScheduleType.COMMON
-                    lessonsSchedule.SHORTENED -> LessonsScheduleType.SHORTENED
-                    lessonsSchedule.WITH_CLASS_HOUR -> LessonsScheduleType.WITH_CLASS_HOUR
+                    RKSILessonsSchedule.COMMON -> LessonsScheduleType.COMMON
+                    RKSILessonsSchedule.SHORTENED -> LessonsScheduleType.SHORTENED
+                    RKSILessonsSchedule.WITH_CLASS_HOUR -> LessonsScheduleType.WITH_CLASS_HOUR
                     else -> LessonsScheduleType.COMMON
                 }
             )
@@ -256,14 +265,12 @@ class RKSIOfficialProvider(
     private suspend fun getTablet(
         date: LocalDate,
         building: String,
-        files: List<GoogleDriveParser.Item>,
-        search: ScheduleSearch
+        files: List<GoogleDriveParser.Item>
     ): File? {
         val tabletName = generateFileName(
             mapOf(
                 "building" to building,
-                "date" to date.toString(),
-                "query" to search.query
+                "date" to date.toString()
             ),
             fileExtension = "xlsx"
         )
@@ -274,7 +281,7 @@ class RKSIOfficialProvider(
         }
 
         return get() ?: let {
-            val downloaded = findAndDownloadTabletFromGD(date, files, search.query)
+            val downloaded = findAndDownloadTabletFromGD(date, files, tabletName)
             if (downloaded) get() else null
         }
     }
@@ -386,8 +393,8 @@ class RKSIOfficialProvider(
                                 auditory
                             },
                             group = Group(it.trim()),
-                            teacher = Teacher(teacher),
-                            building = "1",
+                            teacher = Teacher(teacher.replace("__", "_"), teacher),
+                            building = if (columns == 1) "2" else "1"
                         )
                     }
                 }.let { otUnits.addAll(it.flatten()) }
@@ -414,18 +421,16 @@ class RKSIOfficialProvider(
     private suspend fun getReplacements(date: LocalDate, search: ScheduleSearch): List<Lesson> {
         val predicate = { teacher: String, group: String ->
             when (search) {
-                is ScheduleSearch.Group -> group == search.query
-                is ScheduleSearch.Teacher -> teacher == search.query
+                is ScheduleSearch.Group -> group == search.name
+                is ScheduleSearch.Teacher -> teacher == search.name
             }
         }
 
         Log.d("d", "d: 1")
-        val files1 = googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await())
-        val files2 = googleDriveApi.getFolderContent(files1.folders().first().id)
 
         val parseTablet1Process = CoroutineScope(Default).async {
             Log.d("d", "d->: 11")
-            val tablet1 = getTablet(date, "1", files1, search) ?: return@async null
+            val tablet1 = getTablet(date, "1", files1.await()) ?: return@async null
             Log.d("d", "d->: 12 ${tablet1.canRead()} ${tablet1.exists()}")
             Log.d("d", "d->: 12")
             val workbook1 = WorkbookFactory.create(tablet1)
@@ -435,7 +440,7 @@ class RKSIOfficialProvider(
 
         val parseTablet2Process = CoroutineScope(Default).async {
             Log.d("d", "d->: 21")
-            val tablet2 = getTablet(date, "2", files2, search) ?: return@async null
+            val tablet2 = getTablet(date, "2", files2.await()) ?: return@async null
             Log.d("d", "d->: 22")
             val workbook2 = WorkbookFactory.create(tablet2)
             Log.d("d", "d->: 23")
@@ -449,13 +454,11 @@ class RKSIOfficialProvider(
     }
 }
 
-fun List<Lesson>.withReplacements(
+private fun List<Lesson>.withReplacements(
     replacements: List<Lesson>,
     schedule: List<LessonTime>
 ): List<Lesson> {
     val unionSchedule = mutableMapOf<Int, List<Lesson?>>()
-
-    Log.d("d", replacements.joinToString("\n"))
 
     replacements.forEach {
         unionSchedule[it.number] = listOf(it, null)
@@ -495,8 +498,10 @@ fun List<Lesson>.withReplacements(
                     type = lesson.type,
                     state = if (lesson.type != LessonType.CLASS_HOUR) LessonState.CHANGED
                     else LessonState.COMMON,
-                    subject = if (replacement.otUnits.all { it.teacher !in lessonTeachers }) ""
-                    else lesson.subject
+                    subject = if (
+                        lesson.type != LessonType.CLASS_HOUR &&
+                        replacement.otUnits.all { it.teacher !in lessonTeachers }
+                    ) "" else lesson.subject
                 )
             } else lesson
         } else lesson!!

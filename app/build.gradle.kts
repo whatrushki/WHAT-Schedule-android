@@ -1,5 +1,3 @@
-import com.google.devtools.ksp.gradle.model.Ksp
-
 plugins {
     id("com.google.devtools.ksp")
     alias(libs.plugins.android.application)
@@ -55,6 +53,7 @@ dependencies {
 
     ksp(libs.room.compiler)
 
+//    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     implementation(libs.poi)
     implementation(libs.poi.ooxml)
     implementation(libs.ksoup.lite)

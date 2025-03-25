@@ -1,6 +1,7 @@
 package app.what.schedule.libs
 
 import android.util.Log
+import app.what.foundation.utils.retry
 import com.fleeksoft.ksoup.Ksoup
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -29,14 +30,21 @@ class GoogleDriveParser(
 
     suspend fun getFolderContent(folderId: String): List<Item> {
         Log.d("d", "getFolderContent: https://drive.google.com/drive/folders/$folderId")
-        val response = client.get("https://drive.google.com/drive/folders/$folderId").bodyAsText()
-        val document = Ksoup.parse(response)
-        return document.getElementsByAttributeValue("data-target", "doc").map {
-            val id = it.attr("data-id")
-            val name = it.getElementsByClass("KL4NAf").first()!!.text()
+        var items: List<Item> = emptyList()
+        retry(3, 500) {
+            Log.d("d", "getFolderContent: attempt $it")
+            val response =
+                client.get("https://drive.google.com/drive/folders/$folderId").bodyAsText()
+            val document = Ksoup.parse(response)
+            items = document.getElementsByAttributeValue("data-target", "doc").map {
+                val id = it.attr("data-id")
+                val name = it.getElementsByClass("KL4NAf").first()!!.text()
 
-            return@map if ('.' in name) Item.File(id, name)
-            else Item.Folder(id, name)
+                return@map if ('.' in name) Item.File(id, name)
+                else Item.Folder(id, name)
+            }
         }
+
+        return items
     }
 }

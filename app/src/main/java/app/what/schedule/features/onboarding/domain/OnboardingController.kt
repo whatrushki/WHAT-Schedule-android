@@ -1,6 +1,5 @@
 package app.what.schedule.features.onboarding.domain
 
-import android.util.Log
 import app.what.foundation.core.UIController
 import app.what.schedule.data.local.settings.AppSettingsRepository
 import app.what.schedule.data.remote.api.InstitutionManager

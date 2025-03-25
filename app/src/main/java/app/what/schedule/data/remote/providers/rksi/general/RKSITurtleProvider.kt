@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.impl.rksi.turtle
+package app.what.schedule.data.remote.providers.rksi.general
 
 import android.util.Log
 import app.what.schedule.data.remote.api.AdditionalData
@@ -14,20 +14,21 @@ import app.what.schedule.data.remote.api.OneTimeUnit
 import app.what.schedule.data.remote.api.ParseMode
 import app.what.schedule.data.remote.api.SourceType
 import app.what.schedule.data.remote.api.Teacher
-import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule
-import app.what.schedule.data.remote.impl.rksi.RKSILessonsSchedule.numberOf
-import app.what.schedule.data.remote.impl.rksi.turtle.TurtleApi.Schedule.Responses.GetSchedule
+import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule.numberOf
+import app.what.schedule.data.remote.providers.rksi.general.TurtleApi.Schedule.Responses.GetSchedule
 import app.what.schedule.data.remote.utils.parseMonth
 import app.what.schedule.data.remote.utils.parseTime
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.time.LocalDate
 import java.time.LocalTime
 
-val TurtleScheduleMetadata by lazy {
+private val TurtleProviderMetadata by lazy {
     MetaInfo(
         id = "turtle",
         name = "Turtle",
@@ -50,11 +51,11 @@ class RKSITurtleProvider(
 ) : InstitutionProvider {
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "http://45.155.207.232:8080/api/v2"
-        override val metadata = TurtleScheduleMetadata
+        override val metadata = TurtleProviderMetadata
         override fun create(): InstitutionProvider = RKSITurtleProvider(get())
     }
 
-    override val metadata = RKSITurtleProvider.metadata
+    override val metadata = Factory.metadata
     override val lessonsSchedule = RKSILessonsSchedule
 
     override suspend fun getGroupSchedule(
@@ -138,13 +139,13 @@ class RKSITurtleProvider(
             }
         }
 
-        var schedule = lessonsSchedule.COMMON
+        var schedule = RKSILessonsSchedule.COMMON
 
         lessons = if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null) {
-            schedule = lessonsSchedule.WITH_CLASS_HOUR
+            schedule = RKSILessonsSchedule.WITH_CLASS_HOUR
             lessons.map {
                 it.copy(
-                    number = lessonsSchedule.WITH_CLASS_HOUR.numberOf(it.startTime) ?: 0
+                    number = RKSILessonsSchedule.WITH_CLASS_HOUR.numberOf(it.startTime) ?: 0
                 )
             }
         } else {
@@ -154,9 +155,12 @@ class RKSITurtleProvider(
 
             lessons.map { lesson ->
                 val number =
-                    getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.WITH_CLASS_HOUR)
-                        ?: getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.SHORTENED)
-                        ?: getNumberOrChangeSchedule(lesson.startTime, lessonsSchedule.COMMON)
+                    getNumberOrChangeSchedule(lesson.startTime, RKSILessonsSchedule.WITH_CLASS_HOUR)
+                        ?: getNumberOrChangeSchedule(
+                            lesson.startTime,
+                            RKSILessonsSchedule.SHORTENED
+                        )
+                        ?: getNumberOrChangeSchedule(lesson.startTime, RKSILessonsSchedule.COMMON)
                         ?: 0
 
                 lesson.copy(number = number)
@@ -168,11 +172,51 @@ class RKSITurtleProvider(
             dateDescription = it.day,
             lessons = lessons,
             scheduleType = when (schedule) {
-                lessonsSchedule.COMMON -> LessonsScheduleType.COMMON
-                lessonsSchedule.SHORTENED -> LessonsScheduleType.SHORTENED
-                lessonsSchedule.WITH_CLASS_HOUR -> LessonsScheduleType.WITH_CLASS_HOUR
+                RKSILessonsSchedule.COMMON -> LessonsScheduleType.COMMON
+                RKSILessonsSchedule.SHORTENED -> LessonsScheduleType.SHORTENED
+                RKSILessonsSchedule.WITH_CLASS_HOUR -> LessonsScheduleType.WITH_CLASS_HOUR
                 else -> LessonsScheduleType.COMMON
             }
         )
+    }
+}
+
+
+private object TurtleApi {
+    object Schedule {
+        object Responses {
+            @Serializable
+            data class GetSchedule(
+                val days: List<ForDay>,
+                val name: String
+            )
+
+            @Serializable
+            data class ForDay(
+                val day: String,
+                val isoDateDay: String,
+                val apairs: List<Apair>
+            )
+
+            @Serializable
+            data class Apair(
+                val time: String,
+                val apair: List<ApairApair>,
+                val isoDateStart: String,
+                val isoDateEnd: String
+            )
+
+            @Serializable
+            data class ApairApair(
+                val doctrine: String,
+                val teacher: String,
+                @SerialName("auditoria") val auditory: String,
+                val corpus: String,
+                val number: Int,
+                val start: String,
+                val end: String,
+                val warn: String
+            )
+        }
     }
 }

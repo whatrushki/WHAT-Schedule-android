@@ -1,8 +1,9 @@
 package app.what.schedule.data.remote.api
 
 import app.what.schedule.data.local.settings.AppSettingsRepository
-import app.what.schedule.data.remote.impl.rksi.official.RKSIOfficialProvider
-import app.what.schedule.data.remote.impl.rksi.turtle.RKSITurtleProvider
+import app.what.schedule.data.remote.providers.dgtu.INST_DGTU
+import app.what.schedule.data.remote.providers.rinh.INST_RINH
+import app.what.schedule.data.remote.providers.rksi.INST_RKSI
 
 data class MetaInfo(
     val id: String,
@@ -75,37 +76,7 @@ interface InstitutionProvider {
     }.$fileExtension"
 }
 
-val insts by lazy {
-    listOf(
-        Institution(
-            MetaInfo(
-                id = "rksi",
-                name = "РКСИ",
-                fullName = "Ростовский-на-Дону Колледж Связи и Информатики",
-                description = "Ростовский-на-Дону Колледж Связи и Информатики",
-                sourceTypes = setOf(SourceType.API, SourceType.PARSER, SourceType.EXCEL),
-                sourceUrl = "https://rksi.ru"
-            ),
-            listOf(
-                InstitutionFilial(
-                    MetaInfo(
-                        id = "rksi",
-                        name = "РКСИ",
-                        fullName = "Ростовский-на-Дону Колледж Связи и Информатики",
-                        description = "Ростовский-на-Дону Колледж Связи и Информатики",
-                        sourceTypes = setOf(SourceType.API, SourceType.PARSER, SourceType.EXCEL),
-                        sourceUrl = "https://rksi.ru"
-                    ),
-                    setOf(
-                        RKSIOfficialProvider.Factory,
-                        RKSITurtleProvider.Factory
-                    ),
-                    RKSIOfficialProvider.Factory
-                )
-            )
-        )
-    )
-}
+val insts by lazy { listOf(INST_RKSI, INST_DGTU, INST_RINH) }
 
 class InstitutionManager(
     private val settings: AppSettingsRepository
@@ -125,13 +96,22 @@ class InstitutionManager(
         val savedData = settings.getInstitutionData()
         savedInstitution = insts.firstOrNull { it.metadata.id == savedData?.first }
         savedFilial = savedInstitution?.filials?.firstOrNull { it.metadata.id == savedData?.second }
-        savedProvider = (savedFilial?.providers?.firstOrNull { it.metadata.id == savedData?.third }
-            ?: savedFilial?.defaultProvider)?.create()
+        (savedFilial
+            ?.providers
+            ?.firstOrNull { it.metadata.id == savedData?.third }
+            ?: savedFilial?.defaultProvider)
+            ?.let {
+                if (savedProviderFactory == it) return
+                savedProviderFactory = it
+                savedProvider = it.create()
+            }
     }
 
     private var savedInstitution: Institution? = null
     private var savedFilial: InstitutionFilial? = null
+    private var savedProviderFactory: InstitutionProvider.Factory? = null
     private var savedProvider: InstitutionProvider? = null
+
     fun getSavedInstitution(): Institution? = savedInstitution
     fun getSavedFilial(): InstitutionFilial? = savedFilial
     fun getSavedProvider(): InstitutionProvider? = savedProvider

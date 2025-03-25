@@ -34,8 +34,8 @@ import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.InstitutionFilial
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.SourceType
-import app.what.schedule.data.remote.impl.rksi.official.RKSIOfficialProvider
-import app.what.schedule.data.remote.impl.rksi.turtle.RKSITurtleProvider
+import app.what.schedule.data.remote.providers.rksi.general.RKSIOfficialProvider
+import app.what.schedule.data.remote.providers.rksi.general.RKSITurtleProvider
 import app.what.schedule.presentation.theme.icons.WHATIcons
 import app.what.schedule.presentation.theme.icons.filled.Domain
 

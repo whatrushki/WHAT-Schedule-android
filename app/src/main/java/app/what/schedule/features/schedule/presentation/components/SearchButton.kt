@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.what.foundation.ui.Gap
@@ -63,11 +64,13 @@ fun SearchButton(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                when (search) {
-                    is ScheduleSearch.Group -> "Группа: " + search.query
-                    is ScheduleSearch.Teacher -> "Препод.: " + search.query
+                text = when (search) {
+                    is ScheduleSearch.Group -> "Группа: " + search.name
+                    is ScheduleSearch.Teacher -> "Препод.: " + search.name
                     null -> "Поиск..."
                 },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.secondary
             )
 

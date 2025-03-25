@@ -46,6 +46,7 @@ class OnboardingFeature(
 
                 controller.clearAction()
             }
+
             null -> Unit
         }
     }

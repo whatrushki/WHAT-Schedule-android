@@ -4,14 +4,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
@@ -25,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.SystemBarsGap
 import app.what.foundation.ui.keyboardAsState
 import app.what.schedule.features.onboarding.domain.models.OnboardingEvent
 import app.what.schedule.features.onboarding.domain.models.OnboardingState
@@ -36,14 +30,20 @@ fun OnboardingView(
     state: OnboardingState,
     listener: Listener<OnboardingEvent>
 ) = Column(
-    modifier = Modifier.fillMaxSize().background(colorScheme.background)
+    modifier = Modifier
+        .fillMaxSize()
+        .background(colorScheme.background)
 ) {
     val keyboardState by keyboardAsState()
 
-    Box(Modifier.animateContentSize().height(if (keyboardState) 20.dp else 120.dp))
+    Box(
+        Modifier
+            .animateContentSize()
+            .height(if (keyboardState) 20.dp else 120.dp)
+    )
 
     Text(
-        "Выбери учебное заведение",
+        "Выбери\nучебное заведение",
         style = typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         fontSize = 46.sp,
@@ -62,7 +62,9 @@ fun OnboardingView(
     Gap(16)
 
     InstitutionSelectPage(
-        modifier = Modifier.background(Color.Transparent).padding(horizontal = 12.dp),
+        modifier = Modifier
+            .background(Color.Transparent)
+            .padding(horizontal = 12.dp),
         institutions = state.institutions
     ) { i, f, p ->
         listener(OnboardingEvent.InstitutionAndProviderSelected(i, f, p))

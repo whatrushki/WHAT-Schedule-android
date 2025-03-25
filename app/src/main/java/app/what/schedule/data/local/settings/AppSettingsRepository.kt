@@ -1,6 +1,8 @@
 package app.what.schedule.data.local.settings
 
 import android.content.Context
+import app.what.schedule.data.remote.api.Group
+import app.what.schedule.data.remote.api.Teacher
 
 class AppSettingsRepository(context: Context) {
     private val sharedPreferences =
@@ -23,17 +25,23 @@ class AppSettingsRepository(context: Context) {
     fun setFirstLaunch(value: Boolean) =
         sharedPreferences.edit().putBoolean(Keys.IS_FIRST_LAUNCH, value).apply()
 
-    fun getLastSearchedGroup(): String? =
-        sharedPreferences.getString(Keys.LAST_SEARCHED_GROUP, null)
+    fun getLastSearchedGroup(): Group? = sharedPreferences
+        .getString(Keys.LAST_SEARCHED_GROUP, null)
+        ?.let { val raw = it.split("|"); Group(raw[0], raw[1]) }
 
-    fun setLastSearchedGroup(value: String) =
-        sharedPreferences.edit().putString(Keys.LAST_SEARCHED_GROUP, value).apply()
+    fun setLastSearchedGroup(value: Group) = sharedPreferences
+        .edit()
+        .putString(Keys.LAST_SEARCHED_GROUP, "${value.name}|${value.id}")
+        .apply()
 
-    fun getLastSearchedTeacher(): String? =
-        sharedPreferences.getString(Keys.LAST_SEARCHED_TEACHER, null)
+    fun getLastSearchedTeacher(): Teacher? = sharedPreferences
+        .getString(Keys.LAST_SEARCHED_TEACHER, null)
+        ?.let { val raw = it.split("|"); Teacher(raw[0], raw[1]) }
 
-    fun setLastSearchedTeacher(value: String) =
-        sharedPreferences.edit().putString(Keys.LAST_SEARCHED_TEACHER, value).apply()
+    fun setLastSearchedTeacher(value: Teacher) = sharedPreferences
+        .edit()
+        .putString(Keys.LAST_SEARCHED_TEACHER, "${value.name}|${value.id}")
+        .apply()
 
     fun getUsedServer(): AppServers =
         AppServers.entries[sharedPreferences.getInt(Keys.USED_SERVER, AppServers.RKSI.ordinal)]

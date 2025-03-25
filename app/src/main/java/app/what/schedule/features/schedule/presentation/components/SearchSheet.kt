@@ -21,8 +21,8 @@ import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.useState
 import app.what.navigation.core.rememberSheetController
 import app.what.schedule.data.remote.api.Group
-import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.api.toScheduleSearch
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.features.schedule.domain.models.ScheduleState
 import app.what.schedule.presentation.theme.icons.WHATIcons
@@ -47,7 +47,7 @@ val SearchSheet = @Composable { state: ScheduleState, listener: Listener<Schedul
         val groups = remember(
             query,
             state.groups.size
-        ) { state.groups.filter { query.lowercase() in it.id.lowercase() } }
+        ) { state.groups.filter { query.lowercase() in it.name.lowercase() } }
 
         SearchBox(query, setQuery, Modifier.padding(horizontal = 12.dp))
 
@@ -95,41 +95,34 @@ val SearchSheet = @Composable { state: ScheduleState, listener: Listener<Schedul
                 list.size,
                 key = {
                     when (val item = list[it]) {
-                        is Group -> item.id
-                        is Teacher -> item.id
-                        else -> ""
+                        is Group -> "group_${item.id}"
+                        is Teacher -> "teacher_${item.id}"
+                        else -> "erererere"
                     }
                 }
             ) { index ->
-                val item = list[index]
+                val name = when (val item = list[index]) {
+                    is Group -> item.name
+                    is Teacher -> item.name
+                    else -> ""
+                }
 
                 LessonTeacherChip(
-                    name = when (item) {
-                        is Group -> item.name
-                        is Teacher -> item.name
-                        else -> ""
-                    },
-                    selected = state.search?.query == when (item) {
-                        is Group -> item.id
-                        is Teacher -> item.id
-                        else -> ""
-                    },
+                    name = name,
+                    selected = state.search?.name == name,
                     modifier = Modifier
                         .animateItem()
                         .padding(horizontal = 8.dp)
                 ) {
-                    when (item) {
-                        is Group -> item.id
-                        is Teacher -> item.id
-                        else -> null
-                    }?.let {
-                        listener(
-                            ScheduleEvent.OnSearchCompleted(
-                                if (selectedTab == 0) ScheduleSearch.Group(it)
-                                else ScheduleSearch.Teacher(it)
-                            )
+                    listener(
+                        ScheduleEvent.OnSearchCompleted(
+                            when (val item = list[index]) {
+                                is Group -> item.toScheduleSearch()
+                                is Teacher -> item.toScheduleSearch()
+                                else -> throw Exception("")
+                            }
                         )
-                    }
+                    )
 
                     sheetController.animateClose()
                 }

@@ -3,10 +3,10 @@ package app.what.foundation.utils
 import kotlinx.coroutines.delay
 
 
-suspend fun retry(times: Int, sleep: Long? =null, block: suspend () -> Unit) {
+suspend fun retry(times: Int, sleep: Long? = null, block: suspend (Int) -> Unit) {
     repeat(times) { attempt ->
         try {
-            block()
+            block(attempt)
             return@retry
         } catch (e: Exception) {
             if (attempt == times - 1) throw e

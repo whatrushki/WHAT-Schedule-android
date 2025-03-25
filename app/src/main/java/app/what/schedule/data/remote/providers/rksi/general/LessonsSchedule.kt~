@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.impl.rksi
+package app.what.schedule.data.remote.providers.rksi
 
 import app.what.schedule.data.remote.api.LessonTime
 import app.what.schedule.data.remote.api.LessonType

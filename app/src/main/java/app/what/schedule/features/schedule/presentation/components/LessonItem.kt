@@ -40,8 +40,9 @@ import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.applyIf
 import app.what.foundation.ui.bclick
+import app.what.foundation.ui.capplyIf
 import app.what.foundation.ui.useState
-import app.what.foundation.utils.remember
+import app.what.foundation.utils.freeze
 import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.Lesson
 import app.what.schedule.data.remote.api.LessonState
@@ -89,7 +90,7 @@ fun LessonUI(
 @Composable
 private fun getCommonViewAccentColor(state: LessonState, type: LessonType) = when (state) {
     LessonState.REMOVED -> colorScheme.secondary
-    else -> if (type != LessonType.COMMON) colorScheme.tertiary
+    else -> if (type.isNonStandard) colorScheme.tertiary
     else colorScheme.primary
 }
 
@@ -105,8 +106,6 @@ private fun EventView(
     val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
 
     val (expanded, setExpanded) = useState(currentTime != null && currentTime in data.startTime..data.endTime)
-
-    val expandedShape = shapes.medium
 
     val expandedTitleBoxBackground by animateColorAsState(
         if (expanded) commonViewAccentColor.copy(alpha = .2f)
@@ -129,10 +128,10 @@ private fun EventView(
         modifier = modifier
             .animateContentSize()
             .fillMaxWidth()
-            .applyIf(expanded) {
+            .capplyIf(expanded) {
                 height(134.dp)
                     .padding(12.dp, 0.dp)
-                    .clip(expandedShape)
+                    .clip(shapes.medium)
             }
             .background(backgroundColor)
             .bclick(enabled = expandable) {
@@ -344,9 +343,8 @@ private fun OtUnitsView(
     otUnits: List<OneTimeUnit>,
     listener: Listener<ScheduleEvent>,
     color: Color = colorScheme.secondary,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(
-        if (viewType == ViewType.TEACHER) 16.dp else 8.dp
-    )
+    horizontalArrangement: Arrangement.Horizontal =
+        Arrangement.spacedBy(if (viewType == ViewType.TEACHER) 16.dp else 8.dp)
 ) = Row(
     modifier = Modifier
         .fillMaxWidth()
@@ -360,15 +358,11 @@ private fun OtUnitsView(
                 icon = if (viewType == ViewType.STUDENT) WHATIcons.Person
                 else WHATIcons.Group,
                 text = if (viewType == ViewType.TEACHER) it.group.name
-                else it.teacher.name.replace("__", "_"),
+                else it.teacher.name,
                 modifier = Modifier.bclick {
                     if (viewType == ViewType.TEACHER)
-                        listener(ScheduleEvent.OnLessonItemGroupClicked(it.group.name))
-                    else listener(
-                        ScheduleEvent.OnLessonItemTeacherClicked(
-                            it.teacher.name
-                        )
-                    )
+                        listener(ScheduleEvent.OnLessonItemGroupClicked(it.group))
+                    else listener(ScheduleEvent.OnLessonItemTeacherClicked(it.teacher))
                 }
             )
 
@@ -397,18 +391,19 @@ private fun CommonViewSubject(
     setExpandable: (Boolean) -> Unit
 ) = Box(
     Modifier
-        .clip(CircleShape)
+        .clip(if (expanded) shapes.medium else CircleShape)
         .fillMaxWidth()
         .background(accentColor.copy(alpha = .2f))
 ) {
     val isLongTitle = subject.split(" ").size > 3
     val (subjectFontSize, setSubjectFontSize) = useState(if (isLongTitle) 12 else 16)
 
-    Text(modifier = Modifier.padding(16.dp, 8.dp),
+    Text(
+        modifier = Modifier.padding(16.dp, 8.dp),
         text = subject,
         color = when (state) {
             LessonState.REMOVED -> colorScheme.secondary
-            else -> if (type != LessonType.COMMON) colorScheme.tertiary
+            else -> if (type.isNonStandard) colorScheme.tertiary
             else colorScheme.onPrimaryContainer
         },
         fontSize = subjectFontSize.sp,
@@ -426,6 +421,7 @@ private fun CommonViewSubject(
         }
     )
 }
+
 
 @Composable
 private fun CommonViewLeftSegment(
@@ -511,7 +507,7 @@ private fun AdditionalInfo(
 @Composable
 fun LessonPreview() = Column {
     MaterialTheme {
-        val currentTime = LocalTime.of(13, 40).remember()
+        val currentTime = LocalTime.of(13, 40).freeze()
         Gap(12)
 
         val lesson = LessonUI(

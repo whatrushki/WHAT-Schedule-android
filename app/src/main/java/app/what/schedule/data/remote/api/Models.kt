@@ -44,7 +44,10 @@ enum class LessonState {
 }
 
 enum class LessonType {
-    COMMON, ADDITIONAL, CLASS_HOUR
+    COMMON, ADDITIONAL, CLASS_HOUR, LECTURE, PRACTISE, LABORATORY, CREDIT;
+
+    val isStandard get() = this != ADDITIONAL && this != CLASS_HOUR && this != LABORATORY && this != CREDIT
+    val isNonStandard get() = !isStandard
 }
 
 data class OneTimeUnit(
@@ -93,7 +96,13 @@ interface LessonsSchedule {
     fun List<LessonTime>.getByNumber(number: Int) = firstOrNull { it.number == number }
 }
 
-sealed class ScheduleSearch(val query: String) {
-    class Group(query: String) : ScheduleSearch(query)
-    class Teacher(query: String) : ScheduleSearch(query)
+sealed class ScheduleSearch(val name: String, val id: String) {
+    class Group(name: String, id: String = name) : ScheduleSearch(name, id)
+    class Teacher(name: String, id: String = name) : ScheduleSearch(name, id)
 }
+
+fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id)
+fun Teacher.toScheduleSearch() = ScheduleSearch.Teacher(name, id)
+
+fun ScheduleSearch.Group.toGroup() = Group(name, id)
+fun ScheduleSearch.Teacher.toTeacher() = Teacher(name, id)

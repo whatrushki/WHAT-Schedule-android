@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,16 +19,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.what.foundation.core.Listener
-import app.what.foundation.data.rememberEnumPreference
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.SegmentTab
-import app.what.schedule.data.local.settings.AppSettingsRepository
 import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.features.settings.domain.models.SettingsEvent
 import app.what.schedule.features.settings.domain.models.SettingsState
-import app.what.schedule.presentation.theme.icons.WHATIcons
-import app.what.schedule.presentation.theme.icons.filled.Domain
-import app.what.schedule.presentation.theme.icons.filled.MeetingRoom
 import org.koin.compose.koinInject
 
 @Composable
