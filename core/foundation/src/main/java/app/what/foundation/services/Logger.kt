@@ -55,7 +55,8 @@ class AppLogger private constructor(context: Context) {
         }
 
         val Auditor
-            get() = instance ?: throw IllegalStateException("FileLogger not initialized. Call initialize() first.")
+            get() = instance
+                ?: throw IllegalStateException("FileLogger not initialized. Call initialize() first.")
     }
 
     @Volatile
@@ -81,12 +82,23 @@ class AppLogger private constructor(context: Context) {
 
     fun debug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
     fun info(tag: String, message: String) = log(LogLevel.INFO, tag, message)
-    fun warn(tag: String, message: String, throwable: Throwable? = null) = log(LogLevel.WARNING, tag, message, throwable)
-    fun err(tag: String, message: String, throwable: Throwable? = null) = log(LogLevel.ERROR, tag, message, throwable)
-    fun critic(tag: String, message: String, throwable: Throwable? = null) = log(LogLevel.CRITICAL, tag, message, throwable)
+    fun warn(tag: String, message: String, throwable: Throwable? = null) =
+        log(LogLevel.WARNING, tag, message, throwable)
+
+    fun err(tag: String, message: String, throwable: Throwable? = null) =
+        log(LogLevel.ERROR, tag, message, throwable)
+
+    fun critic(tag: String, message: String, throwable: Throwable? = null) =
+        log(LogLevel.CRITICAL, tag, message, throwable)
 
     fun log(level: LogLevel, tag: String, message: String, throwable: Throwable? = null) {
-        val entry = LogEntry(id = autoIncrementedId, level = level, tag = tag, message = message, throwable = throwable)
+        val entry = LogEntry(
+            id = autoIncrementedId,
+            level = level,
+            tag = tag,
+            message = message,
+            throwable = throwable
+        )
 
         // Уведомляем если не остановлено
         if (!isLoggingPaused) {
@@ -131,7 +143,8 @@ class AppLogger private constructor(context: Context) {
         if (lines.isEmpty()) return null
 
         // Паттерн для первой строки: [🐛] [2024-01-15 14:30:25.123] [MainActivity] Сообщение
-        val pattern = """\[(.)\] \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] \[(.*)\] (.*)""".toRegex()
+        val pattern =
+            """\[(.)\] \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] \[(.*)\] (.*)""".toRegex()
 
         return pattern.find(lines[0])?.let { matchResult ->
             val (emoji, timestampStr, tag, message) = matchResult.destructured

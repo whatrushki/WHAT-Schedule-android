@@ -1,8 +1,6 @@
 package app.what.foundation.services.crash
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.gestures.rememberScrollable2DState
-import androidx.compose.foundation.gestures.scrollable2D
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

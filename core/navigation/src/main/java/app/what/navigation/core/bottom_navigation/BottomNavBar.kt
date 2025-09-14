@@ -33,9 +33,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
-import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.Show
+import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.navigation.core.Navigator
 import app.what.navigation.core.rememberNavigator
 import kotlin.math.roundToInt

@@ -11,16 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun <T : Any?> useState(initialValue: T): MutableState<T> {
@@ -75,7 +69,7 @@ fun rememberIsAppInForeground(): MutableState<Boolean> {
     DisposableEffect(Unit) {
         val app = context.applicationContext as Application
 
-        val callback = object :  Application.ActivityLifecycleCallbacks {
+        val callback = object : Application.ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 isForeground.value = true
             }
@@ -98,7 +92,8 @@ fun rememberIsAppInForeground(): MutableState<Boolean> {
             override fun onActivityCreated(
                 activity: Activity,
                 savedInstanceState: Bundle?
-            ) {}
+            ) {
+            }
 
             override fun onActivityDestroyed(activity: Activity) {}
 

@@ -237,8 +237,16 @@ fun SettingsScreenGenerator(
                     label = "SettingsScreenAnimation"
                 ) { targetState ->
                     when (targetState) {
-                        is SettingsNode.Category -> CategoryNodeUI(targetState, navigator::navigateTo)
-                        is SettingsNode.SettingsGroup -> GroupNodeUI(targetState, navigator::navigateTo)
+                        is SettingsNode.Category -> CategoryNodeUI(
+                            targetState,
+                            navigator::navigateTo
+                        )
+
+                        is SettingsNode.SettingsGroup -> GroupNodeUI(
+                            targetState,
+                            navigator::navigateTo
+                        )
+
                         is SettingsNode.Setting<*> -> SettingDetailUI(targetState)
                     }
                 }

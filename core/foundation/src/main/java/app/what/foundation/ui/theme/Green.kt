@@ -4,7 +4,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-internal  val greenLightScheme by lazy {
+internal val greenLightScheme by lazy {
     lightColorScheme(
         primary = Color(0xFF446732),
         onPrimary = Color(0xFFFFFFFF),
@@ -44,7 +44,7 @@ internal  val greenLightScheme by lazy {
     )
 }
 
-internal  val greenDarkScheme by lazy {
+internal val greenDarkScheme by lazy {
     darkColorScheme(
         primary = Color(0xFFAAD291),
         onPrimary = Color(0xFF173807),

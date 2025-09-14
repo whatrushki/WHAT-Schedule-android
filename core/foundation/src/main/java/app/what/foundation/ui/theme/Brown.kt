@@ -1,10 +1,10 @@
 package app.what.foundation.ui.theme
 
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-internal  val brownLightScheme by lazy {
+internal val brownLightScheme by lazy {
     lightColorScheme(
         primary = Color(0xFF895120),
         onPrimary = Color(0xFFFFFFFF),
