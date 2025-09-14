@@ -16,18 +16,10 @@ jobs:
 
       - uses: actions/setup-java@v1
         with:
-          distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: ${{ runner.os }}-gradle
 
       - name: Run lint
         run: ./gradlew lint
@@ -37,6 +29,13 @@ jobs:
           ./gradlew test
           ./gradlew assembleRelease
           ./gradlew bundleRelease
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: ${{ runner.os }}-gradle
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
