@@ -1,21 +1,539 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Apache POI и зависимости
+-keep class org.apache.poi.** { *; }
+-keep class org.apache.xmlbeans.** { *; }
+-keep class org.openxmlformats.** { *; }
+-keep class schemas.microsoft.com.** { *; }
+-keep class com.microsoft.schemas.** { *; }
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Logging (Log4j)
+-keep class org.apache.logging.log4j.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# XML и related
+-keep class javax.xml.** { *; }
+-keep class org.w3c.dom.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Игнорировать предупреждения для специфичных классов
+-dontwarn java.awt.**
+-dontwarn javax.swing.**
+-dontwarn org.apache.batik.**
+-dontwarn org.apache.fop.**
+-dontwarn net.sf.saxon.**
+-dontwarn org.osgi.**
+-dontwarn com.github.javaparser.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.apache.maven.**
+-dontwarn org.apache.tools.ant.**
+
+# Сохранить аннотации и сигнатуры для reflection
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+
+# Сохранить нативные методы
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# ========================
+# Navigation Core Rules
+# ========================
+
+# Сохраняем все классы навигации
+-keep class app.what.navigation.core.** { *; }
+
+# Сохраняем все SheetProvider реализации
+-keep class * implements app.what.navigation.core.SheetProvider { *; }
+-keepclassmembers class * implements app.what.navigation.core.SheetProvider {
+    public <init>(...);
+}
+
+# Сохраняем все NavProvider реализации
+-keep class * implements app.what.navigation.core.NavProvider { *; }
+
+# Сохраняем все NavComponent реализации
+-keep class * extends app.what.navigation.core.NavComponent { *; }
+-keepclassmembers class * extends app.what.navigation.core.NavComponent {
+    public <init>(...);
+}
+
+# Сохраняем KClass информацию для reflection
+-keepattributes RuntimeVisibleAnnotations, Signature, InnerClasses
+-keep class kotlin.reflect.** { *; }
+
+# Сохраняем имена классов для поиска через reflection
+-keepnames class app.what.navigation.core.** { *; }
+
+# Для Jetpack Compose
+-keep @androidx.compose.runtime.Composable class *
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable *;
+}
+
+# Сохраняем extension функции
+-keepclassmembers class app.what.navigation.core.** {
+    public static void register(...);
+}
+
+# Сохраняем SheetNavigator и SheetNavGraph полностью
+-keep class app.what.navigation.core.SheetNavigator {
+    *;
+}
+-keep class app.what.navigation.core.SheetNavGraph {
+    *;
+}
+
+# Сохраняем вспомогательные классы
+-keep class androidx.navigation.NavGraphBuilder { *; }
+
+# Please add these rules to your existing keep rules in order to suppress warnings.
+# This is generated automatically by the Android Gradle plugin.
+-dontwarn aQute.bnd.annotation.baseline.BaselineIgnore
+-dontwarn aQute.bnd.annotation.spi.ServiceConsumer
+-dontwarn aQute.bnd.annotation.spi.ServiceProvider
+-dontwarn com.google.errorprone.annotations.InlineMe
+-dontwarn com.microsoft.schemas.office.office.CTCallout
+-dontwarn com.microsoft.schemas.office.office.CTClipPath
+-dontwarn com.microsoft.schemas.office.office.CTDiagram
+-dontwarn com.microsoft.schemas.office.office.CTEquationXml
+-dontwarn com.microsoft.schemas.office.office.CTExtrusion
+-dontwarn com.microsoft.schemas.office.office.CTFill
+-dontwarn com.microsoft.schemas.office.office.CTInk
+-dontwarn com.microsoft.schemas.office.office.CTRegroupTable
+-dontwarn com.microsoft.schemas.office.office.CTRules
+-dontwarn com.microsoft.schemas.office.office.CTSkew
+-dontwarn com.microsoft.schemas.office.office.CTStrokeChild
+-dontwarn com.microsoft.schemas.office.office.STDiagramLayout
+-dontwarn com.microsoft.schemas.office.office.STOLELinkType
+-dontwarn com.microsoft.schemas.office.office.STOLEUpdateMode
+-dontwarn com.microsoft.schemas.office.office.STScreenSize
+-dontwarn com.microsoft.schemas.office.powerpoint.CTEmpty
+-dontwarn com.microsoft.schemas.office.powerpoint.CTRel
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.AttachedToolbarsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ColorsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.CpType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.CustomMenusFileType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.CustomToolbarsFileType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.DataType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.DocumentSheetType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.DynamicGridEnabledType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.EventListType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.FaceNamesType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.FldType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ForeignDataType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.GlueSettingsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.HeaderFooterType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.IconType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.MasterShortcutType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.PpType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ProtectBkgndsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ProtectMastersType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ProtectShapesType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.ProtectStylesType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.PublishSettingsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.RefByType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.SnapAnglesType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.SnapExtensionsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.SnapSettingsType
+-dontwarn com.microsoft.schemas.office.visio.x2012.main.TpType
+-dontwarn com.microsoft.schemas.office.word.CTBorder
+-dontwarn com.microsoft.schemas.office.word.STHorizontalAnchor
+-dontwarn com.microsoft.schemas.office.word.STVerticalAnchor
+-dontwarn com.microsoft.schemas.office.word.STWrapSide
+-dontwarn com.microsoft.schemas.office.x2006.digsig.STPositiveInteger
+-dontwarn com.microsoft.schemas.office.x2006.digsig.STSignatureProviderUrl
+-dontwarn com.microsoft.schemas.office.x2006.digsig.STSignatureText
+-dontwarn com.microsoft.schemas.office.x2006.digsig.STVersion
+-dontwarn com.microsoft.schemas.vml.CTArc
+-dontwarn com.microsoft.schemas.vml.CTCurve
+-dontwarn com.microsoft.schemas.vml.CTImage
+-dontwarn com.microsoft.schemas.vml.CTPolyLine
+-dontwarn com.microsoft.schemas.vml.STImageAspect
+-dontwarn com.microsoft.schemas.vml.STStrokeArrowLength
+-dontwarn com.microsoft.schemas.vml.STStrokeArrowWidth
+-dontwarn com.microsoft.schemas.vml.STStrokeEndCap
+-dontwarn com.microsoft.schemas.vml.STStrokeLineStyle
+-dontwarn com.sun.org.apache.xml.internal.resolver.CatalogManager
+-dontwarn com.sun.org.apache.xml.internal.resolver.tools.CatalogResolver
+-dontwarn edu.umd.cs.findbugs.annotations.Nullable
+-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+-dontwarn javax.imageio.ImageIO
+-dontwarn javax.imageio.ImageReadParam
+-dontwarn javax.imageio.ImageReader
+-dontwarn javax.imageio.ImageTypeSpecifier
+-dontwarn javax.imageio.metadata.IIOMetadata
+-dontwarn javax.imageio.stream.ImageInputStream
+-dontwarn javax.imageio.stream.MemoryCacheImageInputStream
+-dontwarn javax.xml.stream.Location
+-dontwarn javax.xml.stream.XMLEventFactory
+-dontwarn javax.xml.stream.XMLInputFactory
+-dontwarn javax.xml.stream.XMLOutputFactory
+-dontwarn javax.xml.stream.XMLStreamException
+-dontwarn javax.xml.stream.XMLStreamReader
+-dontwarn javax.xml.stream.XMLStreamWriter
+-dontwarn javax.xml.stream.util.StreamReaderDelegate
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTBandFmts
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTBubbleScale
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTDLbl
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTDTable
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTDispUnits
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTExtension
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTLblOffset
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTMultiLvlStrRef
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTPictureOptions
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTPivotFmts
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTPivotSource
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTProtection
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTSizeRepresents
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTSkip
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTStockChart
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTStyle
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTTextLanguageID
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTTimeUnit
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTTrendline
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.CTUpDownBars
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STFirstSliceAng
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STMarkerSize
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STPageSetupOrientation
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STPerspective
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STRotX
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STRotY
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.chart.STThickness
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.diagram.STModelId
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaBiLevelEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaCeilingEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaFloorEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaInverseEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaModulateEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaOutsetEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAlphaReplaceEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAngle
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAnimationElementChoice
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTAudioCD
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBackdrop
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBevel
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBiLevelEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBlendEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBlurEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTBoolean
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTCamera
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTCell3D
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTColorChangeEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTColorReplaceEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTColorSchemeList
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTConnectorLocking
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTCustomColorList
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTEffectReference
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTEmbeddedWAVAudioFile
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTFillEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTFillOverlayEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTFlatText
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTGammaTransform
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTGlowEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTGrayscaleEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTGrayscaleTransform
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTGroupLocking
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTHSLEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTHeaders
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTInnerShadowEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTInverseGammaTransform
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTInverseTransform
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTLightRig
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTLuminanceEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTObjectStyleDefaults
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTPresetShadowEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTPresetTextShape
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTQuickTimeFile
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTReflectionEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTRelativeOffsetEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTShapeLocking
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTSoftEdgesEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTSupplementalFont
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTableBackgroundStyle
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTableCellBorderStyle
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTextUnderlineFillGroupWrapper
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTextUnderlineLineFollowText
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTintEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.CTTransformEffect
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.STEffectContainerType
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.STFixedAngle
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.STPresetMaterialType
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.STShapeID
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.main.STTextColumnCount
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTRel
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTWrapThrough
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTWrapTight
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTWrapTopBottom
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.STAlignH
+-dontwarn org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.STAlignV
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.CTArray
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.CTEmpty
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.CTNull
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.CTVstream
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.STCy
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.STError
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.docPropsVTypes.STVectorBaseType
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTAcc
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTBar
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTBorderBox
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTBox
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTChar
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTEqArr
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTF
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTFunc
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTGroupChr
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTLimLow
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTLimUpp
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTMathPr
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTNary
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTOMathArgPr
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTOMathParaPr
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTOnOff
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTPhant
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTRPR
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTRad
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTSPre
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTSSubSup
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTSSup
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTShp
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTSpacingRule
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTUnSignedInteger
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.math.CTYAlign
+-dontwarn org.openxmlformats.schemas.officeDocument.x2006.sharedTypes.STConformanceClass
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTBuildList
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTControlList
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTCustomShowList
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTCustomerData
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTEmpty
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTExtensionListModify
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTKinsoku
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTModifyVerifier
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTOleObjectEmbed
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTOleObjectLink
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTPhotoAlbum
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTSlideLayoutIdList
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTSlideTransition
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTSmartTags
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateColorBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateEffectBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateMotionBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateRotationBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLAnimateScaleBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLCommandBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLIterateData
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLMediaNodeAudio
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLOleChartTargetElement
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLSetBehavior
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLSubShapeId
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLTextTargetElement
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLTimeNodeExclusive
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLTimeNodeSequence
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLTriggerRuntimeNode
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.CTTLTriggerTimeNodeID
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STDirection
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STIndex
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STTLTimeNodeID
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STTLTimeNodeMasterRelation
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STTLTimeNodePresetClassType
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STTLTimeNodeSyncType
+-dontwarn org.openxmlformats.schemas.presentationml.x2006.main.STTLTriggerEvent
+-dontwarn org.openxmlformats.schemas.schemaLibrary.x2006.main.CTSchemaLibrary
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTBoolean
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCacheHierarchies
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCalculatedItems
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCalculatedMembers
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCellStyles
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTChartFormat
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTChartsheetPr
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTChartsheetProtection
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTChartsheetViews
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCommentPr
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTConditionalFormat
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTConsolidation
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTControlPr
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCsPageSetup
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCustomChartsheetViews
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDataBinding
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDataRefs
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDateTime
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDdeLink
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDimensions
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDrawingHF
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTError
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTFieldGroup
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTFilterColumn
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTFormat
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTFunctionGroup
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTGradientFill
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTHierarchyUsage
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTI
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTMRUColors
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTMeasureDimensionMaps
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTMeasureGroups
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTMissing
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTNumber
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTObjectPr
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTOleLink
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTPCDKPIs
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTPivotFilter
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTPivotHierarchy
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTPivotSelection
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTRecord
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTScenarios
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSmartTagPr
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSmartTagTypes
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSmartTags
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTString
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTupleCache
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTWebPublishItems
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTWebPublishObjects
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.CTX
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STComments
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STDataValidationImeMode
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STOleUpdate
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STPhoneticAlignment
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STPivotAreaType
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STShowDataAs
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STSortBy
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STSortMethod
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STTableType
+-dontwarn org.openxmlformats.schemas.spreadsheetml.x2006.main.STTargetScreenSize
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAltChunkPr
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCaptions
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCellMergeTrackChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCharacterSpacing
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTColorSchemeMapping
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTColumn
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCompat
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTControl
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCustomXmlBlock
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCustomXmlCell
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTCustomXmlRow
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDecimalNumberOrPrecent
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocRsids
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocType
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocVars
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTEastAsianLayout
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTEdnDocProps
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTEdnPos
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFFDDList
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFFHelpText
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFFStatusText
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFFTextType
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFtnDocProps
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTHeaders
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTKinsoku
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLevelSuffix
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLineNumber
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLongHexNumber
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLvlLegacy
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTMacroName
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTMailMerge
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTMathCtrlDel
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTMathCtrlIns
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTMultiLevelType
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTNumPicBullet
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTObjectEmbed
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTObjectLink
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPrChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTProof
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTReadingModeInkLockDown
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSaveThroughXslt
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPrChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTShapeDefaults
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSmartTagType
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStylePaneFilter
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyleSort
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblGridChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblPrChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblPrExChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblStylePr
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTcPrChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTextEffect
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTextboxTightWrap
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTrPrChange
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTrackChangeNumbering
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTrackChangesView
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTwipsMeasure
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTUnsignedDecimalNumber
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTView
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTWriteProtection
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.CTWritingStyle
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STChapterSep
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STDropCap
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STPTabAlignment
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STPTabLeader
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STPTabRelativeTo
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STPageBorderZOrder
+-dontwarn org.openxmlformats.schemas.wordprocessingml.x2006.main.STZoom
+-dontwarn de.rototor.pdfbox.graphics2d.IPdfBoxGraphics2DFontTextDrawer$IFontTextDrawerEnv
+-dontwarn de.rototor.pdfbox.graphics2d.IPdfBoxGraphics2DFontTextDrawer
+-dontwarn de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
+-dontwarn de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
+-dontwarn javax.xml.crypto.AlgorithmMethod
+-dontwarn javax.xml.crypto.Data
+-dontwarn javax.xml.crypto.KeySelector$Purpose
+-dontwarn javax.xml.crypto.KeySelector
+-dontwarn javax.xml.crypto.KeySelectorException
+-dontwarn javax.xml.crypto.KeySelectorResult
+-dontwarn javax.xml.crypto.MarshalException
+-dontwarn javax.xml.crypto.OctetStreamData
+-dontwarn javax.xml.crypto.URIDereferencer
+-dontwarn javax.xml.crypto.URIReference
+-dontwarn javax.xml.crypto.URIReferenceException
+-dontwarn javax.xml.crypto.XMLCryptoContext
+-dontwarn javax.xml.crypto.XMLStructure
+-dontwarn javax.xml.crypto.dom.DOMStructure
+-dontwarn javax.xml.crypto.dsig.CanonicalizationMethod
+-dontwarn javax.xml.crypto.dsig.DigestMethod
+-dontwarn javax.xml.crypto.dsig.Manifest
+-dontwarn javax.xml.crypto.dsig.Reference
+-dontwarn javax.xml.crypto.dsig.SignatureMethod
+-dontwarn javax.xml.crypto.dsig.SignatureProperties
+-dontwarn javax.xml.crypto.dsig.SignatureProperty
+-dontwarn javax.xml.crypto.dsig.SignedInfo
+-dontwarn javax.xml.crypto.dsig.Transform
+-dontwarn javax.xml.crypto.dsig.TransformException
+-dontwarn javax.xml.crypto.dsig.TransformService
+-dontwarn javax.xml.crypto.dsig.XMLObject
+-dontwarn javax.xml.crypto.dsig.XMLSignContext
+-dontwarn javax.xml.crypto.dsig.XMLSignature
+-dontwarn javax.xml.crypto.dsig.XMLSignatureException
+-dontwarn javax.xml.crypto.dsig.XMLSignatureFactory
+-dontwarn javax.xml.crypto.dsig.XMLValidateContext
+-dontwarn javax.xml.crypto.dsig.dom.DOMSignContext
+-dontwarn javax.xml.crypto.dsig.dom.DOMValidateContext
+-dontwarn javax.xml.crypto.dsig.keyinfo.KeyInfo
+-dontwarn javax.xml.crypto.dsig.keyinfo.KeyInfoFactory
+-dontwarn javax.xml.crypto.dsig.keyinfo.KeyValue
+-dontwarn javax.xml.crypto.dsig.keyinfo.X509Data
+-dontwarn javax.xml.crypto.dsig.keyinfo.X509IssuerSerial
+-dontwarn javax.xml.crypto.dsig.spec.C14NMethodParameterSpec
+-dontwarn javax.xml.crypto.dsig.spec.DigestMethodParameterSpec
+-dontwarn javax.xml.crypto.dsig.spec.SignatureMethodParameterSpec
+-dontwarn javax.xml.crypto.dsig.spec.TransformParameterSpec
+-dontwarn javax.xml.stream.events.Namespace
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.ApacheNodeSetData
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.DOMKeyInfo
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.DOMReference
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.DOMSignedInfo
+-dontwarn org.apache.jcp.xml.dsig.internal.dom.DOMSubTreeData
+-dontwarn org.apache.pdfbox.pdmodel.PDDocument
+-dontwarn org.apache.pdfbox.pdmodel.PDPage
+-dontwarn org.apache.pdfbox.pdmodel.PDPageContentStream
+-dontwarn org.apache.pdfbox.pdmodel.common.PDRectangle
+-dontwarn org.apache.pdfbox.pdmodel.font.PDFont
+-dontwarn org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+-dontwarn org.apache.xml.security.Init
+-dontwarn org.apache.xml.security.c14n.Canonicalizer
+-dontwarn org.apache.xml.security.signature.XMLSignatureInput
+-dontwarn org.apache.xml.security.utils.XMLUtils
+-dontwarn org.ietf.jgss.GSSException
+-dontwarn org.ietf.jgss.Oid
+-dontwarn org.w3c.dom.events.Event
+-dontwarn org.w3c.dom.events.EventListener
+-dontwarn org.w3c.dom.events.EventTarget
+-dontwarn org.w3c.dom.events.MutationEvent
+-dontwarn org.w3c.dom.svg.SVGDocument
+-dontwarn org.w3c.dom.svg.SVGSVGElement
+-dontwarn org.w3c.dom.traversal.DocumentTraversal
+-dontwarn org.w3c.dom.traversal.NodeFilter
+-dontwarn org.w3c.dom.traversal.NodeIterator

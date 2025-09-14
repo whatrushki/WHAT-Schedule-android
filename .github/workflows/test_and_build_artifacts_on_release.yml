@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  RELEASE_SIGN_KEY_ALIAS: ${{ secrets.RELEASE_SIGN_KEY_ALIAS }}
+  RELEASE_SIGN_KEY_PASSWORD: ${{ secrets.RELEASE_SIGN_KEY_PASSWORD }}
+
 jobs:
   build_apk_aab:
 #    if: startsWith(github.head_ref, 'master/') == true
@@ -18,6 +23,13 @@ jobs:
         with:
           java-version: '17'
 
+      - name: Checkout keystore repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.KEYSTORE_GIT_REPOSITORY }}
+          token: ${{ secrets.KEYSTORE_ACCESS_TOKEN }}
+          path: app/keystore
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -27,7 +39,7 @@ jobs:
       - name: Build release APK and AAB after test
         run: |
           ./gradlew test
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace
           ./gradlew bundleRelease
 
       - name: Cache Gradle packages

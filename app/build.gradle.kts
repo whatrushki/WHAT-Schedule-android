@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.google.devtools.ksp")
     alias(libs.plugins.android.application)
@@ -18,27 +20,61 @@ android {
         versionName = "0.9.0-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePropsFile = file("keystore/keystore_config.properties")
+            if (keystorePropsFile.exists()) {
+                val keystoreProperties = Properties().apply {
+                    keystorePropsFile.inputStream().use { load(it) }
+                }
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            } else {
+                storeFile = file("keystore/what_apps_keystore.keystore")
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("RELEASE_SIGN_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("RELEASE_SIGN_KEY_PASSWORD") ?: ""
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true    // Включить для релиза
+            isShrinkResources = true  // Удалить неиспользуемые ресурсы
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            isMinifyEnabled = false   // Отключить для отладки
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
@@ -48,10 +84,11 @@ android {
     }
 }
 
+
+
 dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
-    implementation(libs.material3)
 
     ksp(libs.room.compiler)
 
