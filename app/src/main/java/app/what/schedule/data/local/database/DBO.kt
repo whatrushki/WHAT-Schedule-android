@@ -28,7 +28,7 @@ data class RequestDBO(
         childColumns = ["fromRequest"],
         entity = RequestDBO::class,
         onDelete = ForeignKey.CASCADE
-    )]
+    )], indices = [Index(value = ["fromRequest"])]
 )
 data class DayScheduleDBO(
     @PrimaryKey(autoGenerate = true)
@@ -45,7 +45,8 @@ data class DayScheduleDBO(
         childColumns = ["fromDay"],
         entity = DayScheduleDBO::class,
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index(value = ["fromDay"])]
 )
 data class LessonDBO(
     @PrimaryKey(autoGenerate = true)
@@ -66,7 +67,8 @@ data class LessonDBO(
         parentColumns = ["id"],
         childColumns = ["lessonId"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index(value = ["lessonId"])]
 )
 data class OneTimeUnitDBO(
     @PrimaryKey(autoGenerate = true)
