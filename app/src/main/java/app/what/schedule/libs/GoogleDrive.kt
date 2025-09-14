@@ -1,6 +1,6 @@
 package app.what.schedule.libs
 
-import android.util.Log
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.retry
 import com.fleeksoft.ksoup.Ksoup
 import io.ktor.client.HttpClient
@@ -29,10 +29,10 @@ class GoogleDriveParser(
     }
 
     suspend fun getFolderContent(folderId: String): List<Item> {
-        Log.d("d", "getFolderContent: https://drive.google.com/drive/folders/$folderId")
+        Auditor.debug("d", "getFolderContent: https://drive.google.com/drive/folders/$folderId")
         var items: List<Item> = emptyList()
         retry(3, 500) {
-            Log.d("d", "getFolderContent: attempt $it")
+            Auditor.debug("d", "getFolderContent: attempt $it")
             val response =
                 client.get("https://drive.google.com/drive/folders/$folderId").bodyAsText()
             val document = Ksoup.parse(response)

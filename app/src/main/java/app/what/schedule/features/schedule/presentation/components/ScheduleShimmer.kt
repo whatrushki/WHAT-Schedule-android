@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.rememberShimmer
+import app.what.foundation.ui.animations.rememberShimmer
 
 @Preview
 @Composable

@@ -10,5 +10,7 @@ sealed interface ScheduleEvent {
     object OnRefresh : ScheduleEvent
     class OnLessonItemTeacherClicked(val value: Teacher) : ScheduleEvent
     class OnLessonItemGroupClicked(val value: Group) : ScheduleEvent
+    class OnGroupLongPressed(val value: Group) : ScheduleEvent
+    class OnTeacherLongPressed(val value: Teacher) : ScheduleEvent
     class OnSearchCompleted(val query: ScheduleSearch) : ScheduleEvent
 }

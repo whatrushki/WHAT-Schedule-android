@@ -88,7 +88,8 @@ data class GroupDBO(
     val institutionId: String,
     val name: String,
     val groupId: String = name,
-    val year: Int? = null
+    val year: Int? = null,
+    val favorite: Boolean = false
 )
 
 @Entity(
@@ -100,7 +101,8 @@ data class TeacherDBO(
     val id: Long = 0,
     val institutionId: String,
     val name: String,
-    val teacherId: String = name
+    val teacherId: String = name,
+    val favorite: Boolean = false
 )
 
 data class RequestSDBO(

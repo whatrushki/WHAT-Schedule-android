@@ -1,7 +1,7 @@
 package app.what.schedule.features.onboarding.domain
 
 import app.what.foundation.core.UIController
-import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.features.onboarding.domain.models.OnboardingAction
 import app.what.schedule.features.onboarding.domain.models.OnboardingEvent
@@ -10,7 +10,7 @@ import app.what.schedule.features.onboarding.domain.models.OnboardingState
 
 class OnboardingController(
     private val institutionManager: InstitutionManager,
-    private val settings: AppSettingsRepository
+    private val settings: AppValues
 ) : UIController<OnboardingState, OnboardingAction, OnboardingEvent>(
     OnboardingState()
 ) {
@@ -37,7 +37,7 @@ class OnboardingController(
     }
 
     private fun finishAndGoToMain() {
-        settings.setFirstLaunch(false)
+        settings.isFirstLaunch.set(false)
         setAction(OnboardingAction.NavigateToMain)
     }
 }

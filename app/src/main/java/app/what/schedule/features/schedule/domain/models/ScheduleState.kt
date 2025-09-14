@@ -8,11 +8,11 @@ import app.what.schedule.data.remote.api.Teacher
 
 data class ScheduleState(
     val schedules: List<DaySchedule> = emptyList(),
-    val scheduleState: RemoteState = RemoteState.Idle,
+    val scheduleState: RemoteState = RemoteState.Nothing,
     val groups: List<Group> = emptyList(),
-    val groupsState: RemoteState = RemoteState.Idle,
+    val groupsState: RemoteState = RemoteState.Nothing,
     val teachers: List<Teacher> = emptyList(),
-    val teachersState: RemoteState = RemoteState.Idle,
+    val teachersState: RemoteState = RemoteState.Nothing,
     val search: ScheduleSearch? = null
 )
 

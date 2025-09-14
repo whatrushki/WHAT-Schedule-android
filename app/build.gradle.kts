@@ -8,13 +8,14 @@ plugins {
 
 android {
     namespace = "app.what.schedule"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.what.schedule"
         minSdk = 26
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 1409202501
+        versionName = "0.9.0-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -50,6 +51,7 @@ android {
 dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
+    implementation(libs.material3)
 
     ksp(libs.room.compiler)
 

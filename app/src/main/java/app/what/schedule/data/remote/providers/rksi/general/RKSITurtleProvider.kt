@@ -1,6 +1,6 @@
 package app.what.schedule.data.remote.providers.rksi.general
 
-import android.util.Log
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.DaySchedule
 import app.what.schedule.data.remote.api.Group
@@ -102,7 +102,7 @@ class RKSITurtleProvider(
         var lessons: List<Lesson> = it.apairs.map {
             val lesson = it.apair.first()
 
-            Log.d(
+            Auditor.debug(
                 "d",
                 "Lesson: ${lesson.doctrine} ${lesson.start} ${lesson.end} ${lesson.corpus}"
             )

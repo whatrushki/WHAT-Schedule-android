@@ -51,11 +51,11 @@ import app.what.schedule.data.remote.api.OneTimeUnit
 import app.what.schedule.data.remote.api.Teacher
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
-import app.what.schedule.presentation.theme.icons.WHATIcons
-import app.what.schedule.presentation.theme.icons.filled.Domain
-import app.what.schedule.presentation.theme.icons.filled.Group
-import app.what.schedule.presentation.theme.icons.filled.MeetingRoom
-import app.what.schedule.presentation.theme.icons.filled.Person
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.Building
+import app.what.schedule.ui.theme.icons.filled.Group
+import app.what.schedule.ui.theme.icons.filled.Person
+import app.what.schedule.ui.theme.icons.filled.Room
 import java.time.LocalTime
 
 enum class ViewType {
@@ -228,20 +228,21 @@ private fun CommonView(
     val (expanded, setExpanded) = useState(false)
     val (expandable, setExpandable) = useState(true)
 
-    Box(modifier
-        .padding(horizontal = 12.dp)
-        .fillMaxWidth()
-        .applyIf(!expanded, elseBlock = {
-            height(IntrinsicSize.Min)
-        }) { height(146.dp) }
-        .clip(shapes.medium)
-        .background(
-            if (data.state == LessonState.REMOVED) colorScheme.surfaceVariant
-            else colorScheme.surfaceContainer
-        )
-        .bclick(expanded || expandable) {
-            setExpanded(!expanded)
-        }
+    Box(
+        modifier
+            .padding(horizontal = 12.dp)
+            .fillMaxWidth()
+            .applyIf(!expanded, elseBlock = {
+                height(IntrinsicSize.Min)
+            }) { height(146.dp) }
+            .clip(shapes.medium)
+            .background(
+                if (data.state == LessonState.REMOVED) colorScheme.surfaceVariant
+                else colorScheme.surfaceContainer
+            )
+            .bclick(expanded || expandable) {
+                setExpanded(!expanded)
+            }
     ) {
         Tag(
             state = data.state,
@@ -368,13 +369,13 @@ private fun OtUnitsView(
 
             AdditionalInfo(
                 color = color,
-                icon = WHATIcons.MeetingRoom,
+                icon = WHATIcons.Room,
                 text = it.auditory
             )
 
             AdditionalInfo(
                 color = color,
-                icon = WHATIcons.Domain,
+                icon = WHATIcons.Building,
                 text = it.building.ifEmpty { "_" }
             )
         }

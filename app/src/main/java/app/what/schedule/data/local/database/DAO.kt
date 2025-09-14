@@ -27,7 +27,7 @@ interface RequestsDAO {
         WHERE institutionId = :institutionId 
         AND createdAt > :afterDate 
         AND `query` = :query
-        ORDER BY createdAt DESC 
+        ORDER BY id DESC 
         LIMIT 1
     """
     )
@@ -108,7 +108,10 @@ interface GroupsDAO {
     suspend fun selectByInstitution(institutionId: String): List<GroupDBO>
 
     @Query("SELECT * FROM groups WHERE groups.id = :id")
-    suspend fun selectById(id: String): GroupDBO
+    suspend fun selectById(id: Long): GroupDBO
+
+    @Query("SELECT * FROM groups WHERE groups.institutionId = :institutionId AND groups.groupId = :id")
+    suspend fun selectByGroupId(institutionId: String, id: String): GroupDBO
 
     @Query("SELECT groups.id FROM groups WHERE groups.institutionId = :institutionId AND groups.groupId = :id")
     suspend fun selectIdByGroupId(institutionId: String, id: String): Long?
@@ -138,7 +141,10 @@ interface TeachersDAO {
     suspend fun selectByInstitution(institutionId: String): List<TeacherDBO>
 
     @Query("SELECT * FROM teachers WHERE teachers.id = :id")
-    suspend fun selectById(id: String): TeacherDBO
+    suspend fun selectById(id: Long): TeacherDBO
+
+    @Query("SELECT * FROM teachers WHERE teachers.institutionId = :institutionId AND teachers.teacherId = :id")
+    suspend fun selectByTeacherId(institutionId: String, id: String): TeacherDBO
 
     @Query("SELECT teachers.id FROM teachers WHERE teachers.institutionId = :institutionId AND teachers.teacherId = :id")
     suspend fun selectIdByTeacherId(institutionId: String, id: String): Long?

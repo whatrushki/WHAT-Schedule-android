@@ -1,6 +1,6 @@
 package app.what.schedule.data.remote.providers.rksi.general
 
-import android.util.Log
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.DaySchedule
@@ -33,13 +33,14 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.parameters
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.Default
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.io.File
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -141,6 +142,15 @@ class RKSIOfficialProvider(
                 .withDayOfMonth(dataRaw.first().toInt())
                 .withMonth(parseMonth(dataRaw[1].substring(0, dataRaw[1].length - 1)))
 
+            val replacements = CoroutineScope(IO).async {
+                getReplacements(
+                    date, when (parseMode) {
+                        ParseMode.GROUP -> ScheduleSearch.Group(value)
+                        ParseMode.TEACHER -> ScheduleSearch.Teacher(value)
+                    }
+                )
+            }
+
             var lessons: List<Lesson>
             lessons = it.getElementsByTag("p").mapNotNull { lessonRaw ->
                 if (lessonRaw.html().contains("href")) return@mapNotNull null
@@ -196,43 +206,39 @@ class RKSIOfficialProvider(
 
             var schedule = RKSILessonsSchedule.COMMON
 
-            lessons = if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null) {
-                schedule = RKSILessonsSchedule.WITH_CLASS_HOUR
-                lessons.map { it.copy(number = schedule.numberOf(it.startTime) ?: 0) }
-            } else {
-                val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
-                    schedule.numberOf(time) ?: let { schedule = change; null }
-                }
+            lessons =
+                if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null || date.dayOfWeek == DayOfWeek.MONDAY) {
+                    schedule = RKSILessonsSchedule.WITH_CLASS_HOUR
+                    lessons.map { it.copy(number = schedule.numberOf(it.startTime) ?: 0) }
+                } else {
+                    val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
+                        schedule.numberOf(time) ?: let { schedule = change; null }
+                    }
 
-                lessons.map { lesson ->
-                    val number =
-                        getNumberOrChangeSchedule(
-                            lesson.startTime,
-                            RKSILessonsSchedule.WITH_CLASS_HOUR
-                        )
-                            ?: getNumberOrChangeSchedule(
+                    lessons.map { lesson ->
+                        val number =
+                            getNumberOrChangeSchedule(
                                 lesson.startTime,
-                                RKSILessonsSchedule.SHORTENED
+                                RKSILessonsSchedule.WITH_CLASS_HOUR
                             )
-                            ?: getNumberOrChangeSchedule(
-                                lesson.startTime,
-                                RKSILessonsSchedule.COMMON
-                            )
-                            ?: 0
+                                ?: getNumberOrChangeSchedule(
+                                    lesson.startTime,
+                                    RKSILessonsSchedule.SHORTENED
+                                )
+                                ?: getNumberOrChangeSchedule(
+                                    lesson.startTime,
+                                    RKSILessonsSchedule.COMMON
+                                )
+                                ?: 0
 
-                    lesson.copy(number = number)
+                        lesson.copy(number = number)
+                    }
                 }
-            }
 
             if (showReplacements && index < 2) {
-                val replacements = getReplacements(
-                    date, when (parseMode) {
-                        ParseMode.GROUP -> ScheduleSearch.Group(value)
-                        ParseMode.TEACHER -> ScheduleSearch.Teacher(value)
-                    }
-                )
-
-                lessons = lessons.withReplacements(replacements, schedule).sortedBy { it.startTime }
+                lessons = lessons
+                    .withReplacements(replacements.await(), schedule)
+                    .sortedBy { it.startTime }
             }
 
             DaySchedule(
@@ -253,11 +259,11 @@ class RKSIOfficialProvider(
 
     private suspend fun getScheduleTabletGoogleDriveId(): String {
         val response = client.get("https://www.rksi.ru/schedule").bodyAsText()
-        Log.d("d", "dd: 1")
+        Auditor.debug("d", "dd: 1")
         val document = Ksoup.parse(response)
-        Log.d("d", "dd: 2")
+        Auditor.debug("d", "dd: 2")
         val tabletUrl = document.getElementsMatchingText("Планшетка").last()!!.attr("href")
-        Log.d("d", "dd: 3")
+        Auditor.debug("d", "dd: 3")
 
         return tabletUrl.split("/").last()
     }
@@ -292,10 +298,10 @@ class RKSIOfficialProvider(
         fileName: String
     ): Boolean {
         try {
-            Log.d("d", "dd: 4")
-            Log.d("d", "dd: 5")
-            Log.d("d", "dd: 6 ${files.files().map { it.name }}")
-            Log.d(
+            Auditor.debug("d", "dd: 4")
+            Auditor.debug("d", "dd: 5")
+            Auditor.debug("d", "dd: 6 ${files.files().map { it.name }}")
+            Auditor.debug(
                 "d",
                 "dd: 6 $fileName"
             )
@@ -311,11 +317,11 @@ class RKSIOfficialProvider(
                 }
                 ?: return false
 
-            Log.d("d", "dd: 7")
+            Auditor.debug("d", "dd: 7")
 
             val downloadedTablet = client.get(tablet.getDownloadLink()).readRawBytes()
 
-            Log.d("d", "dd: 8")
+            Auditor.debug("d", "dd: 8")
 
             fileManager.writeFile(
                 FileManager.DirectoryType.CACHE,
@@ -323,11 +329,11 @@ class RKSIOfficialProvider(
                 downloadedTablet
             )
 
-            Log.d("d", "dd: 9")
+            Auditor.debug("d", "dd: 9")
 
             return true
         } catch (e: Exception) {
-            Log.d("d", "dd: 10")
+            Auditor.debug("d", "dd: 10")
             return false
         }
     }
@@ -358,7 +364,7 @@ class RKSIOfficialProvider(
                 else (0..<columns).mapIndexedNotNull { colIndex, i ->
                     val firstCellIndex = i * 3
 
-                    Log.d("d", "coord: ($colIndex;$rowIndex;$firstCellIndex)")
+                    Auditor.debug("d", "coord: ($colIndex;$rowIndex;$firstCellIndex)")
 
                     val auditory = row.getCell(firstCellIndex)
                         ?.toString()
@@ -378,9 +384,9 @@ class RKSIOfficialProvider(
                         ?.ifEmpty { return@mapIndexedNotNull null }
                         ?: return@mapIndexedNotNull null
 
-                    Log.d("d", "auditory: $auditory, group: $groups, teacher: $teacher")
+                    Auditor.debug("d", "auditory: $auditory, group: $groups, teacher: $teacher")
 
-                    Log.d(
+                    Auditor.debug(
                         "d",
                         "lessonNumber: $lessonNumber ${sheet.sheetName} ${"Пара" in sheet.sheetName}"
                     )
@@ -393,7 +399,11 @@ class RKSIOfficialProvider(
                                 auditory
                             },
                             group = Group(it.trim()),
-                            teacher = Teacher(teacher.replace("__", "_"), teacher),
+                            teacher = Teacher(
+                                teacher.replace(
+                                    "__", "_"
+                                ), teacher
+                            ),
                             building = if (columns == 1) "2" else "1"
                         )
                     }
@@ -415,6 +425,8 @@ class RKSIOfficialProvider(
             }
         }
 
+        workbook.close()
+
         return lessons
     }
 
@@ -426,24 +438,28 @@ class RKSIOfficialProvider(
             }
         }
 
-        Log.d("d", "d: 1")
+        Auditor.debug("d", "d: 1")
 
-        val parseTablet1Process = CoroutineScope(Default).async {
-            Log.d("d", "d->: 11")
+        val parseTablet1Process = CoroutineScope(IO).async {
+            Auditor.debug("d", "d->: 11")
             val tablet1 = getTablet(date, "1", files1.await()) ?: return@async null
-            Log.d("d", "d->: 12 ${tablet1.canRead()} ${tablet1.exists()}")
-            Log.d("d", "d->: 12")
-            val workbook1 = WorkbookFactory.create(tablet1)
-            Log.d("d", "d->: 13")
+            Auditor.debug("d", "d->: 12 ${tablet1.canRead()} ${tablet1.exists()}")
+            Auditor.debug("d", "d->: 12")
+            val workbook1 = tablet1.inputStream().use { inputStream ->
+                WorkbookFactory.create(inputStream)
+            }
+            Auditor.debug("d", "d->: 13")
             return@async parseLessonsFromWorkbook(workbook1, 2, predicate)
         }
 
-        val parseTablet2Process = CoroutineScope(Default).async {
-            Log.d("d", "d->: 21")
+        val parseTablet2Process = CoroutineScope(IO).async {
+            Auditor.debug("d", "d->: 21")
             val tablet2 = getTablet(date, "2", files2.await()) ?: return@async null
-            Log.d("d", "d->: 22")
-            val workbook2 = WorkbookFactory.create(tablet2)
-            Log.d("d", "d->: 23")
+            Auditor.debug("d", "d->: 22")
+            val workbook2 = tablet2.inputStream().use { inputStream ->
+                WorkbookFactory.create(inputStream)
+            }
+            Auditor.debug("d", "d->: 23")
             return@async parseLessonsFromWorkbook(workbook2, 1, predicate)
         }
 
@@ -472,15 +488,16 @@ private fun List<Lesson>.withReplacements(
         val replacement = it.value.first()
         val lesson = it.value.last()
 
-        Log.d("d", it.toString())
-        Log.d("d", replacement.toString())
-        Log.d("d", lesson.toString())
+        Auditor.debug("d", it.toString())
+        Auditor.debug("d", replacement.toString())
+        Auditor.debug("d", lesson.toString())
 
         return@map if (replacements.isNotEmpty()) {
             if (replacement == null && lesson != null)
                 lesson.copy(state = LessonState.REMOVED)
             else if (replacement != null && lesson == null) {
                 val lessonTime = schedule.getByNumber(replacement.number)
+                if (lessonTime == null) Auditor.debug("d", "EXTRA $schedule ${replacement.number}")
                 replacement.copy(
                     state = LessonState.ADDED,
                     startTime = lessonTime!!.startTime,

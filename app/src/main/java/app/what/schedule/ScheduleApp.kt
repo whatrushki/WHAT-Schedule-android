@@ -1,12 +1,15 @@
 package app.what.schedule
 
 import android.app.Application
-import android.util.Log
 import androidx.room.Room
+import app.what.foundation.services.AppLogger
+import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
-import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.domain.ScheduleRepository
+import app.what.schedule.features.dev.presentation.NetworkMonitorPlugin
 import app.what.schedule.features.main.domain.MainController
 import app.what.schedule.features.onboarding.domain.OnboardingController
 import app.what.schedule.features.schedule.domain.ScheduleController
@@ -31,6 +34,8 @@ class ScheduleApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        CrashHandler.initialize(applicationContext)
+        AppLogger.initialize(applicationContext)
 
         startKoin {
             androidContext(this@ScheduleApp)
@@ -40,7 +45,7 @@ class ScheduleApp : Application() {
 }
 
 val generalModule = module {
-    single { AppSettingsRepository(get()) }
+    single { AppValues(get()) }
     single { AppUtils(get()) }
     single { GoogleDriveParser(get()) }
     single { FileManager(get()) }
@@ -65,10 +70,12 @@ val generalModule = module {
 
     single {
         HttpClient(CIO) {
+            install(NetworkMonitorPlugin)
+
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
-                        Log.d("ktor", message)
+                        Auditor.debug("ktor", message)
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package app.what.schedule.data.remote.api
 
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -61,15 +62,19 @@ data class OneTimeUnit(
     }
 }
 
+@Serializable
 data class Group(
     val name: String,
     val id: String = name,
-    val year: Int? = null
+    val year: Int? = null,
+    val favorite: Boolean = false
 )
 
+@Serializable
 data class Teacher(
     val name: String,
-    val id: String = name
+    val id: String = name,
+    val favorite: Boolean = false
 )
 
 enum class ParseMode {

@@ -36,8 +36,8 @@ import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.SourceType
 import app.what.schedule.data.remote.providers.rksi.general.RKSIOfficialProvider
 import app.what.schedule.data.remote.providers.rksi.general.RKSITurtleProvider
-import app.what.schedule.presentation.theme.icons.WHATIcons
-import app.what.schedule.presentation.theme.icons.filled.Domain
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.Building
 
 
 @Preview
@@ -131,7 +131,7 @@ fun InstitutionUI(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        WHATIcons.Domain.Show(Modifier.size(16.dp), colorScheme.secondary)
+                        WHATIcons.Building.Show(Modifier.size(16.dp), colorScheme.secondary)
 
                         Gap(4)
 

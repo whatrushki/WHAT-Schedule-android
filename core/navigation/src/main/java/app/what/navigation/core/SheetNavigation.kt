@@ -10,8 +10,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetDefaults
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,19 +50,12 @@ fun <T : SheetProvider> SheetNavHost(
 }
 
 @Composable
-fun rememberSheetNavigator(sheetController: SheetController) =
-    remember { SheetNavigator(sheetController) }
+fun rememberSheetNavigator() = LocalSheetNavigator.current
 
 class SheetNavigator(
-    private val sheetController: SheetController
+    private val sheetController: SheetController,
+    private val graph: SheetNavGraph
 ) {
-    private var _graph: SheetNavGraph? = null
-    var graph: SheetNavGraph
-        get() = checkNotNull(_graph) { "sheet graph is not set" }
-        set(graph) {
-            _graph = graph
-        }
-
     private var _stackEntries: MutableList<SheetProvider> = mutableListOf()
     val stackEntries: List<SheetProvider> get() = _stackEntries
 
@@ -95,7 +91,7 @@ class SheetNavigator(
 
         this.content = { content(provider) }
         configure(provider)
-        open()
+        open(true)
     }
 
     private fun SheetController.configure(provider: SheetProvider) {
@@ -109,6 +105,11 @@ fun sheetGraph(block: SheetGraphBuilder.() -> Unit) =
 class SheetNavGraph(
     val registry: MutableMap<KClass<out SheetProvider>, @Composable (Any) -> Unit>
 ) {
+    companion object {
+        val Empty
+            get() = SheetNavGraph(mutableMapOf())
+    }
+
     inline fun <reified T : SheetProvider> get(): @Composable (Any) -> Unit {
         return registry[T::class].orThrow
     }
@@ -139,12 +140,14 @@ interface SheetProvider {
 @Composable
 fun ProvideGlobalSheet(
     controller: SheetController = rememberSheetHostController(),
+    navGraph: SheetNavGraph = SheetNavGraph.Empty,
     transitionSpec: AnimatedContentTransitionScope<@Composable () -> Unit>.() -> ContentTransform = {
         fadeIn() togetherWith fadeOut()
     },
     content: @Composable () -> Unit
 ) = CompositionLocalProvider(
-    LocalSheetController provides controller
+    LocalSheetController provides controller,
+    LocalSheetNavigator provides SheetNavigator(controller, navGraph)
 ) {
     val state = rememberModalBottomSheetState {
         if (it != SheetValue.Hidden) true
@@ -159,7 +162,9 @@ fun ProvideGlobalSheet(
         onDismissRequest = controller::close,
         sheetState = state
     ) {
-        BackHandler { controller.animateClose() }
+        BackHandler {
+            if (controller.cancellable) controller.animateClose()
+        }
 
         Column(
             verticalArrangement = Arrangement.Center,
@@ -230,6 +235,7 @@ fun rememberSheetHostController(
 
 
 val LocalSheetController = staticCompositionLocalOf<SheetController> { error("непон") }
+val LocalSheetNavigator = staticCompositionLocalOf<SheetNavigator> { error("непон") }
 
 interface SheetController {
     val opened: Boolean
@@ -237,7 +243,12 @@ interface SheetController {
     var content: @Composable () -> Unit
 
     fun open(full: Boolean = false)
-    fun open(full: Boolean = false, cancellable: Boolean = true, content: @Composable () -> Unit)
+    fun open(
+        full: Boolean = false,
+        cancellable: Boolean = true,
+        content: @Composable () -> Unit
+    )
+
     fun close()
     fun animateClose()
 

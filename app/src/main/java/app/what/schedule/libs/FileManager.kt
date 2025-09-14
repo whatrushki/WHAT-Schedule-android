@@ -8,6 +8,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
+import app.what.foundation.services.AppLogger.Companion.Auditor
+
 import java.io.File
 import java.io.IOException
 
@@ -42,7 +44,7 @@ class FileManager(private val context: Context) {
                 DirectoryType.CACHE -> readFromCache(fileName)
             }
         } catch (e: IOException) {
-            Log.e(TAG, "Error reading file: $fileName", e)
+            Auditor.err(TAG, "Error reading file: $fileName", e)
             null
         }
     }

@@ -41,7 +41,6 @@ fun InstitutionSelectPage(
     onSelect: (Institution, InstitutionFilial, InstitutionProvider.Factory) -> Unit
 ) = Column(modifier) {
     var selectedInstitution by useState<Institution?>(null)
-    var selectedFilial by useState<InstitutionFilial?>(null)
     val sheetController = rememberSheetController()
     val (query, setQuery) = useState("")
     val filteredInstitutions = remember(query, institutions.size) {
@@ -67,13 +66,11 @@ fun InstitutionSelectPage(
                     selectedInstitution = it
                     if (it.filials.size != 1) return@InstitutionUI
 
-                    selectedFilial = it.filials[0]
                     sheetController.open(true) @Composable {
                         providerSelectSheet(it, it.filials[0], onSelect)
                     }
                 }
             ) { sit ->
-                selectedFilial = sit
                 sheetController.open(true) @Composable {
                     providerSelectSheet(it, sit, onSelect)
                 }

@@ -1,6 +1,7 @@
 package app.what.schedule.data.remote.api
 
-import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.local.settings.AppValues
+import app.what.schedule.data.local.settings.ScheduleProvider
 import app.what.schedule.data.remote.providers.dgtu.INST_DGTU
 import app.what.schedule.data.remote.providers.rinh.INST_RINH
 import app.what.schedule.data.remote.providers.rksi.INST_RKSI
@@ -79,7 +80,7 @@ interface InstitutionProvider {
 val insts by lazy { listOf(INST_RKSI, INST_DGTU, INST_RINH) }
 
 class InstitutionManager(
-    private val settings: AppSettingsRepository
+    private val settings: AppValues
 ) {
     init {
         actualize()
@@ -88,17 +89,17 @@ class InstitutionManager(
     fun getInstitutions(): List<Institution> = insts
 
     fun save(institutionId: String, filialId: String, providerId: String) {
-        settings.setInstitutionData(Triple(institutionId, filialId, providerId))
+        settings.institution.set(ScheduleProvider(institutionId, filialId, providerId))
         actualize()
     }
 
     private fun actualize() {
-        val savedData = settings.getInstitutionData()
-        savedInstitution = insts.firstOrNull { it.metadata.id == savedData?.first }
-        savedFilial = savedInstitution?.filials?.firstOrNull { it.metadata.id == savedData?.second }
+        val savedData = settings.institution.get()
+        savedInstitution = insts.firstOrNull { it.metadata.id == savedData?.inst }
+        savedFilial = savedInstitution?.filials?.firstOrNull { it.metadata.id == savedData?.filial }
         (savedFilial
             ?.providers
-            ?.firstOrNull { it.metadata.id == savedData?.third }
+            ?.firstOrNull { it.metadata.id == savedData?.provider }
             ?: savedFilial?.defaultProvider)
             ?.let {
                 if (savedProviderFactory == it) return

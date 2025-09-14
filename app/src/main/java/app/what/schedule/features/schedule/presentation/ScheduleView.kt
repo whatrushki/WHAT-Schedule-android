@@ -3,6 +3,7 @@ package app.what.schedule.features.schedule.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import app.what.foundation.data.RemoteState
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
+import app.what.foundation.ui.animations.AnimatedEnter
+import app.what.foundation.ui.capplyIf
 import app.what.foundation.ui.useChange
 import app.what.foundation.ui.useState
 import app.what.foundation.utils.freeze
@@ -34,6 +37,7 @@ import app.what.schedule.features.schedule.presentation.components.ScheduleShimm
 import app.what.schedule.features.schedule.presentation.components.SearchButton
 import app.what.schedule.features.schedule.presentation.components.SearchSheet
 import app.what.schedule.features.schedule.presentation.components.ViewType
+import app.what.schedule.ui.components.Fallback
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -51,7 +55,11 @@ fun ScheduleView(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.verticalScroll(rememberScrollState())
+        modifier = Modifier
+            .fillMaxSize()
+            .capplyIf(state.scheduleState != RemoteState.Idle) {
+                verticalScroll(rememberScrollState())
+            }
     ) {
         val sheetController = rememberSheetController()
         val sheet = @Composable { SearchSheet(state, listener) }
@@ -60,6 +68,7 @@ fun ScheduleView(
         val (scheduleType, setScheduleType) = useState<LessonsScheduleType?>(null)
         val currentDate = LocalDate.now().freeze()
         val currentTime = useChange(LocalTime.now(), 60) { LocalTime.now() }
+
 
         LaunchedEffect(pagerState.currentPage, state.scheduleState) {
             if (state.scheduleState != RemoteState.Success) return@LaunchedEffect
@@ -71,16 +80,26 @@ fun ScheduleView(
         Gap(16)
 
         SearchButton(state.search, scheduleType) {
-            sheetController.open(content = sheet)
+            sheetController.open(content = sheet, full = true)
         }
 
         Gap(8)
 
         when (state.scheduleState) {
-            RemoteState.Loading, RemoteState.Idle -> ScheduleShimmer()
+            RemoteState.Idle -> AnimatedEnter {
+                Fallback(
+                    text = "Для того чтобы появилось расписание нужно выбрать группу",
+                    modifier = Modifier.fillMaxSize(),
+                    action = "Выбрать" to { sheetController.open(content = sheet, full = true) }
+                )
+            }
+
+            RemoteState.Loading -> ScheduleShimmer()
+
             RemoteState.Success -> {
                 SingleChoiceSegmentedButtonRow(
-                    Modifier
+                    space = (-4).dp,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                 ) {
@@ -104,32 +123,37 @@ fun ScheduleView(
 
                 Gap(8)
 
-                HorizontalPager(
-                    state = pagerState,
-                    verticalAlignment = Alignment.Top,
-                    key = { state.schedules[it].date.toString() },
-                    modifier = Modifier.fillMaxHeight()
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                AnimatedEnter {
+                    HorizontalPager(
+                        state = pagerState,
+                        verticalAlignment = Alignment.Top,
+                        key = { state.schedules[it].date.toString() },
                         modifier = Modifier.fillMaxHeight()
                     ) {
-                        state.schedules[it].lessons.forEach { lesson ->
-                            LessonUI(
-                                data = lesson,
-                                listener = listener,
-                                currentTime = if (state.schedules[it].date == currentDate)
-                                    currentTime.value else null,
-                                viewType = when (state.search) {
-                                    is ScheduleSearch.Teacher -> ViewType.TEACHER
-                                    else -> ViewType.STUDENT
-                                }
-                            )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxHeight()
+                        ) {
+                            state.schedules[it].lessons.forEach { lesson ->
+                                LessonUI(
+                                    data = lesson,
+                                    listener = listener,
+                                    currentTime = if (state.schedules[it].date == currentDate)
+                                        currentTime.value else null,
+                                    viewType = when (state.search) {
+                                        is ScheduleSearch.Teacher -> ViewType.TEACHER
+                                        else -> ViewType.STUDENT
+                                    }
+                                )
+                            }
                         }
-                    }
-                }
 
-                Gap(12)
+                        Gap(12)
+                    }
+
+
+                    Gap(200)
+                }
             }
 
             else -> Unit

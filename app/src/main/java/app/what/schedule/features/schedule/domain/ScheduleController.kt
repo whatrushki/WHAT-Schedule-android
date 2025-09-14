@@ -1,13 +1,15 @@
 package app.what.schedule.features.schedule.domain
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.safeExecute
 import app.what.foundation.utils.suspendCall
-import app.what.schedule.data.local.settings.AppSettingsRepository
+import app.what.schedule.data.local.settings.AppValues
+import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.Teacher
 import app.what.schedule.data.remote.api.toGroup
 import app.what.schedule.data.remote.api.toScheduleSearch
 import app.what.schedule.data.remote.api.toTeacher
@@ -20,36 +22,63 @@ import kotlinx.coroutines.async
 
 class ScheduleController(
     private val apiRepository: ScheduleRepository,
-    private val settings: AppSettingsRepository
+    private val settings: AppValues
 ) : UIController<ScheduleState, ScheduleAction, ScheduleEvent>(
     ScheduleState()
 ) {
     override fun obtainEvent(viewEvent: ScheduleEvent) = when (viewEvent) {
-        ScheduleEvent.Init -> init()
+        ScheduleEvent.Init -> {}
         ScheduleEvent.UpdateSchedule -> syncSchedule(viewState.search)
         ScheduleEvent.OnRefresh -> syncSchedule(viewState.search, false)
         is ScheduleEvent.OnSearchCompleted -> syncSchedule(viewEvent.query)
         is ScheduleEvent.OnLessonItemGroupClicked -> syncSchedule(viewEvent.value.toScheduleSearch())
         is ScheduleEvent.OnLessonItemTeacherClicked -> syncSchedule(viewEvent.value.toScheduleSearch())
+        is ScheduleEvent.OnTeacherLongPressed -> toggleFavorites(viewEvent.value)
+        is ScheduleEvent.OnGroupLongPressed -> toggleFavorites(viewEvent.value)
     }
 
-    private fun init() {
-        if (viewState.scheduleState != RemoteState.Idle) return
+    init {
+        init()
+    }
 
-        updateApiProvider()
-        val lastSearchedGroup = settings.getLastSearchedGroup()
+
+    private fun init() {
+        val lastSearchedGroup = settings.lastSearchedGroup.get()
+
         updateState {
-            copy(search = lastSearchedGroup?.let { ScheduleSearch.Group(it.name, it.id) })
+            if (lastSearchedGroup == null) copy(scheduleState = RemoteState.Idle)
+            else copy(search = ScheduleSearch.Group(lastSearchedGroup.name, lastSearchedGroup.id))
         }
 
-        safeExecute(scope = viewModelScope,
-            failure = { Log.d("d", "Error: $it") }
+        updateApiProvider()
+
+        safeExecute(
+            scope = viewModelScope,
+            failure = { Auditor.debug("d", "Error: $it") }
         ) {
             val ut = async { updateTeachers() }
             val ug = async { updateGroups() }
             ut.await(); ug.await()
 
             updateSchedule(viewState.search, true)
+        }
+    }
+
+    private fun toggleFavorites(value: Group) {
+        suspendCall(viewModelScope) {
+            apiRepository.toggleFavorites(value)
+        }.invokeOnCompletion {
+            syncGroups()
+            Auditor.debug("d", "synced")
+        }
+    }
+
+    private fun toggleFavorites(value: Teacher) {
+        suspendCall(viewModelScope) {
+            apiRepository.toggleFavorites(value)
+        }.invokeOnCompletion {
+            syncTeachers()
+            Auditor.debug("d", "synced")
         }
     }
 
@@ -68,19 +97,20 @@ class ScheduleController(
     private fun updateApiProvider() = apiRepository.updateApiProvider()
 
     private suspend fun updateSchedule(search: ScheduleSearch?, useCache: Boolean) {
+        search ?: return
+
         safeUpdateState {
             copy(search = search, schedules = emptyList(), scheduleState = RemoteState.Loading)
         }
 
-        Log.d("d", "Api: $apiRepository")
+        Auditor.debug("d", "Api: $apiRepository")
 
         when (search) {
-            is ScheduleSearch.Group -> settings.setLastSearchedGroup(search.toGroup())
-            is ScheduleSearch.Teacher -> settings.setLastSearchedTeacher(search.toTeacher())
-            else -> Unit
+            is ScheduleSearch.Group -> settings.lastSearchedGroup.set(search.toGroup())
+            is ScheduleSearch.Teacher -> settings.lastSearchedTeacher.set(search.toTeacher())
         }
 
-        val data = apiRepository.getSchedule(search ?: return, useCache)
+        val data = apiRepository.getSchedule(search, useCache)
 
         safeUpdateState { copy(scheduleState = RemoteState.Success, schedules = data) }
     }
@@ -88,12 +118,18 @@ class ScheduleController(
     private suspend fun updateGroups() {
         safeUpdateState { copy(groupsState = RemoteState.Loading) }
         val data = apiRepository.getGroups()
+        Auditor.debug(
+            "d",
+            "groups" + data.filter { it.favorite }.joinToString { "${it.name} | ${it.favorite}" })
         safeUpdateState { copy(groups = data, groupsState = RemoteState.Success) }
     }
 
     private suspend fun updateTeachers() {
         safeUpdateState { copy(teachersState = RemoteState.Loading) }
         val data = apiRepository.getTeachers()
+        Auditor.debug(
+            "d",
+            "teachers" + data.filter { it.favorite }.joinToString { "${it.name} | ${it.favorite}" })
         safeUpdateState { copy(teachers = data, teachersState = RemoteState.Success) }
     }
 }
