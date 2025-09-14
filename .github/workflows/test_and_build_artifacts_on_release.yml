@@ -1,9 +1,10 @@
 name: Test_and_build_artifacts_on_release
 
 on:
+  push:
+    branches: [ master ]
   pull_request:
-    branches:
-      - 'main'
+    branches: [ master ]
 
 jobs:
   build_apk_aab:
