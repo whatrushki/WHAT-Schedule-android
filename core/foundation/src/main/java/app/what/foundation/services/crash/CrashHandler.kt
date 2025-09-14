@@ -29,8 +29,10 @@ data class CrashReport(
             CRASH REPORT
             ============
             
-            Timestamp: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                .format(Date(timestamp))}
+            Timestamp: ${
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                .format(Date(timestamp))
+        }
             
             APP INFO:
             ---------
@@ -71,7 +73,7 @@ data class CrashReport(
             Thread: ${thread.name}
             Priority: ${thread.priority}
             State: ${thread.state}
-            ID: ${thread.id}
+            ID: ${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) thread.threadId() else thread.id}
             """
         }
     }

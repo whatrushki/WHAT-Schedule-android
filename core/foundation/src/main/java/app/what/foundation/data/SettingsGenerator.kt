@@ -133,7 +133,7 @@ class SettingsNavigator(initialNode: SettingsNode) {
     fun navigateBack(): Boolean {
         return if (_backStack.size > 1) {
             _isNavigatingForward = false
-            _backStack.removeLast()
+            _backStack.removeAt(_backStack.lastIndex)
             true
         } else {
             false
@@ -144,7 +144,7 @@ class SettingsNavigator(initialNode: SettingsNode) {
         if (index < 0 || index >= _backStack.size - 1) return
         _isNavigatingForward = false
         while (_backStack.size > index + 1) {
-            _backStack.removeLast()
+            _backStack.removeAt(_backStack.lastIndex)
         }
     }
 
