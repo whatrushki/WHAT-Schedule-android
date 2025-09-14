@@ -35,7 +35,6 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.core.ktx)
