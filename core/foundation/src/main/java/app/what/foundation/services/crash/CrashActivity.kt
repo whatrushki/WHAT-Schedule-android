@@ -52,8 +52,10 @@ class CrashActivity : ComponentActivity() {
 
             val uris = listOf(
                 getFileUri(file),
-                getFileUri(Auditor.logFile)
-            )
+            ).let {
+                if (Auditor.logFile.exists()) it + getFileUri(Auditor.logFile)
+                else it
+            }
 
             val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                 type = "text/plain"
@@ -69,5 +71,6 @@ class CrashActivity : ComponentActivity() {
         }
     }
 
-    private fun getFileUri(file: File) = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+    private fun getFileUri(file: File) =
+        FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
 }

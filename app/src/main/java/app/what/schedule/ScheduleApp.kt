@@ -36,6 +36,7 @@ class ScheduleApp : Application() {
 
         CrashHandler.initialize(applicationContext)
         AppLogger.initialize(applicationContext)
+        Auditor.info("core", "App started")
 
         startKoin {
             androidContext(this@ScheduleApp)
