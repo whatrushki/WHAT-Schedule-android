@@ -1,6 +1,6 @@
 # 🌿 WHAT Schedule · Умное расписание
 
-![Banner](https://raw.githubusercontent.com/whatrushki/WHAT-Schedule-android/refs/heads/master/github/app_banner.jpg)
+![Banner](https://raw.githubusercontent.com/whatrushki/WHAT-Schedule-android/refs/heads/master/res/.github/app_banner.jpg)
 
 **Твой цифровой сад учебного времени**  
 _Вырасти свой идеальный график — просто, быстро, зелёно._ 🌱
