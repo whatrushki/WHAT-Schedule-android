@@ -1,8 +1,8 @@
 ---
 name: 🎨 Design Request
-description: Запрос на изменение дизайна или UI/UX
+about: Запрос на изменение дизайна или UI/UX
 title: "[Design] Краткое описание"
-labels: ["type: design", "status: new"]
+labels: []
 assignees: ""
 ---
 
@@ -20,5 +20,3 @@ assignees: ""
 - [ ] Android
 - [ ] Web
 - [ ] Desktop
-
-/label ~"type: design" ~"status: new"

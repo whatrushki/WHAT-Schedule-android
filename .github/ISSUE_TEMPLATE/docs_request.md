@@ -1,8 +1,8 @@
 ---
 name: 📖 Documentation
-description: Запрос на улучшение документации
+about: Запрос на улучшение документации
 title: "[Docs] Краткое описание"
-labels: ["type: documentation", "status: new"]
+labels: []
 assignees: ""
 ---
 
@@ -17,5 +17,3 @@ assignees: ""
 
 ## 🔗 Связанные материалы
 Ссылки на related issues или документацию
-
-/label ~"type: documentation"
