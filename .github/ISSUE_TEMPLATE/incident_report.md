@@ -1,9 +1,10 @@
 ---
-name: ⚠️ Incident Report
+name: "⚠️ Incident Report"
 about: Сообщить о критическом сбое или инциденте
 title: "[Incident] Краткое описание"
-labels: []
-assignees: ""
+labels: "\U0001F195 status: new, ⚠️ type: incident"
+assignees: ''
+
 ---
 
 ## 🚨 Описание инцидента

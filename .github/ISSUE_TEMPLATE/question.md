@@ -1,9 +1,10 @@
 ---
-name: ❓ Question
-description: Задать вопрос по использованию или разработке
+name: "❓ Question"
+about: Задать вопрос по использованию или разработке
 title: "[Question] Краткий вопрос"
-labels: ["type: question", "status: new"]
-assignees: ""
+labels: "\U0001F195 status: new, ❓ type: question"
+assignees: ''
+
 ---
 
 ## ❓ Вопрос

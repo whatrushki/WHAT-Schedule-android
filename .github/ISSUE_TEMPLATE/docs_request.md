@@ -1,9 +1,10 @@
 ---
-name: 📖 Documentation
+name: "\U0001F4D6 Documentation"
 about: Запрос на улучшение документации
 title: "[Docs] Краткое описание"
-labels: []
-assignees: ""
+labels: "\U0001F195 status: new, \U0001F4D6 type: docs"
+assignees: ''
+
 ---
 
 ## 📚 Раздел документации

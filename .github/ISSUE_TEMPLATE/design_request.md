@@ -1,9 +1,10 @@
 ---
-name: 🎨 Design Request
+name: "\U0001F3A8 Design Request"
 about: Запрос на изменение дизайна или UI/UX
 title: "[Design] Краткое описание"
-labels: []
-assignees: ""
+labels: "\U0001F195 status: new, \U0001F3A8 type: design"
+assignees: ''
+
 ---
 
 ## 🎯 Проблема дизайна

@@ -1,9 +1,10 @@
 ---
-name: 🔐 Security Report
+name: "\U0001F510 Security Report"
 about: Сообщить об уязвимости безопасности
 title: "[Security] Краткое описание"
-labels: []
-assignees: ""
+labels: "\U0001F195 status: new, \U0001F510 type: security"
+assignees: ''
+
 ---
 
 ## 🚨 Описание уязвимости

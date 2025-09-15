@@ -1,9 +1,10 @@
 ---
-name: 🎁 Feature Request
+name: "\U0001F9E9 Feature Request"
 about: Предложить новую идею для приложения
 title: "[Feature] Краткое описание фичи"
-labels: []
-assignees: ""
+labels: "\U0001F195 status: new, \U0001F9E9 type: feature"
+assignees: ''
+
 ---
 
 ## 💡 Идея функциональности
