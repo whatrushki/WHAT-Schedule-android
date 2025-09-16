@@ -43,11 +43,11 @@ class ScheduleController(
 
 
     private fun init() {
-        val lastSearchedGroup = settings.lastSearchedGroup.get()
+        val lastSearch = settings.lastSearch.get()
 
         updateState {
-            if (lastSearchedGroup == null) copy(scheduleState = RemoteState.Idle)
-            else copy(search = ScheduleSearch.Group(lastSearchedGroup.name, lastSearchedGroup.id))
+            if (lastSearch == null) copy(scheduleState = RemoteState.Idle)
+            else copy(search = lastSearch)
         }
 
         updateApiProvider()
@@ -105,10 +105,7 @@ class ScheduleController(
 
         Auditor.debug("d", "Api: $apiRepository")
 
-        when (search) {
-            is ScheduleSearch.Group -> settings.lastSearchedGroup.set(search.toGroup())
-            is ScheduleSearch.Teacher -> settings.lastSearchedTeacher.set(search.toTeacher())
-        }
+        settings.lastSearch.set(search)
 
         val data = apiRepository.getSchedule(search, useCache)
 

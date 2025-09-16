@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import animatedStarsBackground
@@ -20,6 +21,7 @@ import app.what.navigation.core.bottom_navigation.BottomNavBar
 import app.what.navigation.core.bottom_navigation.NavAction
 import app.what.navigation.core.bottom_navigation.navItem
 import app.what.navigation.core.rememberHostNavigator
+import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.features.dev.navigation.DevProvider
 import app.what.schedule.features.dev.navigation.devRegistry
 import app.what.schedule.features.main.domain.MainController
@@ -31,6 +33,7 @@ import app.what.schedule.features.settings.navigation.SettingsProvider
 import app.what.schedule.features.settings.navigation.settingsRegistry
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Code
+import org.koin.compose.koinInject
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -58,6 +61,8 @@ class MainFeature(
     @Composable
     override fun content(modifier: Modifier) {
         val navigator = rememberHostNavigator()
+        val appValues: AppValues = koinInject()
+        val devFeaturesEnabled by appValues.devFeaturesEnabled.collect()
 
         Box(
             Modifier
@@ -77,11 +82,11 @@ class MainFeature(
                 navigator = navigator,
                 screens = children
             ) {
-                NavAction("Для разработчиков", WHATIcons.Code) {
+                if (!devFeaturesEnabled!!) null
+                else NavAction("Для разработчиков", WHATIcons.Code) {
                     navigator.c.navigate(DevProvider)
                 }
             }
-
         }
     }
 }

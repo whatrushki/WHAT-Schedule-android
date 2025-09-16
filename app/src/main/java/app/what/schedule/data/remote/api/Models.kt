@@ -1,5 +1,6 @@
 package app.what.schedule.data.remote.api
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.LocalTime
@@ -101,9 +102,21 @@ interface LessonsSchedule {
     fun List<LessonTime>.getByNumber(number: Int) = firstOrNull { it.number == number }
 }
 
-sealed class ScheduleSearch(val name: String, val id: String) {
-    class Group(name: String, id: String = name) : ScheduleSearch(name, id)
-    class Teacher(name: String, id: String = name) : ScheduleSearch(name, id)
+@Serializable
+sealed interface ScheduleSearch {
+    val name: String
+    val id: String
+
+    @Serializable
+    @SerialName("group")
+    class Group(override val name: String, override val id: String = name) : ScheduleSearch
+
+    @Serializable
+    @SerialName("teacher")
+    class Teacher(override val name: String, override val id: String = name) : ScheduleSearch
+
+    operator fun component1() = name
+    operator fun component2() = id
 }
 
 fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id)

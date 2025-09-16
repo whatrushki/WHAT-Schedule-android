@@ -69,7 +69,7 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
         val appValues: AppValues by inject()
 
         val schedule = withContext(IO) {
-            val (groupName, groupId) = appValues.lastSearchedGroup.get()
+            val (groupName, groupId) = appValues.lastSearch.get()
                 ?: return@withContext emptyList()
             scheduleRepository.getSchedule(ScheduleSearch.Group(groupName, groupId), true)
         }
