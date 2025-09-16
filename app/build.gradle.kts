@@ -67,8 +67,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlin {
-        jvmToolchain(11)
+    kotlinOptions {
+        jvmTarget = "11"
     }
 
     buildFeatures {
@@ -101,6 +101,10 @@ dependencies {
     implementation(libs.bundles.room)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
