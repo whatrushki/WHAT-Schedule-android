@@ -99,7 +99,7 @@ class SheetNavigator(
 fun sheetGraph(block: SheetGraphBuilder.() -> Unit) =
     SheetGraphBuilder().apply(block).build()
 
-class SheetNavGraph(
+class SheetNavGraph internal constructor(
     val registry: MutableMap<KClass<out SheetProvider>, @Composable (Any) -> Unit>
 ) {
     companion object {

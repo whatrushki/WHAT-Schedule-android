@@ -5,15 +5,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
 import app.what.foundation.ui.theme.WHATTheme
 import app.what.navigation.core.NavigationHost
+import app.what.navigation.core.ProvideGlobalDialog
 import app.what.navigation.core.ProvideGlobalSheet
-import app.what.navigation.core.sheetGraph
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.features.main.navigation.MainProvider
 import app.what.schedule.features.main.navigation.mainRegistry
 import app.what.schedule.features.onboarding.navigation.OnboardingProvider
 import app.what.schedule.features.onboarding.navigation.onboardingRegistry
+import app.what.schedule.features.settings.presentation.ThemeType
 import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
@@ -27,18 +30,25 @@ class MainActivity : ComponentActivity() {
                 window.setNavigationBarContrastEnforced(false)
             }
 
-            val graph = sheetGraph {}
+            val settings = koinInject<AppValues>()
+            val themeType by settings.themeType.collect()
 
-            WHATTheme {
-                ProvideGlobalSheet(navGraph = graph) {
-                    val settings = koinInject<AppValues>()
-
-                    NavigationHost(
-                        start = if (settings.isFirstLaunch.get()!!) OnboardingProvider
-                        else MainProvider
-                    ) {
-                        mainRegistry()
-                        onboardingRegistry()
+            WHATTheme(
+                darkTheme = when (themeType) {
+                    ThemeType.Dark -> true
+                    ThemeType.System -> isSystemInDarkTheme()
+                    else -> false
+                }
+            ) {
+                ProvideGlobalDialog {
+                    ProvideGlobalSheet {
+                        NavigationHost(
+                            start = if (settings.isFirstLaunch.get()!!) OnboardingProvider
+                            else MainProvider
+                        ) {
+                            mainRegistry()
+                            onboardingRegistry()
+                        }
                     }
                 }
             }
