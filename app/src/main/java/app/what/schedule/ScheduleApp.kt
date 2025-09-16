@@ -64,9 +64,7 @@ val generalModule = module {
             androidContext(),
             AppDatabase::class.java,
             "schedule.db"
-        )
-            .fallbackToDestructiveMigration()
-            .build()
+        ).build()
     }
 
     single {
@@ -84,6 +82,7 @@ val generalModule = module {
                 json(Json {
                     ignoreUnknownKeys = true
                     isLenient = true
+                    classDiscriminator = "type"
                 })
             }
             engine {

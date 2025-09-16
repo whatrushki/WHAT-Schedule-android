@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Process
 import android.os.StatFs
 import android.util.Log
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -115,6 +116,8 @@ class CrashHandler private constructor(
     }
 
     override fun uncaughtException(thread: Thread, exception: Throwable) {
+        Auditor.critic("core", "App crashed", exception)
+
         try {
             val crashReport = createCrashReport(exception)
             saveCrashReport(crashReport)
