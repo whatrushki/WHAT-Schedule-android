@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Расписание</string>
+    <string name="widget_label">Расписание</string>
+    <string name="widget_description">Виджет расписания занятий</string>
 </resources>

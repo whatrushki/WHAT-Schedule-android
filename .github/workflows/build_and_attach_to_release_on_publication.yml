@@ -1,0 +1,75 @@
+name: Build and Attach to Release on Publication
+
+on:
+  release:
+    types: [ published ] # Запускается ТОЛЬКО когда релиз переходит в состояние "published"
+
+env:
+  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  RELEASE_SIGN_KEY_ALIAS: ${{ secrets.RELEASE_SIGN_KEY_ALIAS }}
+  RELEASE_SIGN_KEY_PASSWORD: ${{ secrets.RELEASE_SIGN_KEY_PASSWORD }}
+
+jobs:
+  build_and_attach:
+    name: Build APK/AAB and attach to Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Необходимо для загрузки артефактов в релиз
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Рекомендуется проверять по тегу релиза
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+
+      - name: Checkout keystore repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.KEYSTORE_GIT_REPOSITORY }}
+          token: ${{ secrets.KEYSTORE_ACCESS_TOKEN }}
+          path: app/keystore
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Build Release APK and AAB
+        run: |
+          ./gradlew assembleRelease --stacktrace
+          ./gradlew bundleRelease
+
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }} # Критически важно!
+          asset_path: app/build/outputs/apk/release/app-release.apk
+          asset_name: what-schedule-${{ github.event.release.tag_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload AAB to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: app/build/outputs/bundle/release/app-release.aab
+          asset_name: what-schedule-${{ github.event.release.tag_name }}.aab
+          asset_content_type: application/octet-stream
