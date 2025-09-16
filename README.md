@@ -8,14 +8,8 @@ _Вырасти свой идеальный график — просто, бы�
 ---
 
 ## 🌱 Посади расписание в свой телефон
-
-```bash
-git clone https://github.com/whatrushki/WHAT-Schedule-android.git
-cd WHAT-Schedule-android
-./gradlew build && ./gradlew assembleDebug
-```
-
----
+[<img src="https://github.com/whatrushki/WHAT-Schedule-android/blob/master/.github/res/badge_github.png?raw=true" alt="Get it on GitHub" height="82"
+align="center">](https://github.com/whatrushki/WHAT-Schedule-android/releases/latest/download/what-schedule.apk)
 
 ## 🍃 Почему WHAT Schedule?
 
