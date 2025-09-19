@@ -24,10 +24,10 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.capplyIf
+import app.what.foundation.ui.controllers.rememberSheetController
 import app.what.foundation.ui.useChange
 import app.what.foundation.ui.useState
 import app.what.foundation.utils.freeze
-import app.what.navigation.core.rememberSheetController
 import app.what.schedule.data.remote.api.LessonsScheduleType
 import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
@@ -146,13 +146,10 @@ fun ScheduleView(
                                     }
                                 )
                             }
+
+                            Gap(80)
                         }
-
-                        Gap(12)
                     }
-
-
-                    Gap(200)
                 }
             }
 
