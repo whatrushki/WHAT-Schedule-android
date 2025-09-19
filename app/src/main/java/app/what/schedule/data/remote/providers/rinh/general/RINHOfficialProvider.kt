@@ -64,7 +64,7 @@ class RINHOfficialProvider(
                 URLEncoder.encode(
                     value,
                     "UTF-8"
-                )
+                ).replace("+", "%20")
             }?format=json"
         })
         .body<RINHApi.Schedule.Responses.GetSchedule>()
