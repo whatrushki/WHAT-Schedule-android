@@ -40,10 +40,10 @@ import app.what.navigation.core.Navigator
 import app.what.navigation.core.rememberNavigator
 import kotlin.math.roundToInt
 
-inline val Int.dp: Dp
+internal inline val Int.dp: Dp
     @Composable get() = with(LocalDensity.current) { this@dp.toDp() }
 
-inline val Dp.px: Int
+internal inline val Dp.px: Int
     @Composable get() = with(LocalDensity.current) { this@px.toPx().roundToInt() }
 
 @Composable
@@ -117,6 +117,9 @@ fun BottomNavBar(
                         onClick = {
                             navigator.c.navigate(item.provider) {
                                 launchSingleTop = true
+                                popUpTo(item.provider) {
+                                    inclusive = true
+                                }
                             }
                         }
                     )

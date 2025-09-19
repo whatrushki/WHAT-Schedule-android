@@ -1,10 +1,8 @@
 package app.what.schedule.data.local.settings
 
 import android.content.Context
-import app.what.foundation.data.PreferenceStorage
-import app.what.schedule.data.remote.api.Group
+import app.what.foundation.data.settings.PreferenceStorage
 import app.what.schedule.data.remote.api.ScheduleSearch
-import app.what.schedule.data.remote.api.Teacher
 import app.what.schedule.features.settings.presentation.ThemeType
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.Serializable
@@ -38,6 +36,7 @@ class AppValues(context: Context) {
 
     val institution = storage.createValue("institution", null, ScheduleProvider.serializer())
     val themeType = storage.createValue("theme_type", ThemeType.System, ThemeType.serializer())
-    val devFeaturesEnabled = storage.createValue("dev_features_enabled", false, Boolean.serializer())
+    val devFeaturesEnabled =
+        storage.createValue("dev_features_enabled", false, Boolean.serializer())
 }
 

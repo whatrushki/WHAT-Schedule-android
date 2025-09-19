@@ -1,4 +1,4 @@
-package app.what.foundation.data
+package app.what.foundation.data.settings
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
@@ -27,7 +27,7 @@ class PreferenceStorage(
     ) {
         fun get(): T? = prefs
             .getString(key, null)
-            ?.let { Json.decodeFromString(serializer, it) }
+            ?.let { Json.Default.decodeFromString(serializer, it) }
             ?: defaultValue
 
         fun set(value: T?) {
@@ -35,7 +35,7 @@ class PreferenceStorage(
                 putString(
                     key,
                     if (value == null) null
-                    else Json.encodeToString(serializer, value)
+                    else Json.Default.encodeToString(serializer, value)
                 )
                 apply()
             }

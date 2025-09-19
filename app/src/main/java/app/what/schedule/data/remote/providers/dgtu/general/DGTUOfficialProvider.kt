@@ -166,7 +166,7 @@ private object DGTUApi {
             data class DGTUGroup(
                 val name: String,
                 val id: Int,
-                val kurs: Int
+                val kurs: Int?
             )
 
             @Serializable
@@ -206,7 +206,7 @@ private object DGTUApi {
                 @SerialName("кодПользователя") val codeUser: Int,
                 @SerialName("элементЦиклРасписания") val cycleElement: Boolean,
                 @SerialName("элементГрафика") val graphElement: Boolean,
-                @SerialName("тема") val theme: String,
+                @SerialName("тема") val theme: String?,
                 @SerialName("номерЗанятия") val number: Int,
                 @SerialName("ссылка") val link: String?,
                 @SerialName("созданиеВебинара") val createWebinar: Boolean,

@@ -31,15 +31,14 @@ class GoogleDriveParser(
     suspend fun getFolderContent(folderId: String): List<Item> {
         Auditor.debug("d", "getFolderContent: https://drive.google.com/drive/folders/$folderId")
         var items: List<Item> = emptyList()
-        retry(3, 500) {
+        retry(5, 200) {
             Auditor.debug("d", "getFolderContent: attempt $it")
             val response =
                 client.get("https://drive.google.com/drive/folders/$folderId").bodyAsText()
             val document = Ksoup.parse(response)
             items = document.getElementsByAttributeValue("data-target", "doc").map {
                 val id = it.attr("data-id")
-                val name = it.getElementsByClass("KL4NAf").first()!!.text()
-
+                val name = it.selectFirst("strong")!!.text()
                 return@map if ('.' in name) Item.File(id, name)
                 else Item.Folder(id, name)
             }

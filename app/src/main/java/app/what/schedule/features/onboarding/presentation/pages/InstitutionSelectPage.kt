@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SystemBarsGap
+import app.what.foundation.ui.controllers.rememberSheetController
 import app.what.foundation.ui.useState
-import app.what.navigation.core.rememberSheetController
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.InstitutionFilial
 import app.what.schedule.data.remote.api.InstitutionProvider
