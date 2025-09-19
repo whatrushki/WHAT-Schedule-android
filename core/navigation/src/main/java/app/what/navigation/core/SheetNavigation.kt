@@ -12,39 +12,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import app.what.foundation.core.Monitor.Companion.monitored
-import app.what.foundation.ui.useState
-import app.what.foundation.utils.orThrow
-import app.what.foundation.utils.retry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import app.what.foundation.ui.controllers.LocalSheetController
+import app.what.foundation.ui.controllers.SheetController
+import app.what.foundation.ui.controllers.rememberSheetHostController
 import kotlin.reflect.KClass
-
-
-@Composable
-fun <T : SheetProvider> SheetNavHost(
-    modifier: Modifier = Modifier,
-    navigator: SheetNavigator,
-    start: T,
-    registry: SheetGraphBuilder.() -> Unit,
-    content: @Composable () -> Unit
-) {
-
-}
 
 @Composable
 fun rememberSheetNavigator() = LocalSheetNavigator.current
@@ -108,11 +87,11 @@ class SheetNavGraph internal constructor(
     }
 
     inline fun <reified T : SheetProvider> get(): @Composable (Any) -> Unit {
-        return registry[T::class].orThrow
+        return registry[T::class] ?: error("invalid sheet provider key")
     }
 
     fun <T : SheetProvider> get(key: KClass<T>): @Composable (Any) -> Unit {
-        return registry[key].orThrow
+        return registry[key] ?: error("invalid sheet provider key")
     }
 }
 
@@ -176,79 +155,5 @@ fun ProvideGlobalSheet(
     }
 }
 
-@Composable
-fun rememberSheetController(): SheetController = LocalSheetController.current
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun rememberSheetHostController(
-    start: @Composable () -> Unit = {},
-    scope: CoroutineScope = rememberCoroutineScope()
-): SheetController {
-    var sheetState by useState<SheetState?>(null)
-
-    return remember {
-        object : SheetController {
-            override var content by monitored(start)
-            override var cancellable by monitored(true)
-            override var opened by monitored(false)
-
-            override fun setSheetState(state: SheetState) {
-                sheetState = state
-            }
-
-            override fun open(
-                full: Boolean,
-                cancellable: Boolean,
-                content: @Composable () -> Unit
-            ) {
-                this.content = content
-                this.cancellable = cancellable
-                open(full)
-            }
-
-            override fun open(full: Boolean) {
-                opened = true
-                scope.launch {
-                    delay(300)
-                    // TODO: сумашедший костыль, исправить по возможности
-                    retry(9, 100) {
-                        if (full) sheetState?.expand()
-                    }
-                }
-            }
-
-            override fun close() {
-                opened = false
-            }
-
-            override fun animateClose() {
-                scope.launch { sheetState?.hide() }
-                    .invokeOnCompletion { close() }
-            }
-        }
-    }
-}
-
-
-val LocalSheetController = staticCompositionLocalOf<SheetController> { error("непон") }
 val LocalSheetNavigator = staticCompositionLocalOf<SheetNavigator> { error("непон") }
 
-interface SheetController {
-    val opened: Boolean
-    var cancellable: Boolean
-    var content: @Composable () -> Unit
-
-    fun open(full: Boolean = false)
-    fun open(
-        full: Boolean = false,
-        cancellable: Boolean = true,
-        content: @Composable () -> Unit
-    )
-
-    fun close()
-    fun animateClose()
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    fun setSheetState(state: SheetState)
-}
