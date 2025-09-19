@@ -10,9 +10,7 @@ import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.data.remote.api.Teacher
-import app.what.schedule.data.remote.api.toGroup
 import app.what.schedule.data.remote.api.toScheduleSearch
-import app.what.schedule.data.remote.api.toTeacher
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.features.schedule.domain.models.ScheduleAction
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent

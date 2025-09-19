@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import animatedStarsBackground
 import app.what.foundation.core.Feature
+import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.navigation.core.NavComponent
 import app.what.navigation.core.NavigationHost
 import app.what.navigation.core.Registry
@@ -70,6 +71,7 @@ class MainFeature(
                 .background(colorScheme.background)
                 .animatedStarsBackground()
         ) {
+
             NavigationHost(
                 navigator = navigator,
                 modifier = modifier.systemBarsPadding(),
@@ -77,14 +79,18 @@ class MainFeature(
                 registry = childrenRegistry
             )
 
-            BottomNavBar(
-                modifier = Modifier.align(Alignment.Companion.BottomCenter),
-                navigator = navigator,
-                screens = children
+            // Анимированный BottomNavBar
+            AnimatedEnter(
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                if (!devFeaturesEnabled!!) null
-                else NavAction("Для разработчиков", WHATIcons.Code) {
-                    navigator.c.navigate(DevProvider)
+                BottomNavBar(
+                    navigator = navigator,
+                    screens = children,
+                ) {
+                    if (!devFeaturesEnabled!!) null
+                    else NavAction("Для разработчиков", WHATIcons.Code) {
+                        navigator.c.navigate(DevProvider)
+                    }
                 }
             }
         }

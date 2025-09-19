@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import app.what.foundation.utils.orThrow
 
 val LocalNavController = compositionLocalOf<Navigator?> { null }
 
@@ -20,7 +19,7 @@ fun rememberHostNavigator(
 
 @Composable
 fun rememberNavigator(): Navigator =
-    LocalNavController.current.orThrow
+    LocalNavController.current ?: error("no navigator")
 
 @Composable
 fun rememberNavigator(level: Int): Navigator {
@@ -32,5 +31,5 @@ fun rememberNavigator(level: Int): Navigator {
         parentNavigator = parentNavigator.parent
     }
 
-    return parentNavigator.orThrow
+    return parentNavigator ?: error("no navigator")
 }

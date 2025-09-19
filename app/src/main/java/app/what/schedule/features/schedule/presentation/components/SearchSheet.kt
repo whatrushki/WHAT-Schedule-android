@@ -36,9 +36,9 @@ import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.capplyIf
+import app.what.foundation.ui.controllers.SheetController
+import app.what.foundation.ui.controllers.rememberSheetController
 import app.what.foundation.ui.useState
-import app.what.navigation.core.SheetController
-import app.what.navigation.core.rememberSheetController
 import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.Teacher
 import app.what.schedule.data.remote.api.toScheduleSearch

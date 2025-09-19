@@ -39,6 +39,9 @@ android {
 }
 
 dependencies {
+    implementation(kotlin("reflect"))
+    implementation(project(":core:foundation"))
+
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
 
@@ -50,6 +53,4 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(kotlin("reflect"))
-    implementation(project(":core:foundation"))
 }
