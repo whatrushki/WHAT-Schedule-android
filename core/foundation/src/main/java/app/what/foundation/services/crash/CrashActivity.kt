@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.content.FileProvider
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.theme.WHATTheme
+import app.what.foundation.ui.theme.greenDarkScheme
 import java.io.File
 
 class CrashActivity : ComponentActivity() {
@@ -24,7 +25,9 @@ class CrashActivity : ComponentActivity() {
                 window.setNavigationBarContrastEnforced(false)
             }
 
-            WHATTheme {
+            WHATTheme(
+                theme = greenDarkScheme
+            ) {
                 CrashScreen(
                     crashReport = intent.getStringExtra("CRASH_REPORT") ?: "",
                     onRestart = { restartApp() },

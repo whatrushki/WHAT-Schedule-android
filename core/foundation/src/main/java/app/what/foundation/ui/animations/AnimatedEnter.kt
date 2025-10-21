@@ -27,6 +27,18 @@ fun AnimatedEnter(
         visible = true
     }
 
+    AnimatedEnter(visible, modifier, duration, content)
+}
+
+@Composable
+fun AnimatedEnter(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    duration: Int = 500,
+    content: @Composable () -> Unit
+) {
+
+
     AnimatedVisibility(
         modifier = modifier,
         visible = visible,
@@ -38,3 +50,4 @@ fun AnimatedEnter(
         content()
     }
 }
+

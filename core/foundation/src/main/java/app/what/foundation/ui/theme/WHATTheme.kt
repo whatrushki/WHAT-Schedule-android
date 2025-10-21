@@ -7,37 +7,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+
+val LocalThemeIsDark = compositionLocalOf<Boolean> { error("LocalThemeIsDark is not provided") }
 
 @Composable
 fun WHATTheme(
-    theme: Theme = GreenTheme,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    theme: ColorScheme,
+    isDarkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context)
+            if (isDarkTheme) dynamicDarkColorScheme(context)
             else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> theme.dark
-        else -> theme.light
+        else -> theme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalThemeIsDark provides isDarkTheme
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            content = content
+        )
+    }
 }
-
-class Theme(
-    val light: ColorScheme,
-    val dark: ColorScheme
-)
-
-val BrownTheme by lazy { Theme(brownLightScheme, brownDarkScheme) }
-val GreenTheme by lazy { Theme(greenLightScheme, greenDarkScheme) }
-val BlueTheme by lazy { Theme(blueLightScheme, blueDarkScheme) }

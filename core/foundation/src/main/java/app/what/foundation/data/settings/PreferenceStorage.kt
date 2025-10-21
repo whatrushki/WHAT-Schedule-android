@@ -2,8 +2,11 @@ package app.what.foundation.data.settings
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.edit
+import app.what.foundation.ui.useState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -51,6 +54,16 @@ class PreferenceStorage(
 
         @Composable
         fun collect() = observe().collectAsState(get())
+
+        @Composable
+        fun <R> collect(block: (T?) -> R): State<R?> {
+            val state = useState<R?>(null)
+
+            LaunchedEffect(Unit) {
+                observe().collect { state.value = block(it) }
+            }
+            return state
+        }
     }
 
 

@@ -1,4 +1,4 @@
-package app.what.schedule.features.schedule.presentation.components
+package app.what.schedule.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,53 +32,31 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.capplyIf
-import app.what.foundation.ui.controllers.SheetController
-import app.what.foundation.ui.controllers.rememberSheetController
 import app.what.foundation.ui.useState
-import app.what.schedule.data.remote.api.Group
-import app.what.schedule.data.remote.api.Teacher
-import app.what.schedule.data.remote.api.toScheduleSearch
-import app.what.schedule.features.schedule.domain.models.ScheduleEvent
-import app.what.schedule.features.schedule.domain.models.ScheduleState
-import app.what.schedule.ui.components.AnimatedIconTitle
-import app.what.schedule.ui.components.SearchBox
+import app.what.schedule.data.remote.api.ScheduleSearch
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Crown
 import app.what.schedule.ui.theme.icons.filled.Group
 import app.what.schedule.ui.theme.icons.filled.Person
 
 
-val SearchSheet = @Composable { state: ScheduleState, listener: Listener<ScheduleEvent> ->
-    val sheetController = rememberSheetController()
+val ScheduleSearchPane = @Composable { state: List<ScheduleSearch>,
+                                       selected: String?,
+                                       onClick: (ScheduleSearch) -> Unit,
+                                       onLongClick: (ScheduleSearch) -> Unit ->
+
     val (query, setQuery) = useState("")
-
-    val teachers = remember(
-        query,
-        state.teachers
-    ) { state.teachers.filter { query.lowercase() in it.name.lowercase() } }
-
-    val groups = remember(
-        query,
-        state.groups
-    ) { state.groups.filter { query.lowercase() in it.name.lowercase() } }
-
     val (selectedTab, setSelectedTab) = useState(0)
-
-    val favoriteList = remember(state.groups) {
-        groups.filter { it.favorite } +
-                teachers.filter { it.favorite }
+    val favoriteList = remember(state) { state.filter { it.favorite } }
+    val list = remember(selectedTab, state, query) {
+        (if (selectedTab == 0) state.filterIsInstance<ScheduleSearch.Group>()
+        else state.filterIsInstance<ScheduleSearch.Teacher>()).filter {
+            it.name.lowercase().contains(query.lowercase())
+        }
     }
-
-    val list = remember(
-        selectedTab,
-        groups.size,
-        teachers.size
-    ) { if (selectedTab == 0) groups else teachers }
-
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -117,9 +95,9 @@ val SearchSheet = @Composable { state: ScheduleState, listener: Listener<Schedul
         } else searchBlocks(
             favoriteList,
             true,
-            state.search?.name,
-            sheetController,
-            listener
+            selected,
+            onClick,
+            onLongClick
         )
 
         item(span = { GridItemSpan(2) }) {
@@ -163,64 +141,37 @@ val SearchSheet = @Composable { state: ScheduleState, listener: Listener<Schedul
         searchBlocks(
             list,
             false,
-            state.search?.name,
-            sheetController,
-            listener
+            selected,
+            onClick,
+            onLongClick
         )
     }
 }
 
 fun LazyGridScope.searchBlocks(
-    list: List<Any>,
+    list: List<ScheduleSearch>,
     favorite: Boolean,
     state: String?,
-    sheetController: SheetController,
-    listener: Listener<ScheduleEvent>
+    onClick: (ScheduleSearch) -> Unit,
+    onLongClick: (ScheduleSearch) -> Unit
 ) {
     items(
         list, key = {
             when (it) {
-                is Group -> "group_${it.id}"
-                is Teacher -> "teacher_${it.id}"
-                else -> ""
+                is ScheduleSearch.Group -> "group_${it.id}"
+                is ScheduleSearch.Teacher -> "teacher_${it.id}"
             }.let { if (favorite) "fav_$it" else it }
         }
     ) {
-        val name = when (it) {
-            is Group -> it.name
-            is Teacher -> it.name
-            else -> ""
-        }
-
         SearchItemChip(
-            name = name,
-            selected = state == name,
+            name = it.name,
+            selected = state == it.name,
             favorite = favorite,
             modifier = Modifier
                 .animateItem()
                 .padding(horizontal = 8.dp),
-            onLongClick = {
-                listener(
-                    when (it) {
-                        is Group -> ScheduleEvent.OnGroupLongPressed(it)
-                        is Teacher -> ScheduleEvent.OnTeacherLongPressed(it)
-                        else -> error("unknown type")
-                    }
-                )
-            },
-            onClick = {
-                listener(
-                    ScheduleEvent.OnSearchCompleted(
-                        when (it) {
-                            is Group -> it.toScheduleSearch()
-                            is Teacher -> it.toScheduleSearch()
-                            else -> error("unknown type")
-                        }
-                    )
-                )
-
-                sheetController.animateClose()
-            }
+            onLongClick = { onLongClick(it) },
+            onClick = { onClick(it) }
         )
     }
 }

@@ -42,13 +42,12 @@ fun ProvideGlobalDialog(
             )
         ) {
             Surface(
-                shape = shapes.medium,
+                shape = shapes.large,
                 color = colorScheme.surface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 AnimatedContent(
+                    modifier = Modifier.padding(16.dp),
                     targetState = controller.content,
                     transitionSpec = transitionSpec,
                     label = "AnimatedDialogContent"

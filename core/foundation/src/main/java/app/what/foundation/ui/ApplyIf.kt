@@ -2,15 +2,13 @@ package app.what.foundation.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 
-@Composable
 fun Modifier.capplyIf(
     expression: Boolean,
     elseBlock: @Composable Modifier.() -> Modifier = { this },
     block: @Composable Modifier.() -> Modifier
-): Modifier {
-    return if (expression) block() else elseBlock()
-}
+): Modifier = composed { if (expression) block() else elseBlock() }
 
 fun Modifier.applyIf(
     expression: Boolean,

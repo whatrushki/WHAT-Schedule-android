@@ -52,7 +52,7 @@ fun BaseSettingView(
 
             Gap(18)
 
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(title, style = typography.titleLarge, color = colorScheme.onBackground)
                 Text(
                     description,
@@ -67,6 +67,7 @@ fun BaseSettingView(
             trailing ?: return
 
             Gap(16)
+
             trailing()
         }
     }

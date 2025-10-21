@@ -45,8 +45,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 
-private val RKSIProviderMetadata by lazy {
-    MetaInfo(
+private val RKSIProviderMetadata
+    get() = MetaInfo(
         id = "rksi",
         name = "РКСИ",
         fullName = "Ростовский-на-Дону Колледж Связи и Информатики",
@@ -61,7 +61,6 @@ private val RKSIProviderMetadata by lazy {
             "Долгая загрузка (~12с)"
         )
     )
-}
 
 class RKSIOfficialProvider(
     private val client: HttpClient,
@@ -71,7 +70,7 @@ class RKSIOfficialProvider(
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "https://www.rksi.ru"
         override fun create() = RKSIOfficialProvider(get(), get(), get())
-        override val metadata: MetaInfo = RKSIProviderMetadata
+        override val metadata: MetaInfo by lazy { RKSIProviderMetadata }
     }
 
     override val metadata: MetaInfo = Factory.metadata
@@ -497,7 +496,10 @@ private fun List<Lesson>.withReplacements(
                 lesson.copy(state = LessonState.REMOVED)
             else if (replacement != null && lesson == null) {
                 val lessonTime = schedule.getByNumber(replacement.number)
-                if (lessonTime == null) Auditor.debug("d", "EXTRA $schedule ${replacement.number}")
+                if (lessonTime == null) Auditor.debug(
+                    "d",
+                    "EXTRA $schedule ${replacement.number}"
+                )
                 replacement.copy(
                     state = LessonState.ADDED,
                     startTime = lessonTime!!.startTime,

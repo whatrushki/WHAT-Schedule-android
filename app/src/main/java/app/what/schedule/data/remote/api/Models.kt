@@ -103,24 +103,42 @@ interface LessonsSchedule {
 }
 
 @Serializable
-sealed interface ScheduleSearch {
-    val name: String
-    val id: String
+sealed class ScheduleSearch {
+    abstract val name: String
+    abstract val id: String
+    abstract val favorite: Boolean
 
     @Serializable
     @SerialName("group")
-    class Group(override val name: String, override val id: String = name) : ScheduleSearch
+    class Group(
+        override val name: String, override val id: String = name,
+        override val favorite: Boolean = false
+    ) : ScheduleSearch()
 
     @Serializable
     @SerialName("teacher")
-    class Teacher(override val name: String, override val id: String = name) : ScheduleSearch
+    class Teacher(
+        override val name: String, override val id: String = name,
+        override val favorite: Boolean = false
+    ) : ScheduleSearch()
 
     operator fun component1() = name
     operator fun component2() = id
+    operator fun component3() = favorite
+
+    override fun equals(other: Any?): Boolean =
+        other is ScheduleSearch && this::class == other::class && id == other.id
+
+    override fun hashCode(): Int {
+        var result = favorite.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + id.hashCode()
+        return result
+    }
 }
 
-fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id)
-fun Teacher.toScheduleSearch() = ScheduleSearch.Teacher(name, id)
+fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id, favorite)
+fun Teacher.toScheduleSearch() = ScheduleSearch.Teacher(name, id, favorite)
 
-fun ScheduleSearch.Group.toGroup() = Group(name, id)
-fun ScheduleSearch.Teacher.toTeacher() = Teacher(name, id)
+fun ScheduleSearch.Group.toGroup() = Group(name, id, favorite = favorite)
+fun ScheduleSearch.Teacher.toTeacher() = Teacher(name, id, favorite)

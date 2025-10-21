@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1909202501
-        versionName = "0.9.2-beta"
+        versionName = "0.9.3-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -55,6 +55,7 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+
         debug {
             isMinifyEnabled = false   // Отключить для отладки
             isShrinkResources = false
@@ -73,6 +74,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -84,8 +86,6 @@ android {
     }
 }
 
-
-
 dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
@@ -94,6 +94,7 @@ dependencies {
 
 //    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     implementation(libs.poi)
+    implementation(libs.materialKolor)
     implementation(libs.poi.ooxml)
     implementation(libs.ksoup.lite)
     implementation(libs.bundles.ktor)
@@ -114,6 +115,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3.icons)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

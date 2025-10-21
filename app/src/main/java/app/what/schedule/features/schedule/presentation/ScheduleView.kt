@@ -35,9 +35,9 @@ import app.what.schedule.features.schedule.domain.models.ScheduleState
 import app.what.schedule.features.schedule.presentation.components.LessonUI
 import app.what.schedule.features.schedule.presentation.components.ScheduleShimmer
 import app.what.schedule.features.schedule.presentation.components.SearchButton
-import app.what.schedule.features.schedule.presentation.components.SearchSheet
 import app.what.schedule.features.schedule.presentation.components.ViewType
 import app.what.schedule.ui.components.Fallback
+import app.what.schedule.ui.components.ScheduleSearchPane
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -62,7 +62,17 @@ fun ScheduleView(
             }
     ) {
         val sheetController = rememberSheetController()
-        val sheet = @Composable { SearchSheet(state, listener) }
+        val sheet = @Composable {
+            ScheduleSearchPane(
+                state.scheduleSearches,
+                state.search?.name,
+                {
+                    listener(ScheduleEvent.OnSearchClicked(it))
+                    sheetController.animateClose()
+                },
+                { listener(ScheduleEvent.OnSearchLongPressed(it)) }
+            )
+        }
         val pagerState = rememberPagerState { state.schedules.size }
         val scope = rememberCoroutineScope()
         val (scheduleType, setScheduleType) = useState<LessonsScheduleType?>(null)
@@ -147,7 +157,7 @@ fun ScheduleView(
                                 )
                             }
 
-                            Gap(80)
+                            Gap(120)
                         }
                     }
                 }

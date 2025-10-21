@@ -1,7 +1,7 @@
 package app.what.foundation.utils
 
-typealias Extension<T> = T.() -> Unit
-typealias Extension1<T, A1> = T.(A1) -> Unit
+typealias Ext<T> = T.() -> Unit
+typealias Ext1<T, A1> = T.(A1) -> Unit
 
 // RE - Resultant Extension
 typealias RE<T, R> = T.() -> R

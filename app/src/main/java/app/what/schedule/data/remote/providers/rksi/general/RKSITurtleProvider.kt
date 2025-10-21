@@ -25,11 +25,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
+import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalTime
 
-private val TurtleProviderMetadata by lazy {
-    MetaInfo(
+private val TurtleProviderMetadata
+    get() = MetaInfo(
         id = "turtle",
         name = "Turtle",
         fullName = "Turtle Schedule",
@@ -44,14 +45,14 @@ private val TurtleProviderMetadata by lazy {
             "Незначительные ошибки в расписании"
         )
     )
-}
+
 
 class RKSITurtleProvider(
     private val client: HttpClient
 ) : InstitutionProvider {
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "http://45.155.207.232:8080/api/v2"
-        override val metadata = TurtleProviderMetadata
+        override val metadata by lazy { TurtleProviderMetadata }
         override fun create(): InstitutionProvider = RKSITurtleProvider(get())
     }
 
@@ -63,7 +64,12 @@ class RKSITurtleProvider(
         showReplacements: Boolean,
         additional: AdditionalData
     ): List<DaySchedule> = client
-        .get("$BASE_URL/schedule/$group")
+        .get(
+            "$BASE_URL/schedule/" + URLEncoder.encode(
+                group,
+                "UTF-8"
+            ).replace("+", "%20")
+        )
         .body<GetSchedule>()
         .toDaySchedules(ParseMode.GROUP)
 
@@ -72,7 +78,12 @@ class RKSITurtleProvider(
         showReplacements: Boolean,
         additional: AdditionalData
     ): List<DaySchedule> = client
-        .get("$BASE_URL/schedule/$teacher")
+        .get(
+            "$BASE_URL/schedule/" + URLEncoder.encode(
+                teacher,
+                "UTF-8"
+            ).replace("+", "%20")
+        )
         .body<GetSchedule>()
         .toDaySchedules(ParseMode.TEACHER)
 

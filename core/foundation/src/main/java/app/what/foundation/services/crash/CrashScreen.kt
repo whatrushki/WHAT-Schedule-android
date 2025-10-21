@@ -57,7 +57,6 @@ fun CrashScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Иконка ошибки
             Icon(
                 imageVector = Icons.Default.FavoriteBorder,
                 contentDescription = "Crash",
@@ -67,7 +66,6 @@ fun CrashScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Заголовок
             Text(
                 text = "Приложение остановлено",
                 style = typography.headlineSmall,
@@ -77,7 +75,6 @@ fun CrashScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Описание
             Text(
                 text = "Произошла непредвиденная ошибка. Приносим извинения за неудобства.",
                 style = typography.bodyMedium,
@@ -87,7 +84,6 @@ fun CrashScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Кнопки
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -123,7 +119,6 @@ fun CrashScreen(
                 }
             }
 
-            // Детали ошибки
             if (showDetails) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CrashDetails(crashReport = crashReport)

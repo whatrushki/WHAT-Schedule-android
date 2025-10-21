@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.room.Room
 import app.what.foundation.services.AppLogger
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.foundation.services.auto_update.GitHubUpdateService
+import app.what.foundation.services.auto_update.UpdateConfig
+import app.what.foundation.services.auto_update.UpdateManager
 import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
@@ -50,6 +53,16 @@ val generalModule = module {
     single { AppUtils(get()) }
     single { GoogleDriveParser(get()) }
     single { FileManager(get()) }
+    single {
+        UpdateManager(
+            get(), get(), UpdateConfig(
+                "whatrushki", "WHAT-Schedule-android",
+                BuildConfig.VERSION_NAME
+            )
+        )
+    }
+    single { GitHubUpdateService(get()) }
+
 
     single { InstitutionManager(get()) }
     single { ScheduleRepository(get(), get()) }

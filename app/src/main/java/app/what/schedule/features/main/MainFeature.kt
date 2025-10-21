@@ -2,8 +2,12 @@ package app.what.schedule.features.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
@@ -74,7 +78,11 @@ class MainFeature(
 
             NavigationHost(
                 navigator = navigator,
-                modifier = modifier.systemBarsPadding(),
+                modifier = modifier.windowInsetsPadding(
+                    WindowInsets.systemBars.only(
+                        WindowInsetsSides.Top
+                    )
+                ),
                 start = ScheduleProvider,
                 registry = childrenRegistry
             )

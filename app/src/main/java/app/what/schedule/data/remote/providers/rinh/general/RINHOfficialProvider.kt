@@ -27,8 +27,8 @@ import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalTime
 
-private val RINHProviderMetadata by lazy {
-    MetaInfo(
+private val RINHProviderMetadata
+    get() = MetaInfo(
         id = "rinh",
         name = "Digital",
         fullName = "Расписание РГЭУ (РИНХ)",
@@ -38,14 +38,13 @@ private val RINHProviderMetadata by lazy {
         advantages = listOf(),
         disadvantages = listOf()
     )
-}
 
 class RINHOfficialProvider(
     private val client: HttpClient
 ) : InstitutionProvider {
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "https://rasp-api.rsue.ru/api"
-        override val metadata = RINHProviderMetadata
+        override val metadata by lazy { RINHProviderMetadata }
         override fun create(): InstitutionProvider = RINHOfficialProvider(get())
     }
 

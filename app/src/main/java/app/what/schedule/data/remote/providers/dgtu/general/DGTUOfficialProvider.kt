@@ -26,8 +26,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-private val DGTUProviderMetadata by lazy {
-    MetaInfo(
+private val DGTUProviderMetadata
+    get() = MetaInfo(
         id = "dgtu",
         name = "ДГТУ",
         fullName = "Расписание Дгту",
@@ -37,14 +37,13 @@ private val DGTUProviderMetadata by lazy {
         advantages = listOf(),
         disadvantages = listOf()
     )
-}
 
 class DGTUOfficialProvider(
     private val client: HttpClient
 ) : InstitutionProvider {
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "https://edu.donstu.ru/api"
-        override val metadata = DGTUProviderMetadata
+        override val metadata by lazy { DGTUProviderMetadata }
         override fun create(): InstitutionProvider = DGTUOfficialProvider(get())
     }
 
