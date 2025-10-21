@@ -49,6 +49,7 @@ import app.what.schedule.data.remote.api.LessonState
 import app.what.schedule.data.remote.api.LessonType
 import app.what.schedule.data.remote.api.OneTimeUnit
 import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.api.toScheduleSearch
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.ui.theme.icons.WHATIcons
@@ -361,9 +362,12 @@ private fun OtUnitsView(
                 text = if (viewType == ViewType.TEACHER) it.group.name
                 else it.teacher.name,
                 modifier = Modifier.bclick {
-                    if (viewType == ViewType.TEACHER)
-                        listener(ScheduleEvent.OnLessonItemGroupClicked(it.group))
-                    else listener(ScheduleEvent.OnLessonItemTeacherClicked(it.teacher))
+                    listener(
+                        ScheduleEvent.OnSearchClicked(
+                            if (viewType == ViewType.TEACHER) it.teacher.toScheduleSearch()
+                            else it.group.toScheduleSearch()
+                        )
+                    )
                 }
             )
 

@@ -30,14 +30,14 @@ class ScheduleRepository(
         api = institutionManager.getSavedProvider().orThrow { "No provider selected" }
     }
 
-    suspend fun toggleFavorites(value: Group) {
+    suspend fun toggleFavorites(value: ScheduleSearch.Group) {
         db.withTransaction {
             val group = db.groupsDao.selectByGroupId(getFilialId(), value.id)
             db.groupsDao.update(group.copy(favorite = !group.favorite))
         }
     }
 
-    suspend fun toggleFavorites(value: Teacher) {
+    suspend fun toggleFavorites(value: ScheduleSearch.Teacher) {
         db.withTransaction {
             val teacher = db.teachersDao.selectByTeacherId(getFilialId(), value.id)
             db.teachersDao.update(teacher.copy(favorite = !teacher.favorite))
