@@ -6,12 +6,15 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -24,6 +27,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
@@ -43,20 +47,26 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import app.what.schedule.R
-import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.DaySchedule
 import app.what.schedule.data.remote.api.Lesson
-import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.LessonState
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.domain.ScheduleRepository
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.Locale
 
+class ScheduleWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = ScheduleWidget()
+}
+
 private const val DAY_INDEX_KEY = "day_index"
+internal const val SEARCH_KEY = "search"
 private val MAX_PAGE_INDEX_KEY = ActionParameters.Key<Int>("max_index")
 
 class ScheduleWidget : GlanceAppWidget(), KoinComponent {
@@ -64,27 +74,16 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        Log.d("d", "action updated")
         val scheduleRepository: ScheduleRepository by inject()
-        val appValues: AppValues by inject()
-
-        val schedule = withContext(IO) {
-            val (groupName, groupId) = appValues.lastSearch.get()
-                ?: return@withContext emptyList()
-            scheduleRepository.getSchedule(ScheduleSearch.Group(groupName, groupId), true)
-        }
+        val prefs = getAppWidgetState(context, stateDefinition, id) as Preferences
+        val search = prefs[stringPreferencesKey(SEARCH_KEY)]
+        val schedule = if (search == null) emptyList()
+        else withContext(IO) { scheduleRepository.getSchedule(Json.decodeFromString(search), true) }
 
         provideContent {
             val currentDayIndex = currentState(intPreferencesKey(DAY_INDEX_KEY)) ?: 0
-            Log.d("d", "Current day index: $currentDayIndex")
-            Log.d("d", "action  updated, index: $currentDayIndex")
             WidgetContent(schedule, currentDayIndex)
         }
-    }
-
-    private fun getCurrentDayIndex(context: Context, glanceId: GlanceId): Int {
-        val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
-        return prefs.getInt("day_index_${glanceId.hashCode()}", 0)
     }
 }
 
@@ -154,7 +153,7 @@ fun WidgetContent(
         } else LazyColumn(
             GlanceModifier.cornerRadius(12.dp)
         ) {
-            items(currentDay.lessons) {
+            items(currentDay.lessons.sortedBy { it.startTime }) {
                 Column {
                     LessonCard(it)
                     Spacer(modifier = GlanceModifier.height(8.dp))
@@ -171,10 +170,27 @@ fun LessonCard(
 ) = Column(
     modifier = GlanceModifier
         .fillMaxWidth()
-        .background(GlanceTheme.colors.secondaryContainer)
+        .background(
+            GlanceTheme.colors.secondaryContainer.let {
+                if (lesson.state != LessonState.REMOVED) it
+                else ColorProvider(it.getColor(LocalContext.current).copy(alpha = .8f))
+
+            }
+        )
         .cornerRadius(12.dp)
         .padding(16.dp)
 ) {
+
+    val primaryColor =
+        if (lesson.state == LessonState.REMOVED) GlanceTheme.colors.secondaryContainer
+        else if (lesson.type.isNonStandard) GlanceTheme.colors.tertiary
+        else GlanceTheme.colors.primary
+
+    val onPrimaryColor =
+        if (lesson.state == LessonState.REMOVED) GlanceTheme.colors.onSecondaryContainer
+        else if (lesson.type.isNonStandard) GlanceTheme.colors.onTertiary
+        else GlanceTheme.colors.onPrimary
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = GlanceModifier.fillMaxWidth()
@@ -183,13 +199,13 @@ fun LessonCard(
             modifier = GlanceModifier
                 .size(24.dp)
                 .cornerRadius(100.dp)
-                .background(GlanceTheme.colors.primary),
+                .background(primaryColor),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = lesson.number.toString(),
+                text = if (lesson.number != 0) lesson.number.toString() else "*",
                 style = TextStyle(
-                    color = GlanceTheme.colors.onPrimary,
+                    color = onPrimaryColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -201,7 +217,7 @@ fun LessonCard(
         Text(
             text = formatTime(lesson.startTime),
             style = TextStyle(
-                color = GlanceTheme.colors.primary,
+                color = primaryColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -212,7 +228,7 @@ fun LessonCard(
         Text(
             text = "- ${formatTime(lesson.endTime)}",
             style = TextStyle(
-                color = GlanceTheme.colors.primary,
+                color = primaryColor,
                 fontSize = 16.sp
             )
         )
@@ -223,7 +239,7 @@ fun LessonCard(
     // Информация
     Column {
         Text(
-            text = lesson.subject,
+            text = lesson.subject.ifEmpty { "Замена" },
             style = TextStyle(
                 color = GlanceTheme.colors.onSecondaryContainer,
                 fontSize = 18.sp,
@@ -234,11 +250,20 @@ fun LessonCard(
 
         Spacer(modifier = GlanceModifier.height(4.dp))
 
-        OtUnitValueView("👔", lesson.otUnits.first().teacher.name)
-        Spacer(modifier = GlanceModifier.height(4.dp))
-        OtUnitValueView("🚪", lesson.otUnits.first().auditory)
-        Spacer(modifier = GlanceModifier.height(4.dp))
-        OtUnitValueView("🏢", lesson.otUnits.first().building)
+        Row(
+            GlanceModifier.fillMaxWidth()
+        ) {
+            lesson.otUnits.forEach {
+                Column {
+                    OtUnitValueView("👔", it.teacher.name)
+                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    OtUnitValueView("🚪", it.auditory)
+                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    OtUnitValueView("🏢", it.building)
+                }
+                Spacer(modifier = GlanceModifier.width(4.dp))
+            }
+        }
     }
 }
 
@@ -247,7 +272,7 @@ fun OtUnitValueView(
     icon: String,
     text: String
 ) = Text(
-    text = "$icon $text",
+    text = "$icon  $text",
     style = TextStyle(
         color = GlanceTheme.colors.secondary,
         fontSize = 14.sp
@@ -281,11 +306,6 @@ fun IconButton(
             )
         )
     }
-}
-
-// Receiver для виджета
-class ScheduleWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = ScheduleWidget()
 }
 
 class PrevDayActionCallback : ActionCallback {
