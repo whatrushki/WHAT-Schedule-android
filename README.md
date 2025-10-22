@@ -14,10 +14,9 @@ align="center">](https://github.com/whatrushki/WHAT-Schedule-android/releases/la
 
 ## 🎋 Screenshots
 
-| ![Image 1](.github/res/image1.png) | ![Image 2](.github/res/image2.png) |
-|:-------------------------------------------------------------------------:|:-------------------------------------------------------------------------:|
-| ![Image 3](.github/res/image3.png) | ![Image 4](.github/res/image4.png) |
-| ![Image 5](.github/res/image5.png) | 
+| ![Image 1](.github/res/image1.png) | ![Image 2](.github/res/image2.png) | ![Image 3](.github/res/image3.png) |
+|:----------------------------------:|:----------------------------------:|:----------------------------------:|
+| ![Image 4](.github/res/image4.png) | ![Image 5](.github/res/image5.png) |                                    |
 
 
 ## 🍃 Почему WHAT Schedule?
