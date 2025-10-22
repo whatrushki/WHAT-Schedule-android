@@ -74,6 +74,7 @@ fun NavigationItem(
             .clickable(
                 indication = null, // Убираем ripple эффект
                 interactionSource = remember { MutableInteractionSource() },
+                enabled = !selected,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center

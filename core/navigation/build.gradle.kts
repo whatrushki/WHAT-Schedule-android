@@ -18,14 +18,6 @@ android {
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = true    // Включить для релиза
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-
         debug {
             isMinifyEnabled = false   // Отключить для отладки
         }

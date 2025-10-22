@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.what.foundation.core.Monitor.Companion.monitored
 import app.what.foundation.core.UIComponent
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.services.auto_update.DownloadState
 import app.what.foundation.services.auto_update.UpdateInfo
 import app.what.foundation.services.auto_update.UpdateManager
@@ -63,6 +64,7 @@ object SettingUpdateComponent : UIComponent {
         LaunchedEffect(Unit) {
             scope.launch {
                 val result = updateManager.checkForUpdates()
+                Auditor.debug("d", result.toString())
                 if (result is UpdateResult.Available) updateInfo = result.updateInfo
             }
         }

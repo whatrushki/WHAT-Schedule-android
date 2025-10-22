@@ -16,7 +16,7 @@ android {
         applicationId = "app.what.schedule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1909202501
+        versionCode = 22102501
         versionName = "0.9.3-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

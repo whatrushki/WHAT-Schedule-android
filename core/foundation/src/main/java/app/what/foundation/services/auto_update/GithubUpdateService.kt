@@ -41,6 +41,7 @@ class GitHubUpdateService(
 
             Auditor.debug("d", "$latestVersion $currentVersionParsed")
             Auditor.debug("d", "${latestRelease.tagName} $currentVersion")
+            Auditor.debug("d", "${latestVersion > currentVersionParsed}")
 
             if (latestVersion > currentVersionParsed) {
                 val apkAsset = latestRelease.assets.firstOrNull { it.name.endsWith(".apk") }
