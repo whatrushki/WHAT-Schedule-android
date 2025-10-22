@@ -1,6 +1,6 @@
 # 🌿 WHAT Schedule · Умное расписание
 
-![Banner](https://github.com/whatrushki/WHAT-Schedule-android/blob/master/.github/res/app_banner.jpg?raw=true)
+![Banner](.github/res/app_banner.jpg)
 
 **Твой цифровой сад учебного времени**  
 _Вырасти свой идеальный график — просто, быстро, зелёно._ 🌱
@@ -8,8 +8,17 @@ _Вырасти свой идеальный график — просто, бы�
 ---
 
 ## 🌱 Посади расписание в свой телефон
-[<img src="https://github.com/whatrushki/WHAT-Schedule-android/blob/master/.github/res/badge_github.png?raw=true" alt="Get it on GitHub" height="82"
+[<img src=".github/res/badge_github.png?raw=true" alt="Get it on GitHub" height="82"
 align="center">](https://github.com/whatrushki/WHAT-Schedule-android/releases/latest/download/what-schedule.apk)
+
+
+## 🎋 Screenshots
+
+| ![Image 1](.github/res/image1.png) | ![Image 2](.github/res/image2.png) |
+|:-------------------------------------------------------------------------:|:-------------------------------------------------------------------------:|
+| ![Image 3](.github/res/image3.png) | ![Image 4](.github/res/image4.png) |
+| ![Image 5](.github/res/image5.png) | 
+
 
 ## 🍃 Почему WHAT Schedule?
 
@@ -56,7 +65,7 @@ Room              // Надёжная и типобезопасная просл
 - [x] MVP
 - [x] Кеширование
 - [x] Виджеты на главный экран
-- [ ] Темы
+- [x] Темы
 - [ ] Интеграция новостей
 
 ## 💚 Стань садовником проекта
