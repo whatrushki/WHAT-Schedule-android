@@ -3,7 +3,9 @@ package app.what.schedule.features.widget
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -42,6 +44,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.material3.ColorProviders
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -49,11 +52,17 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.what.schedule.R
+import app.what.schedule.data.local.settings.AppValues
+import app.what.schedule.data.local.settings.ThemeStyle
+import app.what.schedule.data.local.settings.ThemeType
 import app.what.schedule.data.remote.api.DaySchedule
 import app.what.schedule.data.remote.api.Lesson
 import app.what.schedule.data.remote.api.LessonState
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.domain.ScheduleRepository
+import app.what.schedule.utils.GlanceUtils.isSystemInDarkTheme
+import com.materialkolor.ktx.DynamicScheme
+import com.materialkolor.toColorScheme
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -70,19 +79,38 @@ internal const val SEARCH_KEY = "search"
 private val MAX_PAGE_INDEX_KEY = ActionParameters.Key<Int>("max_index")
 
 class ScheduleWidget : GlanceAppWidget(), KoinComponent {
-
+    private val settings: AppValues by inject()
+    private val scheduleRepository: ScheduleRepository by inject()
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val scheduleRepository: ScheduleRepository by inject()
+        val themeType = settings.themeType.get()
+        val themeStyle = settings.themeStyle.get()
+        val themeColor = settings.themeColor.get()
+
         val prefs = getAppWidgetState(context, stateDefinition, id) as Preferences
         val search = prefs[stringPreferencesKey(SEARCH_KEY)]
         val schedule = if (search == null) emptyList()
         else withContext(IO) { scheduleRepository.getSchedule(Json.decodeFromString(search), true) }
 
         provideContent {
+            val isDarkTheme = when (themeType) {
+                ThemeType.Dark -> true
+                ThemeType.System -> LocalContext.current.isSystemInDarkTheme()
+                else -> false
+            }
+
+            val theme = ColorProviders(
+                when (themeStyle) {
+                    ThemeStyle.CustomColor -> DynamicScheme(Color(themeColor!!), isDarkTheme)
+                    else -> DynamicScheme(Color(0xFF94FF28), isDarkTheme)
+                }.toColorScheme()
+            )
+
+            GlanceTheme(theme) {
             val currentDayIndex = currentState(intPreferencesKey(DAY_INDEX_KEY)) ?: 0
             WidgetContent(schedule, currentDayIndex)
+            }
         }
     }
 }
