@@ -1,6 +1,6 @@
 package app.what.schedule.features.schedule.domain.models
 
-import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.models.ScheduleSearch
 
 sealed interface ScheduleEvent {
     object Init : ScheduleEvent

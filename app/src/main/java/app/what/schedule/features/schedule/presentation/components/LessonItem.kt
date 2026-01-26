@@ -43,13 +43,13 @@ import app.what.foundation.ui.bclick
 import app.what.foundation.ui.capplyIf
 import app.what.foundation.ui.useState
 import app.what.foundation.utils.freeze
-import app.what.schedule.data.remote.api.Group
-import app.what.schedule.data.remote.api.Lesson
-import app.what.schedule.data.remote.api.LessonState
-import app.what.schedule.data.remote.api.LessonType
-import app.what.schedule.data.remote.api.OneTimeUnit
-import app.what.schedule.data.remote.api.Teacher
-import app.what.schedule.data.remote.api.toScheduleSearch
+import app.what.schedule.data.remote.api.models.Group
+import app.what.schedule.data.remote.api.models.Lesson
+import app.what.schedule.data.remote.api.models.LessonState
+import app.what.schedule.data.remote.api.models.LessonType
+import app.what.schedule.data.remote.api.models.OneTimeUnit
+import app.what.schedule.data.remote.api.models.Teacher
+import app.what.schedule.data.remote.api.models.toScheduleSearch
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.ui.theme.icons.WHATIcons
@@ -57,6 +57,7 @@ import app.what.schedule.ui.theme.icons.filled.Building
 import app.what.schedule.ui.theme.icons.filled.Group
 import app.what.schedule.ui.theme.icons.filled.Person
 import app.what.schedule.ui.theme.icons.filled.Room
+import java.time.LocalDate
 import java.time.LocalTime
 
 enum class ViewType {
@@ -364,8 +365,8 @@ private fun OtUnitsView(
                 modifier = Modifier.bclick {
                     listener(
                         ScheduleEvent.OnSearchClicked(
-                            if (viewType == ViewType.TEACHER) it.teacher.toScheduleSearch()
-                            else it.group.toScheduleSearch()
+                            if (viewType == ViewType.TEACHER) it.group.toScheduleSearch()
+                            else it.teacher.toScheduleSearch()
                         )
                     )
                 }
@@ -517,6 +518,7 @@ fun LessonPreview() = Column {
 
         val lesson = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Основы дискретной математики и философии науки",
                 type = LessonType.COMMON,
@@ -542,6 +544,7 @@ fun LessonPreview() = Column {
 
         val classHour = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Классный час",
                 type = LessonType.CLASS_HOUR,
@@ -562,6 +565,7 @@ fun LessonPreview() = Column {
 
         val lesson2 = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Основы дискретной математики и философии науки",
                 type = LessonType.COMMON,
@@ -587,6 +591,7 @@ fun LessonPreview() = Column {
 
         val lesson3 = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Доп.занятие",
                 type = LessonType.COMMON,
@@ -607,6 +612,7 @@ fun LessonPreview() = Column {
 
         val classHour2 = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Классный час",
                 type = LessonType.CLASS_HOUR,
@@ -633,6 +639,7 @@ fun LessonPreview() = Column {
 
         val lesson4 = LessonUI(
             data = Lesson(
+                date = LocalDate.now(),
                 number = 1,
                 subject = "Доп.занятие",
                 type = LessonType.ADDITIONAL,

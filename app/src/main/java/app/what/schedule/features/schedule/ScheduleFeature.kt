@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import app.what.foundation.core.Feature
 import app.what.navigation.core.NavComponent
@@ -26,7 +25,7 @@ class ScheduleFeature(
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()
     ) {
-        val viewState by controller.collectStates()
+        val viewState = controller.collectStates()
 
         LaunchedEffect(Unit) {
             listener(ScheduleEvent.Init)

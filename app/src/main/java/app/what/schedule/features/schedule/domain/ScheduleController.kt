@@ -4,11 +4,12 @@ import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.foundation.utils.safeExecute
-import app.what.foundation.utils.suspendCall
+import app.what.foundation.utils.launchIO
+import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
-import app.what.schedule.data.remote.api.ScheduleSearch
-import app.what.schedule.data.remote.api.toScheduleSearch
+import app.what.schedule.data.remote.api.ScheduleResponse
+import app.what.schedule.data.remote.api.models.ScheduleSearch
+import app.what.schedule.data.remote.api.models.toScheduleSearch
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.features.schedule.domain.models.ScheduleAction
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
@@ -25,8 +26,8 @@ class ScheduleController(
 ) {
     override fun obtainEvent(viewEvent: ScheduleEvent) = when (viewEvent) {
         ScheduleEvent.Init -> {}
-        ScheduleEvent.UpdateSchedule -> syncSchedule(viewState.search)
-        ScheduleEvent.OnRefresh -> syncSchedule(viewState.search, false)
+        ScheduleEvent.UpdateSchedule -> syncSchedule(viewState.selectedSearch)
+        ScheduleEvent.OnRefresh -> syncSchedule(viewState.selectedSearch, false)
         is ScheduleEvent.OnSearchClicked -> syncSchedule(viewEvent.value)
         is ScheduleEvent.OnSearchLongPressed -> toggleFavorites(viewEvent.value)
     }
@@ -35,22 +36,23 @@ class ScheduleController(
         init()
     }
 
+    val debugMode: Boolean
+        get() = settings.debugMode.get() == true
+
     private fun init() {
         val lastSearch = settings.lastSearch.get()
 
         updateState {
             if (lastSearch == null) copy(scheduleState = RemoteState.Idle)
-            else copy(search = lastSearch)
+            else copy(selectedSearch = lastSearch)
         }
 
-        updateApiProvider()
-
         updateSearches()
-        syncSchedule(viewState.search, true)
+        syncSchedule(viewState.selectedSearch, true)
     }
 
     private fun toggleFavorites(value: ScheduleSearch) {
-        suspendCall(viewModelScope) {
+        viewModelScope.launchIO {
             when (value) {
                 is ScheduleSearch.Group -> apiRepository.toggleFavorites(value)
                 is ScheduleSearch.Teacher -> apiRepository.toggleFavorites(value)
@@ -62,42 +64,66 @@ class ScheduleController(
     }
 
     private fun syncSchedule(search: ScheduleSearch?, useCache: Boolean = true) {
-        suspendCall(viewModelScope) { updateSchedule(search, useCache) }
+        viewModelScope.launchSafe(
+            debug = debugMode,
+            onFailure = {
+                updateState { copy(scheduleState = RemoteState.Error(it)) }
+            }
+        ) {
+            updateSchedule(search, useCache)
+        }
     }
-
-    private fun updateApiProvider() = apiRepository.updateApiProvider()
 
     private suspend fun updateSchedule(search: ScheduleSearch?, useCache: Boolean) {
         search ?: return
 
-        safeUpdateState {
-            copy(search = search, schedules = emptyList(), scheduleState = RemoteState.Loading)
+        updateState {
+            copy(
+                selectedSearch = search,
+                schedules = emptyList(),
+                scheduleState = RemoteState.Loading
+            )
         }
 
         Auditor.debug("d", "Api: $apiRepository")
 
         settings.lastSearch.set(search)
-        val data = apiRepository.getSchedule(search, useCache)
+        val data = apiRepository.getSchedule(search, useCache, viewState.schedules.isEmpty()).also {
+            Auditor.debug("d", it.toString())
+        }
 
-        safeUpdateState { copy(scheduleState = RemoteState.Success, schedules = data) }
+        updateState {
+            when (data) {
+                is ScheduleResponse.Available -> copy(
+                    scheduleState = RemoteState.Success,
+                    schedules = data.schedules
+                )
+
+                ScheduleResponse.Empty -> copy(
+                    scheduleState = RemoteState.Empty,
+                    schedules = emptyList()
+                )
+
+                ScheduleResponse.UpToDate -> copy(scheduleState = RemoteState.Success)
+            }
+        }
     }
 
     private fun updateSearches() {
-        safeExecute(
-            scope = viewModelScope,
-            failure = {
-                safeUpdateState {
+        viewModelScope.launchSafe(
+            onFailure = {
+                updateState {
                     copy(scheduleSearchesState = RemoteState.Error(it))
                 }
             }
         ) {
-            safeUpdateState { copy(scheduleSearchesState = RemoteState.Loading) }
+            updateState { copy(scheduleSearchesState = RemoteState.Loading) }
 
             val ut = async { apiRepository.getTeachers().map { it.toScheduleSearch() } }
             val ug = async { apiRepository.getGroups().map { it.toScheduleSearch() } }
             val data = awaitAll(ut, ug).flatten()
 
-            safeUpdateState {
+            updateState {
                 copy(
                     scheduleSearches = data,
                     scheduleSearchesState = RemoteState.Success
