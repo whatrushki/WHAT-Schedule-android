@@ -1,5 +1,6 @@
 package app.what.foundation.services.crash
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
@@ -93,7 +94,8 @@ data class StorageInfo(
 )
 
 class CrashHandler private constructor(
-    private val context: Context
+    private val context: Context,
+    private val activity: Class<out Activity>
 ) : Thread.UncaughtExceptionHandler {
 
     private var defaultHandler: Thread.UncaughtExceptionHandler? = null
@@ -103,15 +105,18 @@ class CrashHandler private constructor(
     }
 
     companion object {
-        fun initialize(context: Context) {
+        fun <T : Activity> initialize(context: Context, activity: Class<T>) {
             val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
 
-            // Если уже наш обработчик, не делаем ничего
             if (currentHandler is CrashHandler) return
 
-            Thread.setDefaultUncaughtExceptionHandler(CrashHandler(context.applicationContext).apply {
-                setDefaultHandler(currentHandler)
-            })
+            Thread.setDefaultUncaughtExceptionHandler(
+                CrashHandler(
+                    context.applicationContext,
+                    activity
+                ).apply {
+                    setDefaultHandler(currentHandler)
+                })
         }
     }
 
@@ -122,7 +127,7 @@ class CrashHandler private constructor(
             val crashReport = createCrashReport(exception)
             saveCrashReport(crashReport)
 
-            val intent = Intent(context, CrashActivity::class.java).apply {
+            val intent = Intent(context, activity).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra("CRASH_REPORT", crashReport.toText())
             }

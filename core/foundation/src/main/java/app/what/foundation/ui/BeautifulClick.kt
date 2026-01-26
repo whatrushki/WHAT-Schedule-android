@@ -8,11 +8,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 
 
-fun Modifier.bclick(enabled: Boolean = true, block: () -> Unit): Modifier = composed {
-    clickable(
-        indication = LocalIndication.current,
-        interactionSource = remember { MutableInteractionSource() },
-        enabled = enabled,
-        onClick = block
-    )
+fun Modifier.bclick(enabled: Boolean = true, block: (() -> Unit)?): Modifier = composed {
+    val indication = LocalIndication.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    applyIf(block != null && enabled) {
+        clickable(
+            indication = indication,
+            interactionSource = interactionSource,
+            onClick = block!!
+        )
+    }
 }

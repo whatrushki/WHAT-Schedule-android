@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,9 +40,9 @@ fun Fallback(
     verticalArrangement = Arrangement.Center,
     horizontalAlignment = Alignment.CenterHorizontally
 ) {
-    val (topPadding, bottomPadding) = when (action == null) {
-        true -> 8.dp to 8.dp
-        false -> 8.dp to 16.dp
+    val (topPadding, bottomPadding) = when {
+        action == null -> 8.dp to 8.dp
+        else -> 8.dp to 16.dp
     }
 
     val fallbackShape = remember {
@@ -99,7 +98,7 @@ fun Fallback(
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
-                modifier = modifier.fillMaxSize()
+                modifier = modifier.fillMaxWidth()
             )
         }
     }

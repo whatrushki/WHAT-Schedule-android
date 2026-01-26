@@ -6,10 +6,11 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
-import app.what.schedule.data.remote.api.LessonState
-import app.what.schedule.data.remote.api.LessonType
-import app.what.schedule.data.remote.api.LessonsScheduleType
+import app.what.schedule.data.remote.api.models.LessonState
+import app.what.schedule.data.remote.api.models.LessonType
+import app.what.schedule.data.remote.api.models.LessonsScheduleType
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 @Entity(tableName = "requests")
@@ -18,6 +19,7 @@ data class RequestDBO(
     val id: Long = 0,
     val institutionId: String,
     val query: String,
+    val lastModified: LocalDateTime,
     val createdAt: LocalDate = LocalDate.now(),
 )
 

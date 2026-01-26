@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import app.what.foundation.core.Monitor.Companion.monitored
 import app.what.foundation.utils.retry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -29,9 +28,9 @@ fun rememberSheetHostController(
 
     return remember {
         object : SheetController {
-            override var content by monitored(start)
-            override var cancellable by monitored(true)
-            override var opened by monitored(false)
+            override var content by mutableStateOf(start)
+            override var cancellable by mutableStateOf(true)
+            override var opened by mutableStateOf(false)
 
             override fun setSheetState(state: SheetState) {
                 sheetState = state

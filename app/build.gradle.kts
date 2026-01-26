@@ -16,8 +16,8 @@ android {
         applicationId = "app.what.schedule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22102501
-        versionName = "0.9.3-beta"
+        versionCode = 26012601
+        versionName = "0.9.8-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -92,17 +92,19 @@ dependencies {
 
     ksp(libs.room.compiler)
 
-//    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
-    implementation(libs.poi)
-    implementation(libs.materialKolor)
-    implementation(libs.poi.ooxml)
-    implementation(libs.ksoup.lite)
     implementation(libs.bundles.ktor)
     implementation(libs.bundles.koin)
     implementation(libs.bundles.room)
+    implementation(libs.bundles.coil)
+
+    implementation(libs.poi)
+    implementation(libs.poi.ooxml)
+    implementation(libs.process.phoenix)
+    implementation(libs.ksoup.lite)
+    implementation(libs.materialKolor)
+    implementation(libs.androidx.glance)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.glance)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
     implementation(libs.androidx.work.runtime.ktx)

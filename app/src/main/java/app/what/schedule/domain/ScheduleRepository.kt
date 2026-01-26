@@ -2,8 +2,8 @@ package app.what.schedule.domain
 
 import androidx.room.withTransaction
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.foundation.utils.launchIO
 import app.what.foundation.utils.orThrow
-import app.what.foundation.utils.suspendCall
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.database.DayScheduleDBO
 import app.what.schedule.data.local.database.GroupDBO
@@ -12,23 +12,23 @@ import app.what.schedule.data.local.database.OneTimeUnitDBO
 import app.what.schedule.data.local.database.RequestDBO
 import app.what.schedule.data.local.database.RequestSDBO
 import app.what.schedule.data.local.database.TeacherDBO
-import app.what.schedule.data.remote.api.DaySchedule
-import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.InstitutionManager
-import app.what.schedule.data.remote.api.ScheduleSearch
-import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.api.ScheduleResponse
+import app.what.schedule.data.remote.api.models.DaySchedule
+import app.what.schedule.data.remote.api.models.Group
+import app.what.schedule.data.remote.api.models.ScheduleSearch
+import app.what.schedule.data.remote.api.models.Teacher
+import kotlinx.coroutines.CoroutineScope
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 class ScheduleRepository(
     private val db: AppDatabase,
-    private val institutionManager: InstitutionManager
+    private val institutionManager: InstitutionManager,
+    private val scope: CoroutineScope
 ) {
-    private var api = institutionManager.getSavedProvider().orThrow { "No provider selected" }
+    private val api get() = institutionManager.getSavedProvider().orThrow { "No provider selected" }
     private fun getFilialId() = institutionManager.getSavedFilial()!!.metadata.id
-
-    fun updateApiProvider() {
-        api = institutionManager.getSavedProvider().orThrow { "No provider selected" }
-    }
 
     suspend fun toggleFavorites(value: ScheduleSearch.Group) {
         db.withTransaction {
@@ -62,41 +62,60 @@ class ScheduleRepository(
                 .also { db.withTransaction { it.forEach { saveTeacher(getFilialId(), it) } } }
         }
 
-    suspend fun getSchedule(search: ScheduleSearch, useCache: Boolean): List<DaySchedule> {
+    suspend fun getSchedule(
+        search: ScheduleSearch,
+        useCache: Boolean,
+        requiresData: Boolean = true
+    ): ScheduleResponse {
         Auditor.debug("d", "getSchedule repo")
 
-        val request: RequestSDBO? = if (!useCache) null
-        else db.requestsDao.selectLast(getFilialId(), search.id)
+//        Auditor.debug("d", "request: $request")
+//        Auditor.debug("d", "search: $search")
+//        Auditor.debug(
+//            "d",
+//            "request != null && request.request.createdAt < LocalDate.now().minusDays(1): ${
+//                request != null && request.createdAt < LocalDate.now().minusDays(1)
+//            }"
+//        )
 
-        Auditor.debug("d", "request: $request")
-
-        Auditor.debug("d", "search: $search")
-
-        Auditor.debug(
-            "d",
-            "request != null && request.request.createdAt < LocalDate.now().minusDays(1): ${
-                request != null && request.request.createdAt < LocalDate.now().minusDays(1)
-            }"
-        )
+        val lastRequest = db.requestsDao.selectLastOfInstitution(getFilialId())
+        val cache: RequestSDBO? = db.requestsDao.selectLastWithData(getFilialId(), search.id)
+        Auditor.debug("d", "cache=${cache}")
 
         return if (
-            request != null &&
-            request.request.createdAt == LocalDate.now()
+            cache != null
+            && useCache
+            && cache.request.createdAt == LocalDate.now()
         ) {
             Auditor.debug("d", "from cache")
-            request.daySchedules.map { it.toModel() }
+            ScheduleResponse.Available.FromCache(
+                cache.daySchedules.map { it.toModel() },
+                cache.request.lastModified
+            )
         } else {
-            Auditor.debug("d", "from api")
-            val daySchedules = when (search) {
-                is ScheduleSearch.Group -> api.getGroupSchedule(search.id, true)
-                is ScheduleSearch.Teacher -> api.getTeacherSchedule(search.id, true)
+            Auditor.debug("d", "from api | lastModified=${cache?.request?.lastModified}")
+            Auditor.debug("d", "from api | cache=${cache}")
+            Auditor.debug("d", "from api | cache != null==${cache == null}")
+            Auditor.debug("d", "from api | requiresData==${requiresData}")
+            Auditor.debug("d", "from api | requiresData=${(cache == null || requiresData)}")
+
+            val response = api.getGroupSchedule(
+                search.id, true, mapOf(
+                    "lastModified" to lastRequest?.lastModified,
+                    "requiresData" to (cache == null || requiresData)
+                )
+            )
+
+            if (response is ScheduleResponse.Available) scope.launchIO {
+                saveRequest(
+                    getFilialId(),
+                    search.id,
+                    response.lastModified,
+                    response.schedules
+                )
             }
 
-            suspendCall {
-                saveRequest(getFilialId(), search.id, daySchedules)
-            }
-
-            daySchedules
+            response
         }
     }
 
@@ -125,6 +144,7 @@ class ScheduleRepository(
     private suspend fun saveRequest(
         institutionId: String,
         query: String,
+        lastModified: LocalDateTime,
         daySchedules: List<DaySchedule>
     ) {
         db.withTransaction {
@@ -132,7 +152,8 @@ class ScheduleRepository(
             val requestId = db.requestsDao.insert(
                 RequestDBO(
                     institutionId = institutionId,
-                    query = query
+                    query = query,
+                    lastModified = lastModified
                 )
             )
 

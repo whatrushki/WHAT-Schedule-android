@@ -8,12 +8,13 @@ import app.what.foundation.ui.theme.WHATTheme
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.local.settings.ThemeStyle
 import app.what.schedule.data.local.settings.ThemeType
+import app.what.schedule.data.local.settings.rememberAppValues
 import com.materialkolor.ktx.DynamicScheme
 import com.materialkolor.toColorScheme
 
 @Composable
 fun AppTheme(
-    settings: AppValues,
+    settings: AppValues = rememberAppValues(),
     content: @Composable () -> Unit
 ) {
     val themeType by settings.themeType.collect()

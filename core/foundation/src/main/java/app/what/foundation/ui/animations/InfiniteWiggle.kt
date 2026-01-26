@@ -9,10 +9,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.rotate
 
-@Composable
-fun Modifier.wiggle(degrees: Float): Modifier {
+fun Modifier.wiggle(degrees: Float): Modifier = composed {
     val infiniteTransition = rememberInfiniteTransition()
 
     val rotationAngle by infiniteTransition.animateFloat(
@@ -27,5 +27,5 @@ fun Modifier.wiggle(degrees: Float): Modifier {
         )
     )
 
-    return rotate(rotationAngle)
+    rotate(rotationAngle)
 }

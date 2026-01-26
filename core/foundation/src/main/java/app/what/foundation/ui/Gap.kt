@@ -14,7 +14,18 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+@Composable
+fun ColumnScope.Gap(size: Dp, modifier: Modifier = Modifier) {
+    Spacer(modifier = modifier.height(size))
+}
+
+@Composable
+fun RowScope.Gap(size: Dp, modifier: Modifier = Modifier) {
+    Spacer(modifier = modifier.width(size))
+}
 
 @Composable
 fun ColumnScope.Gap(size: Int, modifier: Modifier = Modifier) =
@@ -26,16 +37,12 @@ fun RowScope.Gap(size: Int, modifier: Modifier = Modifier) =
 
 @Composable
 fun HorizontalGap(size: Int, modifier: Modifier = Modifier) = Spacer(
-    modifier = Modifier
-        .width(size.dp)
-        .then(modifier)
+    modifier = Modifier.width(size.dp).then(modifier)
 )
 
 @Composable
 fun VerticalGap(size: Int, modifier: Modifier = Modifier) = Spacer(
-    modifier = Modifier
-        .height(size.dp)
-        .then(modifier)
+    modifier = Modifier.height(size.dp).then(modifier)
 )
 
 @Composable

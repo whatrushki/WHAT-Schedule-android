@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -163,7 +162,7 @@ class LogFilter : Filter<LogEntry> {
 fun LogsPane(
     modifier: Modifier = Modifier,
 ) {
-    val logs by Auditor.getLogsFlow().collectAsState()
+    val logs by Auditor.collectLogs()
 
     FilteredList(
         title = "Логи приложения",

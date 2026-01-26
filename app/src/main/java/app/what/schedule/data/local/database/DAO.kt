@@ -24,6 +24,44 @@ interface RequestsDAO {
     @Query(
         """
         SELECT * FROM requests 
+        WHERE institutionId = :institutionId
+        ORDER BY id DESC 
+        LIMIT 1
+    """
+    )
+    suspend fun selectLastOfInstitution(institutionId: String): RequestDBO?
+
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM requests 
+        WHERE institutionId = :institutionId 
+        AND createdAt > :afterDate 
+        AND `query` = :query
+        ORDER BY id DESC 
+        LIMIT 1
+    """
+    )
+    suspend fun selectLastWithData(
+        institutionId: String,
+        query: String,
+        afterDate: LocalDate = LocalDate.MIN
+    ): RequestSDBO?
+
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM requests 
+        WHERE id = :id
+        ORDER BY id DESC 
+        LIMIT 1
+    """
+    )
+    suspend fun selectLastWithData(id: Long): RequestSDBO?
+
+    @Query(
+        """
+        SELECT * FROM requests 
         WHERE institutionId = :institutionId 
         AND createdAt > :afterDate 
         AND `query` = :query
@@ -35,7 +73,7 @@ interface RequestsDAO {
         institutionId: String,
         query: String,
         afterDate: LocalDate = LocalDate.MIN
-    ): RequestSDBO?
+    ): RequestDBO?
 
     @Update
     suspend fun update(request: RequestDBO)
@@ -104,22 +142,22 @@ interface GroupsDAO {
     @Update
     suspend fun update(group: GroupDBO)
 
-    @Query("SELECT * FROM groups WHERE groups.institutionId = :institutionId")
+    @Query("SELECT * FROM `groups` WHERE `groups`.institutionId = :institutionId")
     suspend fun selectByInstitution(institutionId: String): List<GroupDBO>
 
-    @Query("SELECT * FROM groups WHERE groups.id = :id")
+    @Query("SELECT * FROM `groups` WHERE `groups`.id = :id")
     suspend fun selectById(id: Long): GroupDBO
 
-    @Query("SELECT * FROM groups WHERE groups.institutionId = :institutionId AND groups.groupId = :id")
+    @Query("SELECT * FROM `groups` WHERE `groups`.institutionId = :institutionId AND `groups`.groupId = :id")
     suspend fun selectByGroupId(institutionId: String, id: String): GroupDBO
 
-    @Query("SELECT groups.id FROM groups WHERE groups.institutionId = :institutionId AND groups.groupId = :id")
+    @Query("SELECT `groups`.id FROM `groups` WHERE `groups`.institutionId = :institutionId AND `groups`.groupId = :id")
     suspend fun selectIdByGroupId(institutionId: String, id: String): Long?
 
-    @Query("SELECT * FROM groups WHERE groups.name = :name")
+    @Query("SELECT * FROM `groups` WHERE `groups`.name = :name")
     suspend fun selectByName(name: String): GroupDBO
 
-    @Query("SELECT * FROM groups WHERE groups.year = :year")
+    @Query("SELECT * FROM `groups` WHERE `groups`.year = :year")
     suspend fun selectByYear(year: Int): GroupDBO
 
     @Delete

@@ -118,7 +118,7 @@ fun BottomNavBar(
                             navigator.c.navigate(item.provider) {
                                 launchSingleTop = true
                                 popUpTo(item.provider) {
-                                    inclusive = true
+                                    inclusive = false
                                 }
                             }
                         }
