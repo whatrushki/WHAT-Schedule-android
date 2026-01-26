@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import animatedStarsBackground
 import app.what.foundation.core.Feature
 import app.what.foundation.ui.animations.AnimatedEnter
+import app.what.foundation.ui.applyIf
 import app.what.navigation.core.NavComponent
 import app.what.navigation.core.NavigationHost
 import app.what.navigation.core.Registry
@@ -26,19 +27,21 @@ import app.what.navigation.core.bottom_navigation.BottomNavBar
 import app.what.navigation.core.bottom_navigation.NavAction
 import app.what.navigation.core.bottom_navigation.navItem
 import app.what.navigation.core.rememberHostNavigator
-import app.what.schedule.data.local.settings.AppValues
+import app.what.schedule.data.local.settings.rememberAppValues
 import app.what.schedule.features.dev.navigation.DevProvider
 import app.what.schedule.features.dev.navigation.devRegistry
 import app.what.schedule.features.main.domain.MainController
 import app.what.schedule.features.main.domain.models.MainEvent
 import app.what.schedule.features.main.navigation.MainProvider
+import app.what.schedule.features.news.navigation.NewsProvider
+import app.what.schedule.features.news.navigation.newsRegistry
 import app.what.schedule.features.schedule.navigation.ScheduleProvider
 import app.what.schedule.features.schedule.navigation.scheduleRegistry
 import app.what.schedule.features.settings.navigation.SettingsProvider
 import app.what.schedule.features.settings.navigation.settingsRegistry
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Code
-import org.koin.compose.koinInject
+import app.what.schedule.ui.theme.icons.filled.News
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -52,12 +55,14 @@ class MainFeature(
 
     private companion object {
         val children = listOf(
+            navItem("Новости", WHATIcons.News, NewsProvider),
             navItem("Расписание", Icons.Default.DateRange, ScheduleProvider),
             navItem("Настройки", Icons.Default.Settings, SettingsProvider)
         )
 
         val childrenRegistry: Registry = {
             settingsRegistry()
+            newsRegistry()
             scheduleRegistry()
             devRegistry()
         }
@@ -66,14 +71,15 @@ class MainFeature(
     @Composable
     override fun content(modifier: Modifier) {
         val navigator = rememberHostNavigator()
-        val appValues: AppValues = koinInject()
-        val devFeaturesEnabled by appValues.devFeaturesEnabled.collect()
+        val appValues = rememberAppValues()
+        val useAnimation by appValues.useAnimation.collect()
+        val devFeaturesEnabled by appValues.devPanelEnabled.collect()
 
         Box(
             Modifier
                 .fillMaxSize()
                 .background(colorScheme.background)
-                .animatedStarsBackground()
+                .applyIf(useAnimation == true) { animatedStarsBackground() }
         ) {
 
             NavigationHost(
@@ -87,7 +93,6 @@ class MainFeature(
                 registry = childrenRegistry
             )
 
-            // Анимированный BottomNavBar
             AnimatedEnter(
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {

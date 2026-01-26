@@ -21,8 +21,10 @@ import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,9 +41,11 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.useState
 import app.what.schedule.data.local.settings.AppValues
-import app.what.schedule.data.remote.api.ScheduleSearch
-import app.what.schedule.data.remote.api.toScheduleSearch
+import app.what.schedule.data.local.settings.ProvideGLobalAppValues
+import app.what.schedule.data.remote.api.models.ScheduleSearch
+import app.what.schedule.data.remote.api.models.toScheduleSearch
 import app.what.schedule.domain.ScheduleRepository
+import app.what.schedule.ui.components.ScheduleSearchData
 import app.what.schedule.ui.components.ScheduleSearchPane
 import app.what.schedule.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers.IO
@@ -79,24 +83,37 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
             val scheduleRepository = koinInject<ScheduleRepository>()
             val scope = rememberCoroutineScope()
             var searchItems by useState<List<ScheduleSearch>>(emptyList())
-            val search = useState(settings.lastSearch.get())
-
-            AppTheme(settings) {
-                LaunchedEffect(Unit) {
-                    scope.launch(IO) {
-                        val ut =
-                            async { scheduleRepository.getTeachers().map { it.toScheduleSearch() } }
-                        val ug =
-                            async { scheduleRepository.getGroups().map { it.toScheduleSearch() } }
-                        searchItems = awaitAll(ut, ug).flatten()
+            val search by useState(settings.lastSearch.get())
+            val searchData = remember(searchItems, search) {
+                mutableStateOf(
+                    object : ScheduleSearchData {
+                        override val scheduleSearches = searchItems
+                        override val selectedSearch = search
                     }
-                }
-
-                WidgetConfigurationScreen(
-                    appWidgetId = appWidgetId,
-                    selectedSearch = search,
-                    searchItems = searchItems
                 )
+            }
+
+            ProvideGLobalAppValues(settings) {
+                AppTheme {
+                    LaunchedEffect(Unit) {
+                        scope.launch(IO) {
+                            val ut =
+                                async {
+                                    scheduleRepository.getTeachers().map { it.toScheduleSearch() }
+                                }
+                            val ug =
+                                async {
+                                    scheduleRepository.getGroups().map { it.toScheduleSearch() }
+                                }
+                            searchItems = awaitAll(ut, ug).flatten()
+                        }
+                    }
+
+                    WidgetConfigurationScreen(
+                        appWidgetId = appWidgetId,
+                        searchData = searchData
+                    )
+                }
             }
         }
     }
@@ -105,8 +122,7 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
     @Composable
     private fun WidgetConfigurationScreen(
         appWidgetId: Int,
-        selectedSearch: MutableState<ScheduleSearch?>,
-        searchItems: List<ScheduleSearch>
+        searchData: State<ScheduleSearchData>
     ) = Box(
         modifier = Modifier
             .fillMaxSize()
@@ -122,7 +138,7 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
 
             ExtendedFloatingActionButton(
                 onClick = {
-                    saveWidgetConfiguration(appWidgetId, selectedSearch.value!!)
+                    saveWidgetConfiguration(appWidgetId, searchData.value.selectedSearch!!)
                 }
             ) {
                 Text("Выбрать")
@@ -156,9 +172,8 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
 
             // Список для выбора
             ScheduleSearchPane(
-                searchItems,
-                selectedSearch.value?.name,
-                { search -> selectedSearch.value = search },
+                searchData,
+                { search -> searchData.value.selectedSearch!! == search },
                 { /* Обработка долгого нажатия */ }
             )
         }

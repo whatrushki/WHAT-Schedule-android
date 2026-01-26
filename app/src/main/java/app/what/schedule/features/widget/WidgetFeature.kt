@@ -3,7 +3,6 @@ package app.what.schedule.features.widget
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -55,9 +54,10 @@ import app.what.schedule.R
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.local.settings.ThemeStyle
 import app.what.schedule.data.local.settings.ThemeType
-import app.what.schedule.data.remote.api.DaySchedule
-import app.what.schedule.data.remote.api.Lesson
-import app.what.schedule.data.remote.api.LessonState
+import app.what.schedule.data.remote.api.ScheduleResponse
+import app.what.schedule.data.remote.api.models.DaySchedule
+import app.what.schedule.data.remote.api.models.Lesson
+import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.utils.GlanceUtils.isSystemInDarkTheme
@@ -90,8 +90,14 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
 
         val prefs = getAppWidgetState(context, stateDefinition, id) as Preferences
         val search = prefs[stringPreferencesKey(SEARCH_KEY)]
-        val schedule = if (search == null) emptyList()
-        else withContext(IO) { scheduleRepository.getSchedule(Json.decodeFromString(search), true) }
+        val schedule = if (search == null) ScheduleResponse.Empty
+        else withContext(IO) {
+            scheduleRepository.getSchedule(
+                Json.decodeFromString(search),
+                useCache = true,
+                requiresData = true
+            )
+        }
 
         provideContent {
             val isDarkTheme = when (themeType) {
@@ -108,8 +114,16 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
             )
 
             GlanceTheme(theme) {
-            val currentDayIndex = currentState(intPreferencesKey(DAY_INDEX_KEY)) ?: 0
-            WidgetContent(schedule, currentDayIndex)
+                val currentDayIndex = currentState(intPreferencesKey(DAY_INDEX_KEY)) ?: 0
+                when (schedule) {
+                    is ScheduleResponse.Available -> WidgetContent(
+                        schedule.schedules,
+                        currentDayIndex
+                    )
+
+                    else -> Unit
+                }
+
             }
         }
     }

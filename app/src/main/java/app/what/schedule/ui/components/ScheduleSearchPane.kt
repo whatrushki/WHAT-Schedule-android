@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,25 +37,27 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.capplyIf
 import app.what.foundation.ui.useState
-import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Crown
 import app.what.schedule.ui.theme.icons.filled.Group
 import app.what.schedule.ui.theme.icons.filled.Person
 
+interface ScheduleSearchData {
+    val scheduleSearches: List<ScheduleSearch>
+    val selectedSearch: ScheduleSearch?
+}
 
-val ScheduleSearchPane = @Composable { state: List<ScheduleSearch>,
-                                       selected: String?,
+val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                                        onClick: (ScheduleSearch) -> Unit,
                                        onLongClick: (ScheduleSearch) -> Unit ->
-
     val (query, setQuery) = useState("")
     val (selectedTab, setSelectedTab) = useState(0)
-    val favoriteList = remember(state) { state.filter { it.favorite } }
-    val list = remember(selectedTab, state, query) {
-        (if (selectedTab == 0) state.filterIsInstance<ScheduleSearch.Group>()
-        else state.filterIsInstance<ScheduleSearch.Teacher>()).filter {
-            it.name.lowercase().contains(query.lowercase())
+    val favoriteList = remember(state.value) { state.value.scheduleSearches.filter { it.favorite } }
+    val list = remember(selectedTab, state.value, query) {
+        (if (selectedTab == 0) state.value.scheduleSearches.filterIsInstance<ScheduleSearch.Group>()
+        else state.value.scheduleSearches.filterIsInstance<ScheduleSearch.Teacher>()).filter {
+            !it.favorite && it.name.lowercase().contains(query.lowercase())
         }
     }
 
@@ -95,7 +98,7 @@ val ScheduleSearchPane = @Composable { state: List<ScheduleSearch>,
         } else searchBlocks(
             favoriteList,
             true,
-            selected,
+            state.value.selectedSearch?.name ?: "",
             onClick,
             onLongClick
         )
@@ -141,7 +144,7 @@ val ScheduleSearchPane = @Composable { state: List<ScheduleSearch>,
         searchBlocks(
             list,
             false,
-            selected,
+            state.value.selectedSearch?.name ?: "",
             onClick,
             onLongClick
         )

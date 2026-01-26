@@ -1,8 +1,8 @@
 package app.what.schedule.data.remote.providers.rksi.general
 
-import app.what.schedule.data.remote.api.LessonTime
-import app.what.schedule.data.remote.api.LessonType
-import app.what.schedule.data.remote.api.LessonsSchedule
+import app.what.schedule.data.remote.api.models.LessonTime
+import app.what.schedule.data.remote.api.models.LessonType
+import app.what.schedule.data.remote.api.models.LessonsSchedule
 import java.time.LocalTime
 
 
