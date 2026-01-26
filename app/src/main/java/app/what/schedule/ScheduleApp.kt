@@ -11,9 +11,12 @@ import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.InstitutionManager
+import app.what.schedule.domain.NewsRepository
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.features.dev.presentation.NetworkMonitorPlugin
 import app.what.schedule.features.main.domain.MainController
+import app.what.schedule.features.news.domain.NewsController
+import app.what.schedule.features.newsDetail.domain.NewsDetailController
 import app.what.schedule.features.onboarding.domain.OnboardingController
 import app.what.schedule.features.schedule.domain.ScheduleController
 import app.what.schedule.features.settings.domain.SettingsController
@@ -22,10 +25,15 @@ import app.what.schedule.libs.GoogleDriveParser
 import app.what.schedule.utils.AppUtils
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -37,18 +45,28 @@ class ScheduleApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        CrashHandler.initialize(applicationContext)
+        CrashHandler.initialize(applicationContext, CrashActivity::class.java)
         AppLogger.initialize(applicationContext)
         Auditor.info("core", "App started")
 
         startKoin {
             androidContext(this@ScheduleApp)
-            modules(generalModule)
+            modules(generalModule, controllers)
         }
     }
 }
 
+val controllers = module {
+    single<SettingsController> { SettingsController(get(), get()) }
+    single<NewsController> { NewsController(get(), get()) }
+    factory<NewsDetailController> { params -> NewsDetailController(params.get(), get()) }
+    single<ScheduleController> { ScheduleController(get(), get()) }
+    single<OnboardingController> { OnboardingController(get(), get()) }
+    single<MainController> { MainController() }
+}
+
 val generalModule = module {
+    single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     single { AppValues(get()) }
     single { AppUtils(get()) }
     single { GoogleDriveParser(get()) }
@@ -58,26 +76,24 @@ val generalModule = module {
             get(), get(), UpdateConfig(
                 "whatrushki", "WHAT-Schedule-android",
                 BuildConfig.VERSION_NAME
-            )
+            ), CoroutineScope(IO) // TODO: найти оптимальный scope
         )
     }
     single { GitHubUpdateService(get()) }
 
 
-    single { InstitutionManager(get()) }
-    single { ScheduleRepository(get(), get()) }
-
-    single<SettingsController> { SettingsController(get(), get()) }
-    single<ScheduleController> { ScheduleController(get(), get()) }
-    single<OnboardingController> { OnboardingController(get(), get()) }
-    single<MainController> { MainController() }
+    single { InstitutionManager(get(), get()) }
+    single { ScheduleRepository(get(), get(), get()) }
+    single { NewsRepository(get(), get()) }
 
     single {
         Room.databaseBuilder(
             androidContext(),
             AppDatabase::class.java,
             "schedule.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration(true)
+            .build()
     }
 
     single {
@@ -91,6 +107,7 @@ val generalModule = module {
                     }
                 }
             }
+
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
@@ -98,6 +115,11 @@ val generalModule = module {
                     classDiscriminator = "type"
                 })
             }
+
+            install(HttpTimeout) {
+                requestTimeoutMillis = 60 * 1000
+            }
+
             engine {
                 https {
                     trustManager = object : X509TrustManager {
