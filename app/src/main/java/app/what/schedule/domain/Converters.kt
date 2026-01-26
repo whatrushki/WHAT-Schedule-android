@@ -3,11 +3,11 @@ package app.what.schedule.domain
 import app.what.schedule.data.local.database.DayScheduleSDBO
 import app.what.schedule.data.local.database.GroupDBO
 import app.what.schedule.data.local.database.TeacherDBO
-import app.what.schedule.data.remote.api.DaySchedule
-import app.what.schedule.data.remote.api.Group
-import app.what.schedule.data.remote.api.Lesson
-import app.what.schedule.data.remote.api.OneTimeUnit
-import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.api.models.DaySchedule
+import app.what.schedule.data.remote.api.models.Group
+import app.what.schedule.data.remote.api.models.Lesson
+import app.what.schedule.data.remote.api.models.OneTimeUnit
+import app.what.schedule.data.remote.api.models.Teacher
 
 fun TeacherDBO.toModel() = Teacher(
     name = name,
@@ -23,10 +23,10 @@ fun GroupDBO.toModel() = Group(
 
 fun DayScheduleSDBO.toModel() = DaySchedule(
     daySchedule.date,
-    "",
     daySchedule.scheduleType,
     lessons.map {
         Lesson(
+            date = daySchedule.date,
             number = it.lesson.number,
             subject = it.lesson.subject,
             type = it.lesson.type,

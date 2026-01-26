@@ -1,22 +1,30 @@
 package app.what.schedule.data.remote.providers.rksi.general
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
-import app.what.schedule.data.remote.api.DaySchedule
-import app.what.schedule.data.remote.api.Group
 import app.what.schedule.data.remote.api.InstitutionProvider
-import app.what.schedule.data.remote.api.Lesson
-import app.what.schedule.data.remote.api.LessonState
-import app.what.schedule.data.remote.api.LessonTime
-import app.what.schedule.data.remote.api.LessonType
-import app.what.schedule.data.remote.api.LessonsScheduleType
 import app.what.schedule.data.remote.api.MetaInfo
-import app.what.schedule.data.remote.api.OneTimeUnit
-import app.what.schedule.data.remote.api.ParseMode
-import app.what.schedule.data.remote.api.ScheduleSearch
+import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.SourceType
-import app.what.schedule.data.remote.api.Teacher
+import app.what.schedule.data.remote.api.models.DaySchedule
+import app.what.schedule.data.remote.api.models.Group
+import app.what.schedule.data.remote.api.models.Lesson
+import app.what.schedule.data.remote.api.models.LessonState
+import app.what.schedule.data.remote.api.models.LessonTime
+import app.what.schedule.data.remote.api.models.LessonType
+import app.what.schedule.data.remote.api.models.LessonsScheduleType
+import app.what.schedule.data.remote.api.models.NewContent
+import app.what.schedule.data.remote.api.models.NewItem
+import app.what.schedule.data.remote.api.models.NewListItem
+import app.what.schedule.data.remote.api.models.NewTag
+import app.what.schedule.data.remote.api.models.OneTimeUnit
+import app.what.schedule.data.remote.api.models.ParseMode
+import app.what.schedule.data.remote.api.models.ScheduleSearch
+import app.what.schedule.data.remote.api.models.Teacher
 import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule.getByNumber
 import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule.numberOf
 import app.what.schedule.data.remote.utils.parseMonth
@@ -26,6 +34,7 @@ import app.what.schedule.libs.GoogleDriveParser
 import app.what.schedule.libs.files
 import app.what.schedule.libs.folders
 import com.fleeksoft.ksoup.Ksoup
+import com.fleeksoft.ksoup.nodes.Element
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
@@ -35,14 +44,17 @@ import io.ktor.http.parameters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.io.File
-import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import androidx.compose.ui.text.capitalize as capitalizeFirstChar
+import androidx.compose.ui.text.intl.Locale as UiLocale
 
 
 private val RKSIProviderMetadata
@@ -65,23 +77,18 @@ private val RKSIProviderMetadata
 class RKSIOfficialProvider(
     private val client: HttpClient,
     private val googleDriveApi: GoogleDriveParser,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val scope: CoroutineScope
 ) : InstitutionProvider {
     companion object Factory : InstitutionProvider.Factory, KoinComponent {
         private const val BASE_URL = "https://www.rksi.ru"
-        override fun create() = RKSIOfficialProvider(get(), get(), get())
+        override fun create() = RKSIOfficialProvider(get(), get(), get(), get())
         override val metadata: MetaInfo by lazy { RKSIProviderMetadata }
     }
 
     override val metadata: MetaInfo = Factory.metadata
     override val lessonsSchedule = RKSILessonsSchedule
-    private val scheduleTabletGoogleDriveId by
-    asyncLazy { getScheduleTabletGoogleDriveId() }
-
-    private val files1 by
-    asyncLazy { googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await()) }
-    private val files2 by
-    asyncLazy { googleDriveApi.getFolderContent(files1.await().folders().first().id) }
+    private val scheduleTabletGoogleDriveId by scope.asyncLazy { getScheduleTabletGoogleDriveId() }
 
     override suspend fun getTeachers(): List<Teacher> {
         val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
@@ -101,20 +108,152 @@ class RKSIOfficialProvider(
         teacher: String,
         showReplacements: Boolean,
         additional: AdditionalData
-    ): List<DaySchedule> = getAndParseSchedule(teacher, ParseMode.TEACHER, showReplacements)
+    ): ScheduleResponse = getAndParseSchedule(
+        teacher,
+        ParseMode.TEACHER,
+        additional["requiresData"] as Boolean,
+        additional["lastModified"] as LocalDateTime?,
+        showReplacements
+    )
 
     override suspend fun getGroupSchedule(
         group: String,
         showReplacements: Boolean,
         additional: AdditionalData
-    ): List<DaySchedule> = getAndParseSchedule(group, ParseMode.GROUP, showReplacements)
+    ): ScheduleResponse = getAndParseSchedule(
+        group,
+        ParseMode.GROUP,
+        additional["requiresData"] as Boolean,
+        additional["lastModified"] as LocalDateTime?,
+        showReplacements
+    )
 
+    override suspend fun getNews(page: Int): List<NewListItem> {
+        val response = client.get("$BASE_URL/news/$page").bodyAsText()
+        val document = Ksoup.parse(response)
+        val rawData = document.getElementsByClass("flexnews")
+
+        Auditor.debug("d", "news " + rawData.size)
+
+        val data = rawData.map {
+            val url = BASE_URL + it.getElementsByTag("a").attr("href")
+            val id = url.split("_").last()
+            val bannerUrl = formatImageUrl(it.getElementsByTag("img").attr("src"))
+            val title = it.getElementsByTag("h4").first()!!.text()
+            val description = it.getElementsByTag("div").first()!!.text()
+                .let { it.slice(it.indexOf(" ") + title.length + 1..it.lastIndex) }
+            val date = it.getElementsByTag("span").first()!!.text().let {
+                val tmp = it.split(".").map(String::toInt)
+                LocalDate.of(tmp[2], tmp[1], tmp[0])
+            }
+            val tags = emptyList<NewTag>()
+
+            NewListItem(id, url, bannerUrl, title, description, date, tags)
+        }
+
+        Auditor.debug("d", "news " + data.fastJoinToString())
+
+        return data
+    }
+
+    private fun <T : Any?> T.addTo(list: MutableList<T>) = list.add(this)
+
+    override suspend fun getNewDetail(id: String): NewItem {
+        val url = "$BASE_URL/news/n_$id"
+        val response = client.get(url).bodyAsText()
+        val document = Ksoup.parse(response)
+
+        val bannerUrl = formatImageUrl(document.getElementsByTag("img").attr("src"))
+        val title = document.getElementsByTag("h1").text().split(" ").dropLast(1).joinToString(" ")
+        val description = document.getElementsByTag("b").html()
+        val date = document.getElementsByTag("h1").text()
+            .split(" ").last().drop(1).dropLast(1).let {
+                val tmp = it.split(".").map(String::toInt)
+                LocalDate.of(tmp[2], tmp[1], tmp[0])
+            }
+        val content = parseNewContent(document.getElementsByTag("main").first()!!)
+
+        return NewItem(
+            id,
+            url,
+            bannerUrl,
+            title,
+            AnnotatedString
+                .fromHtml(description)
+                .takeIf { it.isNotBlank() },
+            tags = emptyList(),
+            date,
+            content
+        )
+    }
+
+    private fun parseNewContent(tree: Element): NewContent {
+        val list = mutableListOf<NewContent>()
+
+        tree.children().drop(1).forEach {
+            Auditor.debug("d", it.html())
+
+            when {
+                it.`is`("h3") -> NewContent.Item.Subtitle(it.text()).addTo(list)
+                it.`is`("p") && it.getElementsByTag("img").isNotEmpty() ->
+                    NewContent.Item.Image(it.getElementsByTag("img").attr("src")).addTo(list)
+
+                it.`is`("p") && it.text()
+                    .isNotBlank() -> NewContent.Item.Text(AnnotatedString.fromHtml(it.html()))
+                    .addTo(list)
+
+                it.`is`(".img50") -> it.getElementsByTag("img").forEach {
+                    NewContent.Item.Image(it.attr("src")).addTo(list)
+                }
+
+                it.`is`("ul") -> NewContent.Item.UnsortedList(
+                    it.getElementsByTag("li").map {
+                        it.text().capitalizeFirstChar(UiLocale.current)
+                    }).addTo(list)
+
+                it.`is`("ol") -> NewContent.Item.SortedList(
+                    it.getElementsByTag("li")
+                        .map { it.text().capitalizeFirstChar(UiLocale.current) }).addTo(list)
+            }
+        }
+        val images = mutableListOf<String>()
+        for (i in list.indices.reversed()) {
+            val it = list[i]
+            if (it is NewContent.Item.Image) {
+                it.data.addTo(images)
+                list.removeAt(i)
+            } else break
+        }
+
+        if (images.isNotEmpty())
+            list.add(NewContent.Item.ImageCarousel(images))
+
+        return NewContent.Container.Column(list)
+    }
+
+    private fun formatImageUrl(url: String): String = BASE_URL + url
 
     private suspend fun getAndParseSchedule(
         value: String,
         parseMode: ParseMode,
+        requiresData: Boolean,
+        lastModified: LocalDateTime?,
         showReplacements: Boolean
-    ): List<DaySchedule> {
+    ): ScheduleResponse {
+        val files1 = googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await())
+        val files2 = googleDriveApi.getFolderContent(files1.folders().first().id)
+        val files = (files1 + files2).files()
+
+        Auditor.debug("D", "ddasdsad $requiresData")
+
+        Auditor.debug(
+            "D",
+            "ddasdsad " + lastModified.toString() + files.fastJoinToString { it.lastModified.toString() })
+
+        if (!requiresData && files.any { lastModified != null && it.lastModified > lastModified }
+                .not())
+            return ScheduleResponse.UpToDate
+
         val response = client.submitForm(
             url = "$BASE_URL/mobile_schedule",
             formParameters = parameters {
@@ -130,25 +269,24 @@ class RKSIOfficialProvider(
 
         val document = Ksoup.parse(response)
         var dataRaw: List<String>
-
         val daySchedulesRaw = document.getElementsByClass("schedule_item")
+
+        val replacements = CoroutineScope(IO).async {
+            getAllReplacements(
+                files1, files2, lastModified, when (parseMode) {
+                    ParseMode.GROUP -> ScheduleSearch.Group(value)
+                    ParseMode.TEACHER -> ScheduleSearch.Teacher(value)
+                }
+            )
+        }
+
+        Auditor.debug("d", "replacements: ${replacements.await()}")
 
         val daySchedules = daySchedulesRaw.mapIndexed { index, it ->
             dataRaw = it.getElementsByTag("b").text().split(" ")
-
-            val dateDescription = it.getElementsByTag("b").first()!!.text()
             val date = LocalDate.now()
                 .withDayOfMonth(dataRaw.first().toInt())
                 .withMonth(parseMonth(dataRaw[1].substring(0, dataRaw[1].length - 1)))
-
-            val replacements = CoroutineScope(IO).async {
-                getReplacements(
-                    date, when (parseMode) {
-                        ParseMode.GROUP -> ScheduleSearch.Group(value)
-                        ParseMode.TEACHER -> ScheduleSearch.Teacher(value)
-                    }
-                )
-            }
 
             var lessons: List<Lesson>
             lessons = it.getElementsByTag("p").mapNotNull { lessonRaw ->
@@ -185,6 +323,7 @@ class RKSIOfficialProvider(
                 )
 
                 Lesson(
+                    date = date,
                     number = 0,
                     otUnits = otUnits,
                     startTime = startDate,
@@ -205,44 +344,39 @@ class RKSIOfficialProvider(
 
             var schedule = RKSILessonsSchedule.COMMON
 
-            lessons =
-                if (lessons.firstOrNull { it.type == LessonType.CLASS_HOUR } != null || date.dayOfWeek == DayOfWeek.MONDAY) {
-                    schedule = RKSILessonsSchedule.WITH_CLASS_HOUR
-                    lessons.map { it.copy(number = schedule.numberOf(it.startTime) ?: 0) }
-                } else {
-                    val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
-                        schedule.numberOf(time) ?: let { schedule = change; null }
-                    }
+            val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
+                schedule.numberOf(time) ?: let { schedule = change; null }
+            }
 
-                    lessons.map { lesson ->
-                        val number =
-                            getNumberOrChangeSchedule(
-                                lesson.startTime,
-                                RKSILessonsSchedule.WITH_CLASS_HOUR
-                            )
-                                ?: getNumberOrChangeSchedule(
-                                    lesson.startTime,
-                                    RKSILessonsSchedule.SHORTENED
-                                )
-                                ?: getNumberOrChangeSchedule(
-                                    lesson.startTime,
-                                    RKSILessonsSchedule.COMMON
-                                )
-                                ?: 0
+            lessons = lessons.map { lesson ->
+                val number = getNumberOrChangeSchedule(
+                    lesson.startTime,
+                    RKSILessonsSchedule.WITH_CLASS_HOUR
+                ) ?: getNumberOrChangeSchedule(
+                    lesson.startTime,
+                    RKSILessonsSchedule.SHORTENED
+                ) ?: getNumberOrChangeSchedule(
+                    lesson.startTime,
+                    RKSILessonsSchedule.COMMON
+                ) ?: 0
 
-                        lesson.copy(number = number)
-                    }
-                }
+                lesson.copy(number = number)
+            }
+
+
+            Auditor.debug(
+                "d",
+                "lessons: ${lessons.joinToString { "${it.date} ${it.startTime} ${it.subject}\n" }}"
+            )
 
             if (showReplacements && index < 2) {
                 lessons = lessons
-                    .withReplacements(replacements.await(), schedule)
+                    .withReplacements(replacements.await().filter { it.date == date }, schedule)
                     .sortedBy { it.startTime }
             }
 
             DaySchedule(
                 date = date,
-                dateDescription = dateDescription,
                 lessons = lessons,
                 scheduleType = when (schedule) {
                     RKSILessonsSchedule.COMMON -> LessonsScheduleType.COMMON
@@ -253,7 +387,12 @@ class RKSIOfficialProvider(
             )
         }
 
-        return daySchedules
+        return ScheduleResponse.Available.FromSource(daySchedules, files.also {
+            Auditor.debug(
+                "d",
+                "lastModified: ${it.fastJoinToString { it.lastModified.toString() }}"
+            )
+        }.maxOf { it.lastModified })
     }
 
     private suspend fun getScheduleTabletGoogleDriveId(): String {
@@ -267,10 +406,89 @@ class RKSIOfficialProvider(
         return tabletUrl.split("/").last()
     }
 
+    private suspend fun getAllReplacements(
+        itemsOfFirstBuilding: List<GoogleDriveParser.Item>,
+        itemsOfSecondBuilding: List<GoogleDriveParser.Item>,
+        lastModified: LocalDateTime?,
+        search: ScheduleSearch
+    ): List<Lesson> {
+        val predicate = { teacher: String, group: String ->
+            when (search) {
+                is ScheduleSearch.Group -> group == search.name
+                is ScheduleSearch.Teacher -> teacher == search.name
+            }
+        }
+
+        Auditor.debug("d", "d: 1")
+
+        val currentDate = LocalDate.now()
+
+        fun List<GoogleDriveParser.Item.File>.filterByModifiedDateAndPutData(shortYear: Boolean = false) =
+            filter {
+                val raw = it.name.split(".").dropLast(1).map(String::toInt)
+                val date = LocalDate.of(raw[2].plus(if (shortYear) 2000 else 0), raw[1], raw[0])
+                (date >= currentDate).also { _ -> it.additionalData["date"] = date }
+            }
+
+        Auditor.debug("d", "d: 2")
+
+        val building1TabletsParsingProcess =
+            itemsOfFirstBuilding.files().filterByModifiedDateAndPutData()
+                .map {
+                    createTabletParsingAsyncTask(
+                        it.additionalData["date"] as LocalDate,
+                        lastModified, "1", 2, it, predicate
+                    )
+                }
+
+        Auditor.debug("d", "d: 3")
+        val building2TabletsParsingProcess =
+            itemsOfSecondBuilding.files().filterByModifiedDateAndPutData(true)
+                .map {
+                    createTabletParsingAsyncTask(
+                        it.additionalData["date"] as LocalDate,
+                        lastModified, "2", 1, it, predicate
+                    )
+                }
+
+        Auditor.debug("d", "d: 4")
+        val tablet1Replacements = building1TabletsParsingProcess.awaitAll()
+        val tablet2Replacements = building2TabletsParsingProcess.awaitAll()
+        Auditor.debug("d", "d: 5")
+        return tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull()
+            .flatten()
+    }
+
+    private fun createTabletParsingAsyncTask(
+        date: LocalDate,
+        lastModified: LocalDateTime?,
+        building: String,
+        columns: Int,
+        file: GoogleDriveParser.Item.File,
+        predicate: (String, String) -> Boolean
+    ) = CoroutineScope(IO).async {
+        Auditor.debug("d", "d->: 11")
+        val tablet =
+            getTablet(
+                date,
+                building,
+                lastModified != null && file.lastModified > lastModified,
+                file
+            ) ?: return@async null
+        Auditor.debug("d", "d->: 12 ${tablet.canRead()} ${tablet.exists()}")
+        Auditor.debug("d", "d->: 12")
+        val workbook1 = tablet.inputStream().use { inputStream ->
+            WorkbookFactory.create(inputStream)
+        }
+        Auditor.debug("d", "d->: 13")
+        return@async parseLessonsFromWorkbook(workbook1, columns, date, predicate)
+    }
+
     private suspend fun getTablet(
         date: LocalDate,
         building: String,
-        files: List<GoogleDriveParser.Item>
+        fromDrive: Boolean,
+        file: GoogleDriveParser.Item.File
     ): File? {
         val tabletName = generateFileName(
             mapOf(
@@ -280,49 +498,37 @@ class RKSIOfficialProvider(
             fileExtension = "xlsx"
         )
 
-        val get = {
-            val file = fileManager.getFile(FileManager.DirectoryType.CACHE, tabletName)
-            if (file?.exists() == true) file else null
+        fun getCachedFile() = fileManager
+            .getFile(FileManager.DirectoryType.CACHE, tabletName)
+            ?.takeIf { it.exists() }
+
+        suspend fun downloadAndGetCachedFile(): File? {
+            val downloaded = findAndDownloadTabletFromGD(file, tabletName)
+            return if (downloaded) getCachedFile() else null
         }
 
-        return get() ?: let {
-            val downloaded = findAndDownloadTabletFromGD(date, files, tabletName)
-            if (downloaded) get() else null
+        return when {
+            fromDrive -> downloadAndGetCachedFile()
+            else -> getCachedFile() ?: downloadAndGetCachedFile()
         }
     }
 
     private suspend fun findAndDownloadTabletFromGD(
-        date: LocalDate,
-        files: List<GoogleDriveParser.Item>,
+        file: GoogleDriveParser.Item.File,
         fileName: String
     ): Boolean {
         try {
             Auditor.debug("d", "dd: 4")
             Auditor.debug("d", "dd: 5")
-            Auditor.debug("d", "dd: 6 ${files.files().map { it.name }}")
-            Auditor.debug(
-                "d",
-                "dd: 6 $fileName"
-            )
-
-            val tablet = files
-                .files()
-                .firstOrNull {
-                    "${
-                        date.dayOfMonth.toString().padStart(2, '0')
-                    }.${
-                        date.month.value.toString().padStart(2, '0')
-                    }.${date.year}.xlsx" in it.name
-                }
-                ?: return false
+            Auditor.debug("d", "dd: 6 $fileName")
 
             Auditor.debug("d", "dd: 7")
 
-            val downloadedTablet = client.get(tablet.getDownloadLink()).readRawBytes()
+            val downloadedTablet = client.get(file.getDownloadLink()).readRawBytes()
 
             Auditor.debug("d", "dd: 8")
 
-            fileManager.writeFile(
+            fileManager.writeBytes(
                 FileManager.DirectoryType.CACHE,
                 fileName,
                 downloadedTablet
@@ -340,6 +546,7 @@ class RKSIOfficialProvider(
     private fun parseLessonsFromWorkbook(
         workbook: Workbook,
         columns: Int,
+        date: LocalDate,
         predicate: (teacher: String, group: String) -> Boolean
     ): List<Lesson> {
         val lessons = mutableListOf<Lesson>()
@@ -360,10 +567,16 @@ class RKSIOfficialProvider(
                 if (emptyRows > 5) break
 
                 if (row.lastCellNum < 0) emptyRows++
-                else (0..<columns).mapIndexedNotNull { colIndex, i ->
+                else (0 until columns).mapIndexedNotNull { colIndex, i ->
                     val firstCellIndex = i * 3
 
-                    Auditor.debug("d", "coord: ($colIndex;$rowIndex;$firstCellIndex)")
+//                    Auditor.debug(
+//                        "d",
+//                        "d"
+//                        "coord: (${row.getCell(firstCellIndex)};${row.getCell(firstCellIndex + 2)};${
+//                            row.getCell(firstCellIndex + 1)
+//                        })"
+//                    )
 
                     val auditory = row.getCell(firstCellIndex)
                         ?.toString()
@@ -410,14 +623,15 @@ class RKSIOfficialProvider(
 
                 if (otUnits.isNotEmpty()) lessons.add(
                     Lesson(
+                        date = date,
                         number = lessonNumber,
                         startTime = LocalTime.MIN,
                         endTime = LocalTime.MIN,
                         otUnits = otUnits,
                         subject = "",
-                        type = when (lessonNumber == 0) {
-                            true -> LessonType.CLASS_HOUR
-                            false -> LessonType.COMMON
+                        type = when {
+                            lessonNumber == 0 -> LessonType.CLASS_HOUR
+                            else -> LessonType.COMMON
                         }
                     )
                 )
@@ -429,63 +643,27 @@ class RKSIOfficialProvider(
         return lessons
     }
 
-    private suspend fun getReplacements(date: LocalDate, search: ScheduleSearch): List<Lesson> {
-        val predicate = { teacher: String, group: String ->
-            when (search) {
-                is ScheduleSearch.Group -> group == search.name
-                is ScheduleSearch.Teacher -> teacher == search.name
-            }
-        }
-
-        Auditor.debug("d", "d: 1")
-
-        val parseTablet1Process = CoroutineScope(IO).async {
-            Auditor.debug("d", "d->: 11")
-            val tablet1 = getTablet(date, "1", files1.await()) ?: return@async null
-            Auditor.debug("d", "d->: 12 ${tablet1.canRead()} ${tablet1.exists()}")
-            Auditor.debug("d", "d->: 12")
-            val workbook1 = tablet1.inputStream().use { inputStream ->
-                WorkbookFactory.create(inputStream)
-            }
-            Auditor.debug("d", "d->: 13")
-            return@async parseLessonsFromWorkbook(workbook1, 2, predicate)
-        }
-
-        val parseTablet2Process = CoroutineScope(IO).async {
-            Auditor.debug("d", "d->: 21")
-            val tablet2 = getTablet(date, "2", files2.await()) ?: return@async null
-            Auditor.debug("d", "d->: 22")
-            val workbook2 = tablet2.inputStream().use { inputStream ->
-                WorkbookFactory.create(inputStream)
-            }
-            Auditor.debug("d", "d->: 23")
-            return@async parseLessonsFromWorkbook(workbook2, 1, predicate)
-        }
-
-        val tablet1Replacements = parseTablet1Process.await()
-        val tablet2Replacements = parseTablet2Process.await()
-
-        return (tablet1Replacements ?: emptyList()) + (tablet2Replacements ?: emptyList())
-    }
 }
+
 
 private fun List<Lesson>.withReplacements(
     replacements: List<Lesson>,
     schedule: List<LessonTime>
 ): List<Lesson> {
-    val unionSchedule = mutableMapOf<Int, List<Lesson?>>()
+    Auditor.debug("d", "$this \n $replacements")
+    val unionSchedule = mutableMapOf<Int, Pair<Lesson?, Lesson?>>()
 
     replacements.forEach {
-        unionSchedule[it.number] = listOf(it, null)
+        unionSchedule[it.number] = it to null
     }
 
     this.forEach {
-        unionSchedule[it.number] = listOf(unionSchedule[it.number]?.first(), it)
+        unionSchedule[it.number] = unionSchedule[it.number]?.first to it
     }
 
     return unionSchedule.map {
-        val replacement = it.value.first()
-        val lesson = it.value.last()
+        val replacement = it.value.first
+        val lesson = it.value.second
 
         Auditor.debug("d", it.toString())
         Auditor.debug("d", replacement.toString())

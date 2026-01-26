@@ -4,7 +4,7 @@ import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.InstitutionFilial
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.SourceType
-import app.what.schedule.data.remote.providers.rinh.general.RINHOfficialProvider
+import app.what.schedule.data.remote.providers.rinh.general.RINHDigitalProvider
 
 val INST_RINH by lazy {
     Institution(
@@ -26,8 +26,8 @@ val INST_RINH by lazy {
                     sourceTypes = setOf(SourceType.API),
                     sourceUrl = "https://rsue.ru/"
                 ),
-                setOf(RINHOfficialProvider.Factory),
-                RINHOfficialProvider.Factory
+                setOf(RINHDigitalProvider.Factory),
+                RINHDigitalProvider.Factory
             )
         )
     )
