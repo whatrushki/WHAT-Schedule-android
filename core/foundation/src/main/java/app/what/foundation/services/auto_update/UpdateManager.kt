@@ -1,113 +1,108 @@
 package app.what.foundation.services.auto_update
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
-import android.provider.Settings
+import android.os.Environment.getExternalStoragePublicDirectory
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
-import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.coroutines.cancellation.CancellationException
 
 class UpdateManager(
     private val gitHubService: GitHubUpdateService,
     private val context: Context,
-    private val config: UpdateConfig
+    private val config: UpdateConfig,
+    private val scope: CoroutineScope
 ) {
+    var updateInfo by mutableStateOf<UpdateInfo?>(null)
+        private set
 
-    private var currentDownloadJob: Job? = null
-    private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
-    val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+    var downloadState by mutableStateOf<DownloadState>(DownloadState.Idle)
+        private set
+
+    private var downloadJob: Job? = null
+
+    private fun getFileName(version: String) = "${config.githubRepo}-$version.apk"
 
     suspend fun checkForUpdates(): UpdateResult {
-        return gitHubService.checkForUpdates(
-            owner = config.githubOwner,
-            repo = config.githubRepo,
-            currentVersion = config.currentVersion
+        val result = gitHubService.checkForUpdates(
+            config.githubOwner,
+            config.githubRepo,
+            config.currentVersion
         )
+        if (result is UpdateResult.Available) {
+            updateInfo = result.updateInfo
+            checkIfAlreadyDownloaded(result.updateInfo)
+        }
+        return result
     }
 
-    fun downloadUpdate(updateInfo: UpdateInfo) {
-        currentDownloadJob?.cancel()
+    private fun checkIfAlreadyDownloaded(info: UpdateInfo) {
+        val file = getPublicFile(getFileName(info.version))
+        if (file != null && file.exists() && file.length() >= info.fileSize) {
+            downloadState = DownloadState.Completed(file)
+        }
+    }
 
-        currentDownloadJob = CoroutineScope(Dispatchers.IO).launch {
+    fun handleAction(info: UpdateInfo) {
+        when (val state = downloadState) {
+            is DownloadState.Idle, is DownloadState.Error -> downloadUpdate(info)
+            is DownloadState.Completed -> installUpdate(state.file)
+            else -> {}
+        }
+    }
+
+    private fun downloadUpdate(info: UpdateInfo) {
+        downloadJob?.cancel()
+        downloadJob = scope.launch(Dispatchers.IO) {
             try {
-                _downloadState.value = DownloadState.Preparing
+                downloadState = DownloadState.Preparing
 
-                val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                    ?: context.filesDir
+                // Создаем файл в публичной папке Downloads
+                val fileName = getFileName(info.version)
+                val destinationFile = preparePublicFile(fileName)
 
-                val fileName = "${config.githubRepo}-${updateInfo.version}.apk"
-                val outputFile = File(downloadsDir, fileName)
-
-                outputFile.delete()
-
-                val result = if (outputFile.exists()) Result.success(outputFile)
-                else gitHubService.downloadUpdate(
-                    downloadUrl = updateInfo.downloadUrl,
-                    destination = outputFile,
-                    onProgress = { progress ->
-                        _downloadState.value = DownloadState.Downloading(progress)
-                    }
+                val result = gitHubService.downloadUpdate(
+                    downloadUrl = info.downloadUrl,
+                    destination = destinationFile,
+                    onProgress = { downloadState = DownloadState.Downloading(it) }
                 )
 
-                result.onSuccess { file ->
-                    _downloadState.value = DownloadState.Completed(file)
-                }.onFailure { error ->
-                    _downloadState.value = DownloadState.Error("Ошибка загрузки: ${error.message}")
-                }
-
-            } catch (e: CancellationException) {
-                _downloadState.value = DownloadState.Error("Загрузка отменена")
+                downloadState = result.fold(
+                    onSuccess = { DownloadState.Completed(it) },
+                    onFailure = { DownloadState.Error(it.message ?: "Ошибка") }
+                )
             } catch (e: Exception) {
-                _downloadState.value = DownloadState.Error("Ошибка загрузки: ${e.message}")
+                downloadState = DownloadState.Error(e.message ?: "Ошибка")
             }
         }
     }
 
-    fun cancelDownload() {
-        currentDownloadJob?.cancel()
-        _downloadState.value = DownloadState.Idle
+    private fun getPublicFile(fileName: String): File? {
+        val downloadsDir = getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        return File(downloadsDir, fileName).takeIf { it.exists() }
     }
 
-    @SuppressLint("NewApi")
-    fun installUpdate(file: File) = with(context) {
-        if (file.exists()) {
-            if (!packageManager.canRequestPackageInstalls()) {
-                startActivity(
-                    Intent(
-                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        "package:$packageName".toUri()
-                    ).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                )
-            } else {
-                val apkUri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    file
-                )
+    private fun preparePublicFile(fileName: String): File {
+        val downloadsDir = getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+        return File(downloadsDir, fileName)
+    }
 
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(apkUri, "application/vnd.android.package-archive")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    context.startActivity(intent)
-                }
-            }
+    fun installUpdate(file: File) {
+        val apkUri =
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
     }
 }
 

@@ -3,7 +3,7 @@ package app.what.schedule.data.remote.utils
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-fun parseMonth(month: String) = when (month) {
+fun parseMonth(month: String) = when (month.lowercase()) {
     "января" -> 1
     "февраля" -> 2
     "марта" -> 3

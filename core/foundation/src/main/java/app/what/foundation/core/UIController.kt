@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 abstract class UIController<State : Any, Action, Event>(initialState: State) : ViewModel() {
@@ -36,13 +37,9 @@ abstract class UIController<State : Any, Action, Event>(initialState: State) : V
 
     abstract fun obtainEvent(viewEvent: Event)
 
-    protected fun updateState(state: State) {
-        _viewStates.value = state
-    }
+    protected fun updateState(state: State) { _viewStates.value = state }
 
-    protected fun updateState(block: RE<State, State>) = updateState(viewState.block())
-    protected suspend fun safeUpdateState(block: RE<State, State>) =
-        withContext(Main) { updateState(block) }
+    protected fun updateState(reducer: State.() -> State) = _viewStates.update { it.reducer() }
 
     protected fun setAction(action: Action? = null) {
         viewAction = action

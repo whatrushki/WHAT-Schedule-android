@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.edit
 import app.what.foundation.ui.useState
 import kotlinx.coroutines.flow.Flow
@@ -16,17 +17,37 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 
-class PreferenceStorage(
-    private val prefs: SharedPreferences,
-    private val preferencesFlow: MutableSharedFlow<String>
-) {
+interface Named {
+    val displayName: String
+}
+
+abstract class PreferenceStorage(protected val prefs: SharedPreferences) {
+    private val preferencesFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener { _, key ->
+            key?.let { preferencesFlow.tryEmit(it) }
+        }
+    }
+
+    protected fun <T : Any> createValue(
+        key: String,
+        defaultValue: T?,
+        serializer: KSerializer<T>,
+        title: String = "",
+        description: String? = null,
+        icon: ImageVector? = null
+    ): Value<T> = Value(prefs, preferencesFlow, key, defaultValue, serializer, title, description, icon)
 
     class Value<T : Any>(
         private val prefs: SharedPreferences,
         private val preferencesFlow: MutableSharedFlow<String>,
         private val key: String,
         private val defaultValue: T?,
-        private val serializer: KSerializer<T>
+        private val serializer: KSerializer<T>,
+        val title: String,
+        val description: String? = null,
+        val icon: ImageVector? = null,
     ) {
         fun get(): T? = prefs
             .getString(key, null)
@@ -64,14 +85,5 @@ class PreferenceStorage(
             }
             return state
         }
-    }
-
-
-    fun <T : Any> createValue(
-        key: String,
-        defaultValue: T?,
-        serializer: KSerializer<T>
-    ): Value<T> {
-        return Value(prefs, preferencesFlow, key, defaultValue, serializer)
     }
 }

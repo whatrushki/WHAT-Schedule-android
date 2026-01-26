@@ -10,10 +10,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun Modifier.jumping(strength: Float): Modifier {
+fun Modifier.jumping(strength: Float): Modifier = composed {
     val infiniteTransition = rememberInfiniteTransition()
     val bounce by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -24,5 +25,5 @@ fun Modifier.jumping(strength: Float): Modifier {
         )
     )
 
-    return offset(y = (-bounce).dp)
+    offset(y = (-bounce).dp)
 }

@@ -107,7 +107,6 @@ private fun DrawScope.drawSimpleRoundedStar(
     drawPath(path, strokeColor, style = Stroke(width = strokeWidth))
 }
 
-@Composable
 fun Modifier.animatedStarsBackground(
     shape1: BackgroundShapeConfig = BackgroundShapeConfig(
         size = 120.dp,
