@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.what.foundation.ui.applyIf
 import app.what.foundation.ui.controllers.DialogController
 import app.what.foundation.ui.controllers.LocalDialogController
 import app.what.foundation.ui.controllers.rememberDialogHostController
@@ -47,7 +48,7 @@ fun ProvideGlobalDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 AnimatedContent(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.applyIf(!controller.full) { padding(8.dp) },
                     targetState = controller.content,
                     transitionSpec = transitionSpec,
                     label = "AnimatedDialogContent"
