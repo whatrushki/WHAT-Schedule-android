@@ -1,0 +1,90 @@
+package app.what.schedule.ui.theme.icons.filled
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
+import app.what.schedule.ui.theme.icons.WHATIcons
+
+val WHATIcons.Support: ImageVector
+    get() {
+        if (_Support != null) {
+            return _Support!!
+        }
+        _Support = ImageVector.Builder(
+            name = "Support",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 960f,
+            viewportHeight = 960f
+        ).apply {
+            path(fill = SolidColor(Color(0xFFE3E3E3))) {
+                moveTo(480f, 880f)
+                quadToRelative(-83f, 0f, -156f, -31.5f)
+                reflectiveQuadTo(197f, 763f)
+                quadToRelative(-54f, -54f, -85.5f, -127f)
+                reflectiveQuadTo(80f, 480f)
+                quadToRelative(0f, -83f, 31.5f, -156f)
+                reflectiveQuadTo(197f, 197f)
+                quadToRelative(54f, -54f, 127f, -85.5f)
+                reflectiveQuadTo(480f, 80f)
+                quadToRelative(83f, 0f, 156f, 31.5f)
+                reflectiveQuadTo(763f, 197f)
+                quadToRelative(54f, 54f, 85.5f, 127f)
+                reflectiveQuadTo(880f, 480f)
+                quadToRelative(0f, 83f, -31.5f, 156f)
+                reflectiveQuadTo(763f, 763f)
+                quadToRelative(-54f, 54f, -127f, 85.5f)
+                reflectiveQuadTo(480f, 880f)
+                close()
+                moveTo(364f, 778f)
+                lineToRelative(48f, -110f)
+                quadToRelative(-42f, -15f, -72.5f, -46.5f)
+                reflectiveQuadTo(292f, 548f)
+                lineToRelative(-110f, 46f)
+                quadToRelative(23f, 64f, 71f, 112f)
+                reflectiveQuadToRelative(111f, 72f)
+                close()
+                moveTo(292f, 412f)
+                quadToRelative(17f, -42f, 47.5f, -73.5f)
+                reflectiveQuadTo(412f, 292f)
+                lineToRelative(-46f, -110f)
+                quadToRelative(-64f, 24f, -112f, 72f)
+                reflectiveQuadToRelative(-72f, 112f)
+                lineToRelative(110f, 46f)
+                close()
+                moveTo(480f, 600f)
+                quadToRelative(50f, 0f, 85f, -35f)
+                reflectiveQuadToRelative(35f, -85f)
+                quadToRelative(0f, -50f, -35f, -85f)
+                reflectiveQuadToRelative(-85f, -35f)
+                quadToRelative(-50f, 0f, -85f, 35f)
+                reflectiveQuadToRelative(-35f, 85f)
+                quadToRelative(0f, 50f, 35f, 85f)
+                reflectiveQuadToRelative(85f, 35f)
+                close()
+                moveTo(596f, 778f)
+                quadToRelative(63f, -24f, 110.5f, -71.5f)
+                reflectiveQuadTo(778f, 596f)
+                lineToRelative(-110f, -48f)
+                quadToRelative(-15f, 42f, -46f, 72.5f)
+                reflectiveQuadTo(550f, 668f)
+                lineToRelative(46f, 110f)
+                close()
+                moveTo(668f, 410f)
+                lineTo(778f, 364f)
+                quadToRelative(-24f, -63f, -71.5f, -110.5f)
+                reflectiveQuadTo(596f, 182f)
+                lineToRelative(-46f, 112f)
+                quadToRelative(41f, 15f, 71f, 45.5f)
+                reflectiveQuadToRelative(47f, 70.5f)
+                close()
+            }
+        }.build()
+
+        return _Support!!
+    }
+
+@Suppress("ObjectPropertyName")
+private var _Support: ImageVector? = null
