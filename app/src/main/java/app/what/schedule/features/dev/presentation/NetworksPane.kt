@@ -1,120 +1,191 @@
 package app.what.schedule.features.dev.presentation
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.VerticalGap
+import app.what.foundation.ui.SegmentTab
+import app.what.foundation.ui.controllers.rememberDialogController
 import app.what.schedule.features.dev.presentation.components.Filter
 import app.what.schedule.features.dev.presentation.components.FilteredList
-import app.what.schedule.ui.theme.icons.WHATIcons
-import app.what.schedule.ui.theme.icons.filled.Crown
-import app.what.schedule.ui.theme.icons.filled.Export
 import io.ktor.client.plugins.api.SendingRequest
 import io.ktor.client.plugins.api.createClientPlugin
+import io.ktor.client.request.HttpSendPipeline
 import io.ktor.client.statement.bodyAsText
-import io.ktor.client.statement.request
-import io.ktor.http.contentLength
+import io.ktor.http.HttpHeaders
+import io.ktor.http.Url
+import io.ktor.http.content.OutgoingContent
 import io.ktor.util.AttributeKey
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.readRemaining
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.io.readString
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
-import java.time.Duration
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlin.coroutines.coroutineContext
+import kotlin.math.log10
+import kotlin.math.pow
 
 
 @Composable
 fun NetworksPane(
     modifier: Modifier = Modifier
 ) {
+    val dialog = rememberDialogController()
     FilteredList(
         "Сетевые запросы",
         values = NetworkMonitor.requests,
         vKey = { it.id },
-        vContent = { NetworkRequestItem(it) },
-        exportValues = NetworkMonitor::exportRequests,
+        vContent = {
+            NetworkRequestItem(it) {
+                dialog.open(true) {
+                    NetworkRequestDialog(it)
+                }
+            }
+        }, exportValues = NetworkMonitor::exportRequests,
         clearValues = NetworkMonitor::clearRequests,
         setIsMonitoringPaused = NetworkMonitor::setMonitoringPause,
         isMonitoringPaused = NetworkMonitor.isMonitoringPaused,
         modifier = modifier,
         filter = NetworkFilter(),
         filterHelpItems = listOf(
-
+            "method:POST" to "Фильтр по методу (GET, POST, PUT, DELETE)",
+            "status:500" to "Фильтр по коду статуса",
+            "is:success" to "Только успешные запросы (200-299)",
+            "is:error" to "Только ошибки (4xx, 5xx, обрыв сети)",
+            "url:google" to "Явный поиск по вхождению в URL",
+            "api/v1" to "Быстрый поиск по части URL"
         )
     )
 }
 
-
+//@Serializable
 data class NetworkRequest(
-    val id: UUID,
+    val id: UUID = UUID.randomUUID(),
     val url: String,
     val method: String,
-    val statusCode: Int,
-    val timestamp: Long,
-    val duration: Duration,
-    val requestSize: Long = 0,
-    val responseSize: Long = 0,
+    val statusCode: Int? = null,
+    val requestTime: Long,
+    var responseTime: Long? = null,
+    var endTime: Long? = null,
     val requestHeaders: Map<String, String> = emptyMap(),
-    val responseHeaders: Map<String, String> = emptyMap(),
+    var responseHeaders: Map<String, String> = emptyMap(),
     val requestBody: String? = null,
-    val responseBody: String? = null,
-    val error: String? = null
+    var responseBody: String? = null,
+    var error: String? = null,
+    val requestSize: Long = 0,
+    var responseSize: Long = 0
 ) {
     val isSuccessful: Boolean get() = statusCode in 200..299
+    val isWebSocket: Boolean get() = requestHeaders["Upgrade"]?.equals("websocket", true) == true
+
+    val host: String get() = runCatching { Url(url).host }.getOrDefault(url)
+    val path: String get() = runCatching { Url(url).encodedPath }.getOrDefault("/")
+
+    val queryParams: List<Pair<String, String>>
+        get() = runCatching {
+            Url(url).parameters.entries().flatMap { (key, values) -> values.map { key to it } }
+        }.getOrDefault(emptyList())
+
+    val requestCookies: Map<String, String> get() = parseCookies(requestHeaders["Cookie"])
+    val responseCookies: Map<String, String> get() = parseSetCookies(responseHeaders["Set-Cookie"])
+
+    val duration: Long get() = if (endTime != null && responseTime != null) endTime!! - requestTime else 0
+    val latency: Long get() = if (responseTime != null) responseTime!! - requestTime else 0
+
     val contentType: String?
-        get() = requestHeaders["Content-Type"] ?: requestHeaders["content-type"]
+        get() = responseHeaders[HttpHeaders.ContentType] ?: responseHeaders["content-type"]
+
+    val statusCategory: StatusCategory
+        get() = when (statusCode) {
+            in 200..299 -> StatusCategory.Success
+            in 300..399 -> StatusCategory.Redirect
+            in 400..599 -> StatusCategory.Error
+            null -> StatusCategory.Pending
+            else -> StatusCategory.Unknown
+        }
+
+    private fun parseCookies(header: String?): Map<String, String> {
+        if (header.isNullOrEmpty()) return emptyMap()
+        return header.split(";").associate {
+            val parts = it.split("=", limit = 2)
+            (parts.getOrNull(0)?.trim() ?: "") to (parts.getOrNull(1)?.trim() ?: "")
+        }
+    }
+
+    private fun parseSetCookies(header: String?): Map<String, String> = parseCookies(header)
 }
 
-// 2. Менеджер сетевых запросов
+enum class StatusCategory {
+    Success, Redirect, Error, Pending, Unknown
+}
+
 object NetworkMonitor {
     private val _requests = mutableStateListOf<NetworkRequest>()
     val requests: List<NetworkRequest> get() = _requests
@@ -126,16 +197,16 @@ object NetworkMonitor {
         isMonitoringPaused = value
     }
 
-    fun trackRequest(
-        request: NetworkRequest
-    ) {
+    fun trackRequest(request: NetworkRequest) {
         if (isMonitoringPaused) return
-
         _requests.add(request)
+        if (_requests.size > 1000) _requests.removeAt(_requests.lastIndex)
+    }
 
-        // Ограничиваем размер списка
-        if (_requests.size > 1000) {
-            _requests.removeAt(0)
+    fun updateRequest(id: UUID, update: (NetworkRequest) -> NetworkRequest) {
+        val index = _requests.indexOfFirst { it.id == id }
+        if (index != -1) {
+            _requests[index] = update(_requests[index])
         }
     }
 
@@ -156,650 +227,927 @@ object NetworkMonitor {
 val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
     val callIdKey = AttributeKey<UUID>("CallId")
 
+    // 1. Старт запроса
     on(SendingRequest) { request, content ->
         val callId = UUID.randomUUID()
         request.attributes.put(callIdKey, callId)
+
+        val requestBodyString = content.decodeContent()
+
+        val netRequest = NetworkRequest(
+            id = callId,
+            url = request.url.toString(),
+            method = request.method.value,
+            requestTime = System.currentTimeMillis(),
+            requestHeaders = request.headers.entries()
+                .associate { it.key to it.value.joinToString(", ") },
+            requestBody = requestBodyString,
+            requestSize = requestBodyString.length.toLong()
+        )
+        NetworkMonitor.trackRequest(netRequest)
     }
 
-    onResponse { response ->
-        val callId: UUID = response.call.attributes[callIdKey]
+    // 2. Ловим Ошибки подключения (No Internet, Timeout)
+    // Внедряемся в pipeline, чтобы поймать exception
+    client.sendPipeline.intercept(HttpSendPipeline.Engine) {
+        val callId = context.attributes.getOrNull(callIdKey) ?: return@intercept
+        try {
+            proceed()
+        } catch (e: Exception) {
+            // Если упало здесь — значит сети нет или таймаут
+            NetworkMonitor.updateRequest(callId) {
+                it.copy(
+                    error = "${e::class.simpleName}: ${e.message}",
+                    endTime = System.currentTimeMillis()
+                )
+            }
+            throw e
+        }
+    }
 
-        NetworkMonitor.trackRequest(
-            NetworkRequest(
-                id = callId,
-                url = response.request.url.toString(),
-                method = response.request.method.value,
+    // 3. Успешный (или неуспешный HTTP) ответ
+    onResponse { response ->
+        val callId = response.call.attributes.getOrNull(callIdKey) ?: return@onResponse
+        val responseTime = System.currentTimeMillis()
+
+        NetworkMonitor.updateRequest(callId) {
+            it.copy(
                 statusCode = response.status.value,
-                timestamp = response.responseTime.timestamp,
-                duration = Duration.ofMillis(response.responseTime.timestamp - response.requestTime.timestamp),
-                requestSize = response.contentLength() ?: 0,
-                responseSize = response.contentLength() ?: 0,
-                requestBody = response.request.content.toString(),
-                responseBody = response.bodyAsText(),
-                error = null
+                responseTime = responseTime,
+                responseHeaders = response.headers.entries()
+                    .associate { entry -> entry.key to entry.value.joinToString(", ") }
             )
-        )
+        }
+
+        try {
+            val bodyText = response.bodyAsText()
+            NetworkMonitor.updateRequest(callId) {
+                it.copy(
+                    endTime = System.currentTimeMillis(),
+                    responseBody = bodyText,
+                    responseSize = bodyText.length.toLong()
+                )
+            }
+        } catch (e: Exception) {
+            NetworkMonitor.updateRequest(callId) {
+                it.copy(error = "Read Error: ${e.message}", endTime = System.currentTimeMillis())
+            }
+        }
+    }
+}
+
+@OptIn(DelicateCoroutinesApi::class)
+suspend fun OutgoingContent.decodeContent(): String {
+    return when (this) {
+        is OutgoingContent.ByteArrayContent -> bytes().decodeToString()
+        is OutgoingContent.ReadChannelContent -> readFrom().readRemaining()
+            .readString(Charsets.UTF_8)
+
+        is OutgoingContent.WriteChannelContent -> {
+            val channel = ByteChannel(true)
+            GlobalScope.launch(coroutineContext + CoroutineName("decodeContent")) {
+                writeTo(channel)
+                channel.close()
+            }
+            channel.readRemaining().readString(Charsets.UTF_8)
+        }
+
+        is OutgoingContent.NoContent -> ""
+        else -> ""
     }
 }
 
 class NetworkFilter : Filter<NetworkRequest> {
     private val methodFilters = mutableListOf<String>()
     private val statusFilters = mutableListOf<Int>()
-    private val urlFilters = mutableListOf<String>()
-    private var successFilter: Boolean? = null
+    private val textFilters =
+        mutableListOf<String>() // Переименовал urlFilters в textFilters для ясности
+
+    // true = is:success (200..299)
+    // false = is:error (400+, 500+, Network Error)
+    private var isSuccessFilter: Boolean? = null
 
     override fun clearFilters() {
         methodFilters.clear()
         statusFilters.clear()
-        urlFilters.clear()
-        successFilter = null
+        textFilters.clear()
+        isSuccessFilter = null
     }
 
     override fun parseQuery(query: String) {
-        val patterns = listOf(
-            Regex("""method:(\w+)"""),
-            Regex("""status:(\d+)"""),
-            Regex("""url:([\w\.\/:-]+)"""),
-            Regex("""is:(\w+)"""),
-            Regex(""""([^"]+)""""),
-            Regex("""(\S+)""")
-        )
+        clearFilters()
 
-        patterns.flatMap { it.findAll(query) }.forEach { match ->
+        // Разбиваем по пробелам, игнорируя пустые части
+        val tokens = query.trim().split("\\s+".toRegex())
+
+        tokens.forEach { token ->
             when {
-                match.value.startsWith("method:") -> {
-                    methodFilters.add(match.groupValues[1].uppercase())
+                token.startsWith("method:", ignoreCase = true) -> {
+                    val value = token.substringAfter(":")
+                    if (value.isNotBlank()) methodFilters.add(value.uppercase())
                 }
 
-                match.value.startsWith("status:") -> {
-                    match.groupValues[1].toIntOrNull()?.let {
+                token.startsWith("status:", ignoreCase = true) -> {
+                    token.substringAfter(":").toIntOrNull()?.let {
                         statusFilters.add(it)
                     }
                 }
 
-                match.value.startsWith("url:") -> {
-                    urlFilters.add(match.groupValues[1])
-                }
-
-                match.value.startsWith("is:") -> {
-                    if (match.groupValues[1] == "success") {
-                        successFilter = true
-                    } else if (match.groupValues[1] == "error") {
-                        successFilter = false
+                token.startsWith("is:", ignoreCase = true) -> {
+                    val value = token.substringAfter(":").lowercase()
+                    when (value) {
+                        "success" -> isSuccessFilter = true
+                        "error" -> isSuccessFilter = false
                     }
                 }
 
-                match.value.startsWith("\"") -> {
-                    urlFilters.add(match.groupValues[1])
+                // Обработка url: отдельно, если пользователь явно написал url:google
+                token.startsWith("url:", ignoreCase = true) -> {
+                    val value = token.substringAfter(":")
+                    if (value.isNotBlank()) textFilters.add(value)
                 }
 
+                // Все остальное считаем простым поиском по URL/Host
                 else -> {
-                    if (!match.value.contains(":")) {
-                        urlFilters.add(match.value)
-                    }
+                    if (token.isNotBlank()) textFilters.add(token)
                 }
             }
         }
     }
 
     override fun matches(value: NetworkRequest): Boolean {
-        if (methodFilters.isNotEmpty() && value.method !in methodFilters) return false
-        if (statusFilters.isNotEmpty() && value.statusCode !in statusFilters) return false
-        if (successFilter != null && value.isSuccessful != successFilter) return false
-        if (urlFilters.isNotEmpty() && urlFilters.none {
-                value.url.contains(
-                    it,
-                    true
-                )
-            }) return false
+        // 1. Фильтр по методу (строгое совпадение)
+        if (methodFilters.isNotEmpty()) {
+            if (value.method.uppercase() !in methodFilters) return false
+        }
+
+        // 2. Фильтр по статусу (строгое совпадение)
+        if (statusFilters.isNotEmpty()) {
+            if (value.statusCode !in statusFilters) return false
+        }
+
+        // 3. Фильтр is:success / is:error
+        if (isSuccessFilter != null) {
+            val isSuccessCode = value.statusCode in 200..299
+
+            if (isSuccessFilter == true) {
+                // Если ищем успех, то должен быть 2xx
+                if (!isSuccessCode) return false
+            } else {
+                // Если ищем ошибку (is:error):
+                // Это либо код >= 400, либо нет кода (ошибка сети), либо поле error не пустое
+                val hasErrorCode = (value.statusCode ?: 0) >= 400
+                val hasNetworkError = value.error != null
+
+                if (!hasErrorCode && !hasNetworkError) return false
+            }
+        }
+
+        // 4. Текстовый поиск (URL или Хост содержит ХОТЯ БЫ ОДИН из фильтров)
+        if (textFilters.isNotEmpty()) {
+            val matchesAny = textFilters.any { filter ->
+                value.url.contains(filter, ignoreCase = true)
+            }
+            if (!matchesAny) return false
+        }
 
         return true
     }
 }
 
 @Composable
-fun NetworkStats(requests: List<NetworkRequest>) {
-    val stats = remember(requests) {
-        val successful = requests.count { it.isSuccessful }
-        val totalSize = requests.sumOf { it.requestSize + it.responseSize }
-        val avgTime =
-            if (requests.isNotEmpty()) requests.sumOf { it.duration.seconds } / requests.size else 0
-
-        Triple(successful, totalSize, avgTime)
-    }
+fun NetworkRequestItem(request: NetworkRequest, onClick: () -> Unit) {
+    val isPending = request.statusCode == null && request.error == null
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .background(colorScheme.surfaceContainer, shapes.medium)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceAround
+            .clickable(onClick = onClick)
+            .background(colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 12.dp), // Чуть больше воздуха
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        StatItem(
-            value = requests.size.toString(),
-            label = "Всего",
-            icon = WHATIcons.Crown
-        )
-        StatItem(
-            value = stats.first.toString(),
-            label = "Успешно",
-            icon = WHATIcons.Crown,
-            color = colorScheme.primary
-        )
-        StatItem(
-            value = "${stats.second / 1024} KB",
-            label = "Объем",
-            icon = WHATIcons.Crown
-        )
-        StatItem(
-            value = "${stats.second}ms",
-            label = "Среднее время",
-            icon = WHATIcons.Crown
-        )
-    }
-}
+        // 1. Метод (Badge)
+        MethodBadge(request.method)
 
-@Composable
-fun StatItem(
-    value: String,
-    label: String,
-    icon: ImageVector,
-    color: Color = colorScheme.primary,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(color.copy(alpha = 0.12f), CircleShape)
-                .padding(6.dp),
-            contentAlignment = Alignment.Center
+        Gap(8)
+
+        // 2. Основная инфа (URL) - Weight 1f, чтобы занимать все доступное место
+        Column(
+            modifier = Modifier.weight(1f)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(16.dp)
+            Text(
+                text = request.path,
+                color = colorScheme.onSurface,
+                style = typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Gap(2)
+            Text(
+                text = request.host,
+                style = typography.bodySmall,
+                color = colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        Text(
-            text = value,
-            style = typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            color = colorScheme.onSurface,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+        Gap(8)
 
-        Text(
-            text = label,
-            style = typography.labelSmall,
-            color = colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun NetworkRequestItem(request: NetworkRequest) {
-    var showDetailsDialog by remember { mutableStateOf(false) }
-
-    val statusColor = when {
-        request.statusCode >= 500 -> MaterialTheme.colorScheme.error
-        request.statusCode >= 400 -> MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    val statusBackground = when {
-        request.statusCode >= 500 -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-        request.statusCode >= 400 -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
-        else -> MaterialTheme.colorScheme.surfaceContainer
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = statusBackground),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .clickable { showDetailsDialog = true }
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // 3. Правая часть (Статус и время) - Фиксируется по контенту с align End
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.widthIn(min = 60.dp) // Минимальная ширина чтобы не скакало
         ) {
-            // Статус код
-            Box(
-                modifier = Modifier
-                    .background(statusColor, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "${request.method} ${request.statusCode}",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+            if (isPending) {
+                // Аккуратный лоадер
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = colorScheme.primary
                 )
-            }
-
-            // URL
-            Text(
-                text = request.url,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Время и размер
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${request.duration.seconds * 1000}ms",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp
-                )
-                if (request.responseSize > 0) {
+            } else {
+                // Статус код
+                if (request.error != null) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Error",
+                        tint = colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
                     Text(
-                        text = "${request.responseSize / 1024} KB",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 10.sp
+                        text = request.statusCode.toString(),
+                        style = typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = getStatusTextColor(request.statusCategory)
                     )
                 }
+
+                Gap(4)
+
+                // Время
+                Text(
+                    text = formatTime(request.requestTime),
+                    style = typography.labelSmall,
+                    color = colorScheme.onSurfaceVariant
+                )
             }
         }
     }
+}
 
-    if (showDetailsDialog) {
-        NetworkRequestDialog(
-            request = request,
-            onDismiss = { showDetailsDialog = false }
+@Composable
+fun MethodBadge(method: String) {
+    // Пастельные цвета: Мягкий фон, контрастный текст
+    val (bgColor, textColor) = when (method.uppercase()) {
+        "GET" -> Color(0xFFD9F9FF) to Color(0xFF1565C0)     // Soft Blue
+        "POST" -> Color(0xFFF3E5F5) to Color(0xFF7B1FA2)    // Soft Purple
+        "PUT" -> Color(0xFFFFF3E0) to Color(0xFFEF6C00)     // Soft Orange
+        "DELETE" -> Color(0xFFFFEBEE) to Color(0xFFC62828)  // Soft Red
+        "PATCH" -> Color(0xFFE0F2F1) to Color(0xFF00695C)   // Soft Teal
+        else -> Color(0xFFF5F5F5) to Color(0xFF616161)      // Grey
+    }
+
+    Box(
+        modifier = Modifier
+            .width(48.dp)
+            .background(bgColor, RoundedCornerShape(8.dp))
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = method.take(4), // Обрезаем длинные методы если что
+            style = typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            color = textColor
         )
     }
 }
 
+fun getStatusTextColor(category: StatusCategory): Color {
+    return when (category) {
+        StatusCategory.Success -> Color(0xFF2E7D32) // Green
+        StatusCategory.Redirect -> Color(0xFFF57C00) // Orange/Dark Yellow
+        StatusCategory.Error -> Color(0xFFC62828) // Red
+        else -> Color.Gray
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NetworkRequestDialog(
     request: NetworkRequest,
-    onDismiss: () -> Unit
+) = Surface(
+    modifier = Modifier.fillMaxSize(),
+    color = colorScheme.surface
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .fillMaxHeight(0.8f),
-            shape = shapes.extraLarge,
-            color = colorScheme.surface,
-            tonalElevation = 8.dp
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Заголовок диалога
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Детали запроса",
-                        style = typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(Icons.Default.Close, "Закрыть")
-                    }
-                }
-
-                Divider()
-
-                // Контент
-                NetworkRequestDetailsContent(request = request)
-            }
-        }
-    }
-}
-
-@Composable
-fun NetworkRequestDetailsContent(request: NetworkRequest) {
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Обзор", "Headers", "Body", "Timing")
-
+    val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize()) {
-        // Табы
-        TabRow(
-            selectedTabIndex = selectedTab,
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary,
-            indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    height = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
+        CenterAlignedTopAppBar(
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = request.host,
+                        style = typography.titleSmall
+                    )
+                    // Компактный статус под заголовком
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val statusText = when (request.statusCode) {
+                            null -> "Loading..."
+                            else -> "${request.statusCode} ${getStatusText(request.statusCode)}"
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    getStatusTextColor(request.statusCategory),
+                                    CircleShape
+                                )
+                        )
+                        Gap(6)
                         Text(
-                            text = title,
-                            fontSize = 12.sp,
-                            maxLines = 1
+                            text = statusText,
+                            style = typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            },
+            actions = {
+                // Кнопка Share
+                IconButton(onClick = { shareCurl(context, request) }) {
+                    Icon(Icons.Default.Share, "Share")
+                }
+            }
+        )
+
+        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+        // --- Tabs ---
+        var selectedTab by remember { mutableIntStateOf(0) }
+        val tabs = listOf("Overview", "Request", "Response")
+
+        SingleChoiceSegmentedButtonRow(
+            space = (-4).dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            tabs.forEachIndexed { index, title ->
+                SegmentTab(
+                    index,
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    label = title,
+                    count = tabs.size,
+                    icon = null
                 )
             }
         }
 
-        // Контент табов
-        when (selectedTab) {
-            0 -> OverviewTab(request)
-            1 -> HeadersTab(request)
-            2 -> BodyTab(request)
-            3 -> TimingTab(request)
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                0 -> OverviewTabContent(request)
+                1 -> RequestTabContent(request)
+                2 -> ResponseTabContent(request)
+            }
         }
     }
 }
 
+
 @Composable
-fun OverviewTab(request: NetworkRequest) {
+fun OverviewTabContent(request: NetworkRequest) {
+    val context = LocalContext.current
+
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        item {
-            RequestInfoItem("URL", request.url)
-            RequestInfoItem("Method", request.method)
-            RequestInfoItem("Status", "${request.statusCode} ${getStatusText(request.statusCode)}")
-            RequestInfoItem("Duration", "${request.duration.seconds * 1000}ms")
-            RequestInfoItem("Request Size", formatBytes(request.requestSize))
-            RequestInfoItem("Response Size", formatBytes(request.responseSize))
-            RequestInfoItem("Timestamp", formatTimestamp(request.timestamp))
+        // Статус "плашкой" как в начале, но аккуратнее (если есть ошибка)
+        if (request.error != null) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer)) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            null,
+                            tint = colorScheme.onErrorContainer
+                        )
+                        Gap(8)
+                        Text(
+                            request.error!!,
+                            color = colorScheme.onErrorContainer,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
 
-            if (request.error != null) {
-                VerticalGap(16)
+        item {
+            SectionHeader("General Info")
+            // URL блок: Label сверху, Value снизу
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
                 Text(
-                    text = "Ошибка:",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    "URL",
+                    style = typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = request.error,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                SelectionContainer {
+                    Text(
+                        text = request.url,
+                        style = typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = Color.LightGray.copy(0.3f)
+            )
+
+            InfoRow("Method", request.method)
+            InfoRow(
+                "Status",
+                "${request.statusCode ?: "Pending"} ${
+                    if (request.statusCode != null) getStatusText(request.statusCode!!) else ""
+                }"
+            )
+            InfoRow("Timestamp", formatFullDate(request.requestTime))
+        }
+
+        item {
+            SectionHeader("Performance")
+            // Вертикальный список атрибутов
+            InfoRow("Total Duration", "${request.duration} ms")
+            InfoRow("Latency (TTFB)", "${request.latency} ms")
+            InfoRow("Request Size", formatBytes(request.requestSize))
+            InfoRow("Response Size", formatBytes(request.responseSize))
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = { openInBrowser(context, request.url) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Open Browser") }
+
+                OutlinedButton(
+                    onClick = { copyToClipboard(context, request.url) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Copy URL") }
             }
         }
     }
 }
 
 @Composable
-fun RequestInfoItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+fun RequestTabContent(request: NetworkRequest) {
+    val context = LocalContext.current
+    LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+        // Query Params с декодированием
+        if (request.queryParams.isNotEmpty()) {
+            item {
+                CleanExpandableSection(
+                    title = "Query Params",
+                    count = request.queryParams.size,
+                    initExpanded = true,
+                    onCopy = {
+                        copyToClipboard(
+                            context,
+                            request.queryParams.joinToString("\n") { "${it.first}: ${it.second}" })
+                    }
+                ) {
+                    KeyValueList(request.queryParams, decodeValues = true)
+                }
+            }
+        }
+
+        item {
+            CleanExpandableSection(
+                title = "Headers",
+                count = request.requestHeaders.size,
+                onCopy = {
+                    copyToClipboard(
+                        context,
+                        request.requestHeaders.entries.joinToString("\n") { "${it.key}: ${it.value}" })
+                }
+            ) {
+                KeyValueList(request.requestHeaders.toList())
+            }
+        }
+
+        if (request.requestCookies.isNotEmpty()) {
+            item {
+                CleanExpandableSection(
+                    title = "Cookies",
+                    count = request.requestCookies.size,
+                    onCopy = {
+                        copyToClipboard(
+                            context,
+                            request.requestCookies.entries.joinToString("\n") { "${it.key}: ${it.value}" })
+                    }
+                ) {
+                    KeyValueList(request.requestCookies.toList())
+                }
+            }
+        }
+
+        item {
+            CleanExpandableSection(
+                title = "Body",
+                initExpanded = true,
+                onCopy = if (!request.requestBody.isNullOrEmpty()) {
+                    { copyToClipboard(context, request.requestBody) }
+                } else null
+            ) {
+                BodyContent(request.requestBody, request.requestHeaders["Content-Type"])
+            }
+        }
+    }
+}
+
+@Composable
+fun ResponseTabContent(request: NetworkRequest) {
+    val context = LocalContext.current
+    LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+        item {
+            CleanExpandableSection(
+                title = "Headers",
+                count = request.responseHeaders.size,
+                onCopy = {
+                    copyToClipboard(
+                        context,
+                        request.responseHeaders.entries.joinToString("\n") { "${it.key}: ${it.value}" })
+                }
+            ) {
+                KeyValueList(request.responseHeaders.toList())
+            }
+        }
+
+        if (request.requestCookies.isNotEmpty()) {
+            item {
+                CleanExpandableSection(
+                    title = "Cookies",
+                    count = request.responseCookies.size,
+                    onCopy = {
+                        copyToClipboard(
+                            context,
+                            request.responseCookies.entries.joinToString("\n") { "${it.key}: ${it.value}" })
+                    }
+                ) {
+                    KeyValueList(request.responseCookies.toList())
+                }
+            }
+        }
+
+        item {
+            CleanExpandableSection(
+                title = "Body",
+                initExpanded = true,
+                onCopy = if (!request.responseBody.isNullOrEmpty()) {
+                    {
+                        copyToClipboard(
+                            context,
+                            request.responseBody!!
+                        )
+                    }
+                } else null
+            ) {
+                BodyContent(request.responseBody, request.requestHeaders["Content-Type"])
+            }
+        }
+    }
+}
+
+@Composable
+fun CleanExpandableSection(
+    title: String,
+    count: Int? = null,
+    initExpanded: Boolean = false,
+    onCopy: (() -> Unit)? = null, // Кнопка копирования теперь тут
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(initExpanded) }
+    val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rot")
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Левая часть: Текст + Счетчик
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = typography.titleSmall,
+                    color = colorScheme.onSurface
+                )
+                if (count != null) {
+                    Gap(8)
+                    Text(
+                        text = "($count)",
+                        style = typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (expanded && onCopy != null) {
+                    IconButton(onClick = onCopy, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Copy",
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    Gap(12)
+                }
+
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(rotation),
+                    tint = colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                content()
+                Gap(8)
+            }
+        }
+    }
+}
+
+@Composable
+fun BodyContent(body: String?, contentType: String?) {
+    if (body.isNullOrEmpty()) {
         Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            "No content",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            color = Color.Gray,
             fontSize = 12.sp
         )
-        Text(
-            text = value,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 2.dp)
-        )
+        return
     }
-}
 
-@Composable
-fun HeadersTab(request: NetworkRequest) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Request Headers:",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
+    val isJson = contentType?.contains("json") == true
+    val displayText = remember(body) { if (isJson) formatJson(body) else body }
 
-        if (request.requestHeaders.isEmpty()) {
-            item {
-                Text(
-                    "No headers",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(request.requestHeaders.entries.toList()) { (key, value) ->
-                HeaderItem(key, value)
-            }
-        }
-
-        item {
-            Text(
-                text = "Response Headers:",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
-
-        if (request.responseHeaders.isEmpty()) {
-            item {
-                Text(
-                    "No headers",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(request.responseHeaders.entries.toList()) { (key, value) ->
-                HeaderItem(key, value)
-            }
-        }
-    }
-}
-
-@Composable
-fun HeaderItem(key: String, value: String) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = colorScheme.surfaceContainerLow, // Светло-серый/адаптивный фон
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        // Ключ
-        Text(
-            text = key,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(140.dp)
-        )
-
-        // Разделитель
-        Text(
-            text = ":",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
-        )
-
-        // Значение
-        Text(
-            text = value,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 12.sp,
-            modifier = Modifier.weight(1f),
-            softWrap = true
-        )
-
-        // Кнопка копирования
-        IconButton(
-            onClick = {
-                val textToCopy = "$key: $value"
-                // Копирование в буфер обмена
-            },
-            modifier = Modifier.size(20.dp)
-        ) {
-            Icon(
-                imageVector = WHATIcons.Export,
-                contentDescription = "Копировать",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+        SelectionContainer {
+            Text(
+                text = displayText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(12.dp),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = colorScheme.onSurface
             )
         }
     }
+}
 
-    Divider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-        thickness = 0.5.dp
+@Composable
+fun KeyValueList(items: List<Pair<String, String>>, decodeValues: Boolean = false) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        items.forEach { (key, value) ->
+            val displayValue = if (decodeValues) {
+                try {
+                    java.net.URLDecoder.decode(value, "UTF-8")
+                } catch (e: Exception) {
+                    value
+                }
+            } else value
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = key,
+                    style = typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(110.dp), // Фиксированная ширина для ключа
+                    color = colorScheme.primary
+                )
+                SelectionContainer {
+                    Text(
+                        text = displayValue,
+                        style = typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.weight(1f),
+                        color = colorScheme.onSurface
+                    )
+                }
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 16.dp),
+                thickness = 0.5.dp,
+                color = Color.LightGray.copy(alpha = 0.3f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, color: Color = colorScheme.primary) {
+    Text(
+        text = title,
+        style = typography.labelLarge,
+        color = color,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp)
     )
 }
 
 @Composable
-fun BodyTab(request: NetworkRequest) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+fun InfoRow(label: String, value: String, canCopy: Boolean = false) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier.padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        item {
-            Text(
-                text = "Request Body:",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-
-        item {
-            if (request.requestBody.isNullOrEmpty()) {
-                Text("No body", fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
-            } else {
-                Text(
-                    text = request.requestBody,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colorScheme.surfaceContainerLow, RoundedCornerShape(8.dp))
-                        .padding(12.dp)
-                )
-            }
-        }
-
-        item {
-            Text(
-                text = "Response Body:",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
-
-        item {
-            if (request.responseBody.isNullOrEmpty()) {
-                Text("No body", fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
-            } else {
-                Text(
-                    text = request.responseBody!!,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colorScheme.surfaceContainerLow, RoundedCornerShape(8.dp))
-                        .padding(12.dp)
+        Text(
+            text = "$label: ",
+            style = typography.bodyMedium,
+            color = colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(120.dp)
+        )
+        Text(
+            text = value,
+            style = typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+            maxLines = 10
+        )
+        if (canCopy) {
+            IconButton(onClick = { Pair(context, value) }, modifier = Modifier.size(20.dp)) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = "Copy",
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }
     }
 }
 
-@Composable
-fun TimingTab(request: NetworkRequest) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        TimingItem("Total Time", "${request.duration.seconds * 1000}ms")
-        TimingItem("Request Size", formatBytes(request.requestSize))
-        TimingItem("Response Size", formatBytes(request.responseSize))
-        TimingItem("Timestamp", formatTimestamp(request.timestamp))
-
-        if (request.error != null) {
-            Gap(16)
-            Text(
-                text = "Error:",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-            Text(
-                text = request.error,
-                color = colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
+fun formatJson(json: String): String {
+    return try {
+        val jsonElement = Json.parseToJsonElement(json)
+        val json = Json { prettyPrint = true }
+        json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), jsonElement)
+    } catch (e: Exception) {
+        json
     }
 }
 
-fun formatTimestamp(timestamp: Long): String {
+fun formatTime(timestamp: Long): String {
+    return SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+}
+
+fun formatFullDate(timestamp: Long): String {
     return SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(timestamp))
+}
+
+fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Network Data", text)
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+}
+
+fun openInBrowser(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun shareCurl(context: Context, request: NetworkRequest) {
+    val builder = StringBuilder("curl -X ${request.method} '${request.url}'")
+
+    request.requestHeaders.forEach { (key, value) ->
+        builder.append(" -H '$key: $value'")
+    }
+
+    if (!request.requestBody.isNullOrEmpty()) {
+        builder.append(" -d '${request.requestBody.replace("'", "'\\''")}'")
+    }
+
+    val sendIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, builder.toString())
+        type = "text/plain"
+    }
+
+    context.startActivity(Intent.createChooser(sendIntent, "Share cURL"))
+}
+
+fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (log10(bytes.toDouble()) / log10(1024.0)).toInt()
+
+    if (digitGroups >= units.size) return "${bytes / 1024 / 1024} MB"
+
+    return String.format(
+        Locale.US,
+        "%.1f %s",
+        bytes / 1024.0.pow(digitGroups.toDouble()),
+        units[digitGroups]
+    )
 }
 
 fun getStatusText(statusCode: Int): String {
     return when (statusCode) {
-        in 100..199 -> "Informational"
-        in 200..299 -> "Success"
-        in 300..399 -> "Redirection"
-        in 400..499 -> "Client Error"
-        in 500..599 -> "Server Error"
-        else -> "Unknown"
-    }
-}
+        // 1xx Information
+        100 -> "Continue"
+        101 -> "Switching Protocols"
 
-@Composable
-fun TimingItem(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-    }
-}
+        // 2xx Success
+        200 -> "OK"
+        201 -> "Created"
+        202 -> "Accepted"
+        204 -> "No Content"
+        205 -> "Reset Content"
+        206 -> "Partial Content"
 
-fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
-        bytes >= 1024 -> "${bytes / 1024} KB"
-        else -> "$bytes B"
+        // 3xx Redirection
+        301 -> "Moved Permanently"
+        302 -> "Found"
+        303 -> "See Other"
+        304 -> "Not Modified"
+        307 -> "Temporary Redirect"
+        308 -> "Permanent Redirect"
+
+        // 4xx Client Error
+        400 -> "Bad Request"
+        401 -> "Unauthorized"
+        403 -> "Forbidden"
+        404 -> "Not Found"
+        405 -> "Method Not Allowed"
+        406 -> "Not Acceptable"
+        408 -> "Request Timeout"
+        409 -> "Conflict"
+        410 -> "Gone"
+        415 -> "Unsupported Media Type"
+        422 -> "Unprocessable Entity"
+        429 -> "Too Many Requests"
+
+        // 5xx Server Error
+        500 -> "Internal Server Error"
+        501 -> "Not Implemented"
+        502 -> "Bad Gateway"
+        503 -> "Service Unavailable"
+        504 -> "Gateway Timeout"
+
+        else -> when (statusCode) {
+            in 200..299 -> "Success"
+            in 300..399 -> "Redirect"
+            in 400..499 -> "Client Error"
+            in 500..599 -> "Server Error"
+            else -> "Unknown"
+        }
     }
 }

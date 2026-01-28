@@ -62,7 +62,7 @@ class AppValues(context: Context) : PreferenceStorage(
     )
 
     val institution = createValue(
-        "institution", null, ScheduleProvider.serializer(),
+        "institution", null, String.serializer(),
         "Учебное заведение", "Выбранное учебное заведение для отображения расписания"
     )
 
@@ -84,6 +84,16 @@ class AppValues(context: Context) : PreferenceStorage(
     val useAnimation = createValue(
         "use_animation", true, Boolean.serializer(),
         "Анимации", "Включение анимаций интерфейса"
+    )
+
+    val isAnalyticsEnabled = createValue(
+        "is_analytics_enabled", true, Boolean.serializer(),
+        "Анализ пользования", "Разрешите собирать анонимную статистику пользования"
+    )
+
+    val readThePolicy = createValue(
+        "read_the_policy", true, Boolean.serializer(),
+        "Политика конфиденциальности", "Ознакомлены с политикой и условиями пользования"
     )
 
     val devSettingsUnlocked = createValue(

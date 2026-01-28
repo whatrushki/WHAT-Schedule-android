@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.providers.iubip.general
+package app.what.schedule.data.remote.providers
 
 
 import androidx.compose.ui.text.AnnotatedString
@@ -6,7 +6,7 @@ import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.schedule.data.remote.api.AdditionalData
-import app.what.schedule.data.remote.api.InstitutionProvider
+import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.SourceType
@@ -14,6 +14,7 @@ import app.what.schedule.data.remote.api.models.DaySchedule
 import app.what.schedule.data.remote.api.models.Group
 import app.what.schedule.data.remote.api.models.Lesson
 import app.what.schedule.data.remote.api.models.LessonState
+import app.what.schedule.data.remote.api.models.LessonTime
 import app.what.schedule.data.remote.api.models.LessonType
 import app.what.schedule.data.remote.api.models.LessonsScheduleType
 import app.what.schedule.data.remote.api.models.NewContent
@@ -41,32 +42,30 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
-private val IUBIPProviderMetadata
+private val IUBIPMetadata
     get() = MetaInfo(
         id = "iubip",
         name = "ИУБиП",
-        fullName = "Расписание ИУБиП",
-        description = "Официальный api-провайдер",
+        fullName = "Южный Университет (Институт Управления, Бизнеса и Права)",
+        description = "Южный Университет (Институт Управления, Бизнеса и Права)",
         sourceTypes = setOf(SourceType.API, SourceType.PARSER),
         sourceUrl = "https://iubip.ru/schedule/",
-        advantages = listOf(),
-        disadvantages = listOf()
     )
 
-class IUBIPOfficialProvider(
+class IUBIP(
     private val client: HttpClient,
     private val scope: CoroutineScope
-) : InstitutionProvider {
-    companion object Factory : InstitutionProvider.Factory, KoinComponent {
+) : Institution {
+    companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.iubip.ru"
 
-        override val metadata by lazy { IUBIPProviderMetadata }
-        override fun create(): InstitutionProvider = IUBIPOfficialProvider(get(), get())
+        override val metadata by lazy { IUBIPMetadata }
+        override fun create(): Institution = IUBIP(get(), get())
     }
 
     override val metadata = Factory.metadata
-    override val lessonsSchedule = IUBIPLessonsSchedule
 
     override suspend fun getGroupSchedule(
         group: String,
@@ -101,7 +100,7 @@ class IUBIPOfficialProvider(
             val lessons =
                 dayScheduleRaw.jsonObject.entries.map { (lessonNumRaw, otUnitsRaw) ->
                     val number = lessonNumRaw.trim().toInt().also { Auditor.debug("D", "num $it") }
-                    val time = lessonsSchedule.COMMON.first { it.number == number }
+                    val time = IUBIPLessonsSchedule.COMMON.first { it.number == number }
                     val otUnits = otUnitsRaw.jsonArray.map {
                         val auditory = it.jsonObject["AUD"]!!.jsonPrimitive.toString()
                             .replace("\"", "").trim()
@@ -266,4 +265,17 @@ class IUBIPOfficialProvider(
     }
 
     private fun formatImageUrl(url: String): String = BASE_URL + url
+}
+
+object IUBIPLessonsSchedule {
+    val COMMON = listOf(
+        LessonTime(1, LocalTime.of(8, 20), LocalTime.of(9, 50)),
+        LessonTime(2, LocalTime.of(10, 0), LocalTime.of(11, 30)),
+        LessonTime(3, LocalTime.of(11, 40), LocalTime.of(13, 10)),
+        LessonTime(4, LocalTime.of(13, 30), LocalTime.of(15, 0)),
+        LessonTime(5, LocalTime.of(15, 10), LocalTime.of(16, 40)),
+        LessonTime(6, LocalTime.of(17, 0), LocalTime.of(18, 30)),
+        LessonTime(7, LocalTime.of(18, 40), LocalTime.of(20, 10)),
+        LessonTime(8, LocalTime.of(20, 20), LocalTime.of(21, 50))
+    )
 }

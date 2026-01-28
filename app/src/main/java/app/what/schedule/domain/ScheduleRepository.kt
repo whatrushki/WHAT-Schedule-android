@@ -12,6 +12,7 @@ import app.what.schedule.data.local.database.OneTimeUnitDBO
 import app.what.schedule.data.local.database.RequestDBO
 import app.what.schedule.data.local.database.RequestSDBO
 import app.what.schedule.data.local.database.TeacherDBO
+import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.InstitutionManager
 import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.models.DaySchedule
@@ -27,8 +28,10 @@ class ScheduleRepository(
     private val institutionManager: InstitutionManager,
     private val scope: CoroutineScope
 ) {
-    private val api get() = institutionManager.getSavedProvider().orThrow { "No provider selected" }
-    private fun getFilialId() = institutionManager.getSavedFilial()!!.metadata.id
+    private val api
+        get() = institutionManager.getSavedInstitution().orThrow { "No provider selected" }
+
+    private fun getFilialId() = api.metadata.id
 
     suspend fun toggleFavorites(value: ScheduleSearch.Group) {
         db.withTransaction {
@@ -99,7 +102,11 @@ class ScheduleRepository(
             Auditor.debug("d", "from api | requiresData==${requiresData}")
             Auditor.debug("d", "from api | requiresData=${(cache == null || requiresData)}")
 
-            val response = api.getGroupSchedule(
+            val fetchSchedule: suspend (String, Boolean, AdditionalData) -> ScheduleResponse =
+                if (search is ScheduleSearch.Group) api::getGroupSchedule
+                else api::getTeacherSchedule
+
+            val response = fetchSchedule(
                 search.id, true, mapOf(
                     "lastModified" to lastRequest?.lastModified,
                     "requiresData" to (cache == null || requiresData)
@@ -107,12 +114,15 @@ class ScheduleRepository(
             )
 
             if (response is ScheduleResponse.Available) scope.launchIO {
-                saveRequest(
-                    getFilialId(),
-                    search.id,
-                    response.lastModified,
-                    response.schedules
-                )
+                db.withTransaction {
+                    db.requestsDao.deleteAll(getFilialId(), search.id)
+                    saveRequest(
+                        getFilialId(),
+                        search.id,
+                        response.lastModified,
+                        response.schedules
+                    )
+                }
             }
 
             response

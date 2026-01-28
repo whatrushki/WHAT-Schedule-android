@@ -49,13 +49,14 @@ import app.what.foundation.ui.bclick
 import app.what.foundation.ui.controllers.rememberDialogController
 import app.what.foundation.ui.keyboardAsState
 import app.what.foundation.ui.useState
+import app.what.schedule.controllers
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.local.settings.ThemeStyle
 import app.what.schedule.data.local.settings.ThemeType
 import app.what.schedule.features.settings.domain.models.SettingsEvent
 import app.what.schedule.features.settings.domain.models.SettingsState
 import app.what.schedule.features.settings.presentation.components.AboutAppContent
-import app.what.schedule.features.settings.presentation.components.asChoice
+import app.what.schedule.features.settings.presentation.components.asInstitutionChoice
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Clear
 import app.what.schedule.ui.theme.icons.filled.Code
@@ -64,6 +65,7 @@ import app.what.schedule.ui.theme.icons.filled.ImageRoller
 import app.what.schedule.utils.AppUtils
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.koin.core.context.unloadKoinModules
 
 // Внутреннее состояние для под-экрана
 private data class SubScreenState(
@@ -200,8 +202,9 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
         category(
             "Основные", "базовые параметры", WHATIcons.Crown,
             content = listOf(
-                app.institution.asChoice {
+                app.institution.asInstitutionChoice {
                     app.lastSearch.set(null)
+                    unloadKoinModules(controllers)
                     utils.restart()
                 }
             )
@@ -212,11 +215,8 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
             content = listOf(
                 app.themeType.asSingleChoice(enumValues<ThemeType>()) { it.displayName },
                 app.themeStyle.asSingleChoice(enumValues<ThemeStyle>()) { it.displayName },
-
-                // Вложенная логика работает как часы
                 app.themeColor.asColorPalette()
                     .dependsOn(app.themeStyle) { it == ThemeStyle.CustomColor },
-
                 app.useAnimation.asSwitch()
             )
         ),
@@ -224,6 +224,8 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
         category(
             "Для разработчиков", "отладка", WHATIcons.Code,
             content = listOf(
+                app.devSettingsUnlocked.asSwitch(),
+                app.isFirstLaunch.asSwitch(),
                 app.devPanelEnabled.asSwitch(),
                 app.debugMode.asSwitch()
             )
@@ -232,7 +234,7 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
         actionCategory(
             "О приложении", "версия, авторы", Icons.Rounded.Info
         ) {
-            dialog.open(true) { AboutAppContent(app, Modifier.fillMaxWidth()) }
+            dialog.open { AboutAppContent(app) }
         }
     )
 }

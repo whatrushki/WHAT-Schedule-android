@@ -57,7 +57,7 @@ fun <T> ChoiceDialogContent(
     onDisplay: (T) -> String,
     onSelect: (T) -> Unit
 ) = Column(
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier.fillMaxWidth().padding(8.dp),
 ) {
     options.forEach { option ->
         Row(

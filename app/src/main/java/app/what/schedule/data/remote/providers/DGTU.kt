@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.providers.dgtu.general
+package app.what.schedule.data.remote.providers
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
@@ -6,7 +6,7 @@ import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
-import app.what.schedule.data.remote.api.InstitutionProvider
+import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.SourceType
@@ -23,7 +23,6 @@ import app.what.schedule.data.remote.api.models.NewListItem
 import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.api.models.OneTimeUnit
 import app.what.schedule.data.remote.api.models.Teacher
-import app.what.schedule.data.remote.providers.rksi.general.RKSILessonsSchedule
 import app.what.schedule.data.remote.utils.LocalDateTimeSerializer
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
@@ -44,27 +43,24 @@ private val DGTUProviderMetadata
     get() = MetaInfo(
         id = "dgtu",
         name = "ДГТУ",
-        fullName = "Расписание Дгту",
-        description = "Официальный api-провайдер",
+        fullName = "Донской Государственный Технический Университет",
+        description = "Донской Государственный Технический Университет",
         sourceTypes = setOf(SourceType.API),
         sourceUrl = "https://edu.donstu.ru/WebApp/#/Rasp",
-        advantages = listOf(),
-        disadvantages = listOf()
     )
 
-class DGTUOfficialProvider(
+class DGTU(
     private val client: HttpClient,
     private val scope: CoroutineScope
-) : InstitutionProvider {
-    companion object Factory : InstitutionProvider.Factory, KoinComponent {
+) : Institution {
+    companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://edu.donstu.ru/api"
         private const val NEWS_BASE_URL = "https://news.donstu.ru"
         override val metadata by lazy { DGTUProviderMetadata }
-        override fun create(): InstitutionProvider = DGTUOfficialProvider(get(), get())
+        override fun create(): Institution = DGTU(get(), get())
     }
 
     override val metadata = Factory.metadata
-    override val lessonsSchedule = RKSILessonsSchedule
 
     private val listYears by scope.asyncLazy { listYears() }
 

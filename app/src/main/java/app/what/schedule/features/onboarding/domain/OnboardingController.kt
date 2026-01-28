@@ -20,23 +20,19 @@ class OnboardingController(
 
     override fun obtainEvent(viewEvent: OnboardingEvent) = when (viewEvent) {
         OnboardingEvent.Init -> {}
-        is OnboardingEvent.InstitutionAndProviderSelected ->
-            institutionAndProviderSelected(viewEvent)
-    }
 
-    private fun institutionAndProviderSelected(
-        viewEvent: OnboardingEvent.InstitutionAndProviderSelected
-    ) {
-        institutionManager.save(
-            viewEvent.institution.metadata.id,
-            viewEvent.filial.metadata.id,
-            viewEvent.provider.metadata.id
-        )
+        is OnboardingEvent.SelectInstitution -> updateState {
+            copy(selectedInstitutionId = viewEvent.id)
+        }
 
-        finishAndGoToMain()
+        OnboardingEvent.FinishOnboarding -> finishAndGoToMain()
     }
 
     private fun finishAndGoToMain() {
+        val selectedInstId = viewState.selectedInstitutionId ?: return
+
+        institutionManager.save(selectedInstId)
+
         settings.isFirstLaunch.set(false)
         setAction(OnboardingAction.NavigateToMain)
     }

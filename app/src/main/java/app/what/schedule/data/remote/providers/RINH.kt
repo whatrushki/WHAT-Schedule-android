@@ -1,4 +1,4 @@
-package app.what.schedule.data.remote.providers.rinh.general
+package app.what.schedule.data.remote.providers
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
@@ -6,7 +6,7 @@ import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
-import app.what.schedule.data.remote.api.InstitutionProvider
+import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.SourceType
@@ -22,7 +22,6 @@ import app.what.schedule.data.remote.api.models.NewListItem
 import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.api.models.OneTimeUnit
 import app.what.schedule.data.remote.api.models.Teacher
-import app.what.schedule.data.remote.providers.iubip.general.IUBIPLessonsSchedule
 import app.what.schedule.data.remote.utils.parseMonth
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
@@ -41,31 +40,28 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-private val RINHDigitalProviderMetadata
+private val RINHMetadata
     get() = MetaInfo(
         id = "rinh",
-        name = "Digital",
-        fullName = "Расписание РГЭУ (РИНХ)",
-        description = "Неофициальный api-провайдер команды Digital",
+        name = "РИНХ",
+        fullName = "Ростовский Государственный Экономический Университет",
+        description = "Ростовский Государственный Экономический Университет",
         sourceTypes = setOf(SourceType.API),
         sourceUrl = "https://rasp.rsue.ru",
-        advantages = listOf(),
-        disadvantages = listOf()
     )
 
-class RINHDigitalProvider(
+class RINH(
     private val client: HttpClient,
     private val scope: CoroutineScope
-) : InstitutionProvider {
-    companion object Factory : InstitutionProvider.Factory, KoinComponent {
+) : Institution {
+    companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://www.iubip.ru"
         private const val NEWS_BASE_URL = "https://rsue.ru"
-        override val metadata by lazy { RINHDigitalProviderMetadata }
-        override fun create(): InstitutionProvider = RINHDigitalProvider(get(), get())
+        override val metadata by lazy { RINHMetadata }
+        override fun create(): Institution = RINH(get(), get())
     }
 
     override val metadata = Factory.metadata
-    override val lessonsSchedule = IUBIPLessonsSchedule
 
     private val getGroupsAndTeachers by scope.asyncLazy { getGroupsAndTeachers() }
 

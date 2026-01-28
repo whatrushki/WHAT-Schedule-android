@@ -1,17 +1,15 @@
 package app.what.schedule.data.remote.api
 
 import app.what.schedule.data.local.settings.AppValues
-import app.what.schedule.data.local.settings.ScheduleProvider
 import app.what.schedule.data.remote.api.models.DaySchedule
 import app.what.schedule.data.remote.api.models.Group
-import app.what.schedule.data.remote.api.models.LessonsSchedule
 import app.what.schedule.data.remote.api.models.NewItem
 import app.what.schedule.data.remote.api.models.NewListItem
 import app.what.schedule.data.remote.api.models.Teacher
-import app.what.schedule.data.remote.providers.dgtu.INST_DGTU
-import app.what.schedule.data.remote.providers.iubip.INST_IUBIP
-import app.what.schedule.data.remote.providers.rinh.INST_RINH
-import app.what.schedule.data.remote.providers.rksi.INST_RKSI
+import app.what.schedule.data.remote.providers.DGTU
+import app.what.schedule.data.remote.providers.IUBIP
+import app.what.schedule.data.remote.providers.RINH
+import app.what.schedule.data.remote.providers.RKSI
 import kotlinx.coroutines.CoroutineScope
 import java.time.LocalDateTime
 
@@ -21,9 +19,7 @@ data class MetaInfo(
     val fullName: String,
     val description: String,
     val sourceTypes: Set<SourceType>,
-    val sourceUrl: String,
-    val advantages: List<String> = emptyList(),
-    val disadvantages: List<String> = emptyList()
+    val sourceUrl: String
 ) {
     companion object {
         fun empty() = MetaInfo(
@@ -32,25 +28,12 @@ data class MetaInfo(
             fullName = "",
             description = "",
             sourceTypes = emptySet(),
-            sourceUrl = "",
-            advantages = emptyList(),
-            disadvantages = emptyList()
+            sourceUrl = ""
         )
     }
 }
 
 enum class SourceType { API, PARSER, EXCEL, PDF }
-
-data class Institution(
-    val metadata: MetaInfo,
-    val filials: List<InstitutionFilial>
-)
-
-data class InstitutionFilial(
-    val metadata: MetaInfo,
-    val providers: Set<InstitutionProvider.Factory>,
-    val defaultProvider: InstitutionProvider.Factory
-)
 
 sealed interface ScheduleResponse {
     object Empty : ScheduleResponse
@@ -74,14 +57,13 @@ sealed interface ScheduleResponse {
 
 typealias AdditionalData = Map<String, Any?>
 
-interface InstitutionProvider {
+interface Institution {
     interface Factory {
         val metadata: MetaInfo
-        fun create(): InstitutionProvider
+        fun create(): Institution
     }
 
     val metadata: MetaInfo
-    val lessonsSchedule: LessonsSchedule
 
     suspend fun getGroupSchedule(
         group: String,
@@ -111,7 +93,14 @@ interface InstitutionProvider {
     }.$fileExtension"
 }
 
-val insts by lazy { listOf(INST_RKSI, INST_DGTU, INST_RINH, INST_IUBIP) }
+val insts: List<Institution.Factory> by lazy {
+    listOf(
+        RKSI.Factory,
+        DGTU.Factory,
+        RINH.Factory,
+        IUBIP.Factory
+    )
+}
 
 class InstitutionManager(
     private val settings: AppValues,
@@ -121,46 +110,23 @@ class InstitutionManager(
         actualize()
     }
 
-    fun getInstitutions(): List<Institution> = insts
-    fun getProviders(): List<InstitutionProvider> =
-        insts.flatMap { it.filials }
-            .flatMap { it.providers }
-            .map { it.create() }
+    fun getInstitutions(): List<Institution.Factory> = insts
 
-    fun save(institutionId: String, filialId: String, providerId: String) {
-        settings.institution.set(ScheduleProvider(institutionId, filialId, providerId))
+    fun save(institutionId: String) {
+        settings.institution.set(institutionId)
         actualize()
     }
 
     private fun actualize() {
         val savedData = settings.institution.get()
-        savedInstitution = insts.firstOrNull { it.metadata.id == savedData?.inst }
-        savedFilial = savedInstitution?.filials?.firstOrNull { it.metadata.id == savedData?.filial }
-        (savedFilial
-            ?.providers
-            ?.firstOrNull { it.metadata.id == savedData?.provider }
-            ?: savedFilial?.defaultProvider)
-            ?.let {
-                if (savedProviderFactory == it) return
-                savedProviderFactory = it
-                savedProvider = it.create()
-            }
+        savedInstitution = insts.firstOrNull { it.metadata.id == savedData }?.create()
     }
 
     private var savedInstitution: Institution? = null
-    private var savedFilial: InstitutionFilial? = null
-    private var savedProviderFactory: InstitutionProvider.Factory? = null
-    private var savedProvider: InstitutionProvider? = null
-
     fun getSavedInstitution(): Institution? = savedInstitution
-    fun getSavedFilial(): InstitutionFilial? = savedFilial
-    fun getSavedProvider(): InstitutionProvider? = savedProvider
 
     fun reset() {
-        savedFilial = null
         savedInstitution = null
-        savedProviderFactory = null
-        savedProvider = null
         settings.institution.set(null)
     }
 }

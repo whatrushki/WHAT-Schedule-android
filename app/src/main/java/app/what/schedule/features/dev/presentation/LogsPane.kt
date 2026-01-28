@@ -44,7 +44,11 @@ class LogFilter : Filter<LogEntry> {
     private val levelFilters = mutableListOf<LogLevel>()
     private val tagFilters = mutableListOf<String>()
     private val textFilters = mutableListOf<String>()
+
+    // true = показывать только логи с Throwable
     private var hasErrorsOnly = false
+
+    // "today", "hour", "5min"
     private var timeFilter: String? = null
 
     override fun clearFilters() {
@@ -56,48 +60,49 @@ class LogFilter : Filter<LogEntry> {
     }
 
     override fun parseQuery(query: String) {
-        val patterns = listOf(
-            Regex("""level:(\w+)"""),
-            Regex("""tag:([\w.]+)"""),
-            Regex("""is:(\w+)"""),
-            Regex("""time:(\w+)"""),
-            Regex(""""([^"]+)""""),
-            Regex("""'([^']+)'"""),
-            Regex("""(\S+)""") // Простой текст без кавычек
-        )
+        clearFilters()
+        if (query.isBlank()) return
 
-        val matches = patterns.flatMap { it.findAll(query) }
+        // Разбиваем строку запроса по пробелам
+        val tokens = query.trim().split("\\s+".toRegex())
 
-        matches.forEach { match ->
+        tokens.forEach { token ->
+            // Убираем кавычки, если пользователь их ввел по привычке ("text" -> text)
+            val cleanToken = token.removeSurrounding("\"").removeSurrounding("'")
+
             when {
-                match.value.startsWith("level:") -> {
-                    val level = match.groupValues[1].uppercase()
-                    LogLevel.entries.find { it.name == level }?.let {
+                // Фильтр по уровню: level:info или level:error
+                cleanToken.startsWith("level:", ignoreCase = true) -> {
+                    val levelName = cleanToken.substringAfter(":").uppercase()
+                    // Ищем такой уровень в enum LogLevel
+                    LogLevel.entries.find { it.name == levelName }?.let {
                         levelFilters.add(it)
                     }
                 }
 
-                match.value.startsWith("tag:") -> {
-                    tagFilters.add(match.groupValues[1])
+                // Фильтр по тегу: tag:Network
+                cleanToken.startsWith("tag:", ignoreCase = true) -> {
+                    val tagValue = cleanToken.substringAfter(":")
+                    if (tagValue.isNotBlank()) tagFilters.add(tagValue)
                 }
 
-                match.value.startsWith("is:") -> {
-                    if (match.groupValues[1] == "error") {
+                // Спец. фильтры: is:error (наличие throwable)
+                cleanToken.startsWith("is:", ignoreCase = true) -> {
+                    val value = cleanToken.substringAfter(":").lowercase()
+                    if (value == "error" || value == "crash") {
                         hasErrorsOnly = true
                     }
                 }
 
-                match.value.startsWith("time:") -> {
-                    timeFilter = match.groupValues[1]
+                // Фильтр по времени: time:today
+                cleanToken.startsWith("time:", ignoreCase = true) -> {
+                    timeFilter = cleanToken.substringAfter(":").lowercase()
                 }
 
-                match.value.startsWith("\"") || match.value.startsWith("'") -> {
-                    textFilters.add(match.groupValues[1])
-                }
-
+                // Всё остальное — текстовый поиск по сообщению и тегу
                 else -> {
-                    if (!match.value.contains(":")) { // Игнорируем команды с :
-                        textFilters.add(match.value)
+                    if (cleanToken.isNotBlank()) {
+                        textFilters.add(cleanToken)
                     }
                 }
             }
@@ -105,58 +110,61 @@ class LogFilter : Filter<LogEntry> {
     }
 
     override fun matches(value: LogEntry): Boolean {
-        // Фильтр по уровню
-        if (levelFilters.isNotEmpty() && value.level !in levelFilters) {
-            return false
+        // 1. Уровень лога (точное совпадение хотя бы с одним выбранным)
+        if (levelFilters.isNotEmpty()) {
+            if (value.level !in levelFilters) return false
         }
 
-        // Фильтр по тегу
-        if (tagFilters.isNotEmpty() && tagFilters.none { value.tag.contains(it, true) }) {
-            return false
+        // 2. Тег (частичное совпадение)
+        if (tagFilters.isNotEmpty()) {
+            // Если ни один из фильтров тега не содержится в теге лога -> false
+            val matchesTag = tagFilters.any { filterTag ->
+                value.tag.contains(filterTag, ignoreCase = true)
+            }
+            if (!matchesTag) return false
         }
 
-        // Фильтр по тексту
-        if (textFilters.isNotEmpty() && textFilters.none {
-                value.message.contains(it, true) || value.tag.contains(it, true)
-            }) {
-            return false
-        }
-
-        // Фильтр по наличию ошибок
+        // 3. Наличие ошибки (Throwable)
         if (hasErrorsOnly && value.throwable == null) {
             return false
         }
 
-        // Фильтр по времени
+        // 4. Фильтр по времени
         if (timeFilter != null) {
             val now = System.currentTimeMillis()
             val logTime = value.timestamp
 
-            when (timeFilter) {
+            val matchesTime = when (timeFilter) {
                 "today" -> {
-                    val calendar = Calendar.getInstance().apply {
+                    val startOfDay = Calendar.getInstance().apply {
                         set(Calendar.HOUR_OF_DAY, 0)
                         set(Calendar.MINUTE, 0)
                         set(Calendar.SECOND, 0)
                         set(Calendar.MILLISECOND, 0)
-                    }
-                    if (logTime < calendar.timeInMillis) return false
+                    }.timeInMillis
+                    logTime >= startOfDay
                 }
 
-                "hour" -> {
-                    if (now - logTime > 3600000) return false
-                }
-
-                "5min" -> {
-                    if (now - logTime > 300000) return false
-                }
+                "hour" -> (now - logTime) <= 3600000 // 1 час
+                "5min" -> (now - logTime) <= 300000  // 5 минут
+                else -> true
             }
+            if (!matchesTime) return false
+        }
+
+        // 5. Текстовый поиск (Ищет в message ИЛИ в tag)
+        // Логика: Если введены слова, лог должен содержать ХОТЯ БЫ ОДНО из них
+        if (textFilters.isNotEmpty()) {
+            val matchesText = textFilters.any { filterText ->
+                value.message.contains(filterText, ignoreCase = true) ||
+                        value.tag.contains(filterText, ignoreCase = true)
+            }
+            if (!matchesText) return false
         }
 
         return true
     }
 }
-
 
 @Composable
 fun LogsPane(
@@ -173,14 +181,16 @@ fun LogsPane(
         clearValues = Auditor::clearLogs,
         setIsMonitoringPaused = Auditor::setIsLoggingPaused,
         isMonitoringPaused = Auditor.isLoggingPaused,
-        filter = LogFilter(),
         modifier = modifier,
+        filter = LogFilter(),
         filterHelpItems = listOf(
-            "level:error" to "Фильтр по уровню (debug, info, warning, error, critical)",
-            "tag:MainActivity" to "Фильтр по тегу",
-            "\"текст\"" to "Поиск текста в сообщении",
-            "is:error" to "Логи с ошибками (имеют throwable)",
-            "time:today" to "Логи за сегодня"
+            "level:error" to "Фильтр по уровню (debug, info, warning, error)",
+            "tag:Main" to "Поиск по тегу (содержит текст)",
+            "is:error" to "Только логи с исключениями (Exception/Throwable)",
+            "time:5min" to "Логи за последние 5 минут",
+            "time:hour" to "Логи за последний час",
+            "time:today" to "Логи с начала дня",
+            "login failed" to "Простой поиск текста в сообщении"
         )
     )
 }

@@ -38,6 +38,7 @@ fun ProvideGlobalDialog(
         Dialog(
             onDismissRequest = controller::close,
             properties = DialogProperties(
+                usePlatformDefaultWidth = !controller.full,
                 dismissOnBackPress = controller.cancellable,
                 dismissOnClickOutside = controller.cancellable
             )
@@ -48,7 +49,6 @@ fun ProvideGlobalDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 AnimatedContent(
-                    modifier = Modifier.applyIf(!controller.full) { padding(8.dp) },
                     targetState = controller.content,
                     transitionSpec = transitionSpec,
                     label = "AnimatedDialogContent"

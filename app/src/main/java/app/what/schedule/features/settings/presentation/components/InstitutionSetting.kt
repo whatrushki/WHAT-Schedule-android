@@ -27,11 +27,10 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.Show
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.controllers.rememberDialogController
-import app.what.schedule.data.local.settings.ScheduleProvider
 import app.what.schedule.data.remote.api.insts
 
-fun PreferenceStorage.Value<ScheduleProvider>.asChoice(
-    sideEffect: (ScheduleProvider?) -> Unit
+fun PreferenceStorage.Value<String>.asInstitutionChoice(
+    sideEffect: (String?) -> Unit
 ) = asDialog { value, set ->
     val dialog = rememberDialogController()
     val selected by value.collect()
@@ -68,22 +67,17 @@ fun PreferenceStorage.Value<ScheduleProvider>.asChoice(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .bclick {
-                        ScheduleProvider(
-                            it.metadata.id,
-                            it.filials.first().metadata.id,
-                            it.filials.first().providers.first().metadata.id
-                        ).also {
-                            set(it)
-                            dialog.close()
-                            sideEffect(it)
-                        }
+
+                        set(it.metadata.id)
+                        dialog.close()
+                        sideEffect(it.metadata.id)
                     }
                     .padding(12.dp, 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                RadioButton(selected = selected!!.inst == it.metadata.id, onClick = null)
+                RadioButton(selected = selected!! == it.metadata.id, onClick = null)
                 Gap(12)
-                Text(it.filials.first().metadata.name)
+                Text(it.metadata.name)
             }
         }
     }
