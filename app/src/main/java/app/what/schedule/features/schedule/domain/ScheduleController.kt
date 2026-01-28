@@ -64,6 +64,7 @@ class ScheduleController(
     }
 
     private fun syncSchedule(search: ScheduleSearch?, useCache: Boolean = true) {
+        Auditor.debug("d", "search $search")
         viewModelScope.launchSafe(
             debug = debugMode,
             onFailure = {

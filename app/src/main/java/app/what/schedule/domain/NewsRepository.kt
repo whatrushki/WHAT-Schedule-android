@@ -10,8 +10,10 @@ class NewsRepository(
     private val db: AppDatabase,
     private val institutionManager: InstitutionManager
 ) {
-    private val api get() = institutionManager.getSavedProvider().orThrow { "No provider selected" }
-    private fun getFilialId() = institutionManager.getSavedFilial()!!.metadata.id
+    private val api
+        get() = institutionManager.getSavedInstitution().orThrow { "No provider selected" }
+
+    private fun getFilialId() = api.metadata.id
 
     suspend fun getNews(page: Int): List<NewListItem> {
         return api.getNews(page)
