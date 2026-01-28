@@ -16,8 +16,8 @@ android {
         applicationId = "app.what.schedule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26012601
-        versionName = "0.9.8-beta"
+        versionCode = 28012601
+        versionName = "0.9.9-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

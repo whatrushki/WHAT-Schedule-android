@@ -234,7 +234,7 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
         actionCategory(
             "О приложении", "версия, авторы", Icons.Rounded.Info
         ) {
-            dialog.open { AboutAppContent(app, Modifier.fillMaxSize()) }
+            dialog.open { AboutAppContent(app) }
         }
     )
 }
