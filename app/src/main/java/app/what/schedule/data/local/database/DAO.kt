@@ -84,6 +84,9 @@ interface RequestsDAO {
 
     @Delete
     suspend fun delete(request: RequestDBO)
+
+    @Query("DELETE FROM requests WHERE institutionId = :institutionId AND `query` = :query")
+    suspend fun deleteAll(institutionId: String, query: String)
 }
 
 @Dao

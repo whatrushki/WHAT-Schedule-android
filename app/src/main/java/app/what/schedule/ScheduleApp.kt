@@ -113,10 +113,12 @@ val generalModule = module {
                     ignoreUnknownKeys = true
                     isLenient = true
                     classDiscriminator = "type"
+                    prettyPrint = true
                 })
             }
 
             install(HttpTimeout) {
+                this@HttpClient.expectSuccess = false
                 requestTimeoutMillis = 60 * 1000
             }
 

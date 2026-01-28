@@ -133,9 +133,11 @@ object SettingUpdateComponent : UIComponent {
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier
-                .size(28.dp)
-                .wiggle(15f), colorScheme.primary)
+            Icon(
+                icon, null, Modifier
+                    .size(28.dp)
+                    .wiggle(15f), colorScheme.primary
+            )
             Gap(12)
             Column {
                 Text(

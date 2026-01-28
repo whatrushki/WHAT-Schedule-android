@@ -49,12 +49,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.Show
+import app.what.foundation.ui.animations.AdvancedLiquidBackground
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.animations.wiggle
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useState
-import app.what.foundation.utils.delayLaunch
-import app.what.schedule.AdvancedLiquidBackground
 import app.what.schedule.BuildConfig
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.features.settings.presentation.utils.rememberGithubStars
@@ -62,8 +61,6 @@ import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.ImageRoller
 import app.what.schedule.ui.theme.icons.filled.Telegram
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -75,12 +72,10 @@ fun AboutAppContent(
     val devSettingsUnlocked by appValues.devSettingsUnlocked.collect()
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
-
-    // Состояние для пасхалки
+    
     var versionClickCount by useState(0)
     var showFireworks by useState(false)
 
-    // Логика пасхалки
     LaunchedEffect(versionClickCount) {
         if (versionClickCount == 10) {
             showFireworks = true
@@ -91,22 +86,16 @@ fun AboutAppContent(
             ).show()
 
             appValues.devSettingsUnlocked.set(true)
-
-            CoroutineScope(IO).delayLaunch(3000L) {
-                versionClickCount = 0
-                showFireworks = false
-            }
         }
     }
 
     Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .height(IntrinsicSize.Min)
             .fillMaxWidth()
             .clip(shapes.medium)
     ) {
-        // 1. Жидкий фон
-        // Используем цвета темы, но делаем их полупрозрачными для смешивания
         val layer1 = colorScheme.primaryContainer to colorScheme.tertiaryContainer
         val layer2 = colorScheme.secondaryContainer to colorScheme.surfaceContainer
 
@@ -114,23 +103,20 @@ fun AboutAppContent(
             layers = listOf(layer1, layer2)
         )
 
-        // Полупрозрачная вуаль для читаемости текста
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surface.copy(alpha = 0.65f)) // Glassmorphism эффект
+                .fillMaxWidth()
+                .background(colorScheme.surface.copy(alpha = 0.65f))
         )
 
-        // 2. Основной контент
         Column(
             modifier = Modifier.padding(12.dp, 24.dp, 12.dp, 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Аватар и Имя
             DevProfile(
-                avatarUrl = "https://github.com/topanim.png", // Подставь свой ник
-                name = "topanim", // Твой ник
+                avatarUrl = "https://github.com/topanim.png",
+                name = "topanim",
                 role = "Android Developer"
             )
 
@@ -254,7 +240,12 @@ private fun SocialChip(
                 modifier = Modifier.size(18.dp)
             )
             Gap(8)
-            Text(text, style = typography.labelLarge, fontWeight = FontWeight.Medium)
+            Text(
+                text,
+                style = typography.labelLarge,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -287,6 +278,7 @@ private fun RepoStatsCard(
             Text(
                 "GitHub Repository",
                 style = typography.titleSmall,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
         }
