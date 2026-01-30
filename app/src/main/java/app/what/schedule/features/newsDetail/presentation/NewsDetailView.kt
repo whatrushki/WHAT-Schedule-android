@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -68,6 +69,7 @@ import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Features
 import app.what.schedule.ui.theme.icons.filled.Question
 import app.what.schedule.ui.theme.icons.filled.Quote
+import app.what.schedule.utils.Analytics
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -87,6 +89,7 @@ fun NewsDetailView(
             verticalScroll(rememberScrollState())
         }
 ) {
+    val uriHandler = LocalUriHandler.current
     val sheet = rememberSheetController()
     val shimmer = rememberShimmer(state.newState == RemoteState.Loading)
     val description = state.newDetailInfo?.description?.takeIf { !it.isEmpty() }
@@ -180,30 +183,46 @@ fun NewsDetailView(
                     )
                 }
 
-                Box(
+                Row(
                     Modifier
-                        .padding(top = 8.dp)
-                        .clip(shapes.small)
-                        .background(colorScheme.primary)
-                        .bclick {
-                            sheet.open { NewsSharePane(state.newListInfo.url) }
-                        }
+                        .height(IntrinsicSize.Min)
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp, 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .clip(shapes.small)
+                            .background(colorScheme.primary)
+                            .weight(1f)
+                            .bclick { uriHandler.openUri(state.newListInfo.url) }
                     ) {
-                        Icons.Default.Share.Show(Modifier.height(18.dp), colorScheme.onPrimary)
-                        Gap(8)
                         Text(
-                            "Поделиться",
+                            "Открыть",
+                            Modifier.padding(12.dp, 8.dp),
                             color = colorScheme.onPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
+                    }
+
+                    Gap(8)
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .width(48.dp)
+                            .fillMaxHeight()
+                            .clip(shapes.small)
+                            .background(colorScheme.primary)
+                            .bclick {
+                                Analytics.logShare("news", state.newListInfo.url)
+                                sheet.open { NewsSharePane(state.newListInfo.url) }
+                            }
+                    ) {
+                        Icons.Default.Share.Show(Modifier.size(24.dp), colorScheme.onPrimary)
                     }
                 }
             }

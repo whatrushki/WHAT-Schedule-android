@@ -36,7 +36,6 @@ class NewsDetailController(
         get() = settings.debugMode.get() == true
 
     private fun requestInfo() {
-        Auditor.debug("d", "request new info ${viewState.newListInfo.id}")
         updateState { copy(newState = RemoteState.Loading) }
 
         viewModelScope.launchSafe(
@@ -46,7 +45,6 @@ class NewsDetailController(
             }
         ) {
             val data = apiRepository.getNewDetail(viewState.newListInfo.id)
-            Auditor.debug("d", data.content.toTreeString())
 
             updateState {
                 copy(

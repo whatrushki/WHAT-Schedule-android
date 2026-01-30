@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Process
 import android.os.StatFs
-import android.util.Log
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import java.io.File
 import java.text.SimpleDateFormat
@@ -98,30 +97,33 @@ class CrashHandler private constructor(
     private val activity: Class<out Activity>
 ) : Thread.UncaughtExceptionHandler {
 
-    private var defaultHandler: Thread.UncaughtExceptionHandler? = null
+    private var sideEffect: ((exception: Throwable) -> Unit)? = null
 
-    fun setDefaultHandler(handler: Thread.UncaughtExceptionHandler?) {
-        defaultHandler = handler
+    fun setSideEffect(handler: (exception: Throwable) -> Unit) {
+        sideEffect = handler
     }
 
+    private var defaultHandler: Thread.UncaughtExceptionHandler? = null
+
     companion object {
-        fun <T : Activity> initialize(context: Context, activity: Class<T>) {
+        fun <T : Activity> initialize(context: Context, activity: Class<T>): CrashHandler {
             val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
 
-            if (currentHandler is CrashHandler) return
-
-            Thread.setDefaultUncaughtExceptionHandler(
-                CrashHandler(
+            return currentHandler as? CrashHandler
+                ?: CrashHandler(
                     context.applicationContext,
                     activity
                 ).apply {
-                    setDefaultHandler(currentHandler)
-                })
+                    Thread.setDefaultUncaughtExceptionHandler(this)
+                    defaultHandler = currentHandler
+                }
         }
     }
 
     override fun uncaughtException(thread: Thread, exception: Throwable) {
         Auditor.critic("core", "App crashed", exception)
+
+        sideEffect?.invoke(exception)
 
         try {
             val crashReport = createCrashReport(exception)
@@ -134,11 +136,9 @@ class CrashHandler private constructor(
 
             context.startActivity(intent)
         } catch (e: Exception) {
-            Log.d("d", e.toString())
-            // Если что-то пошло не так, вызываем дефолтный обработчик
+            Auditor.err("core", "Ошибка при обработке краша", e)
             defaultHandler?.uncaughtException(thread, exception)
         } finally {
-            // Всегда завершаем процесс
             Process.killProcess(Process.myPid())
             exitProcess(10)
         }

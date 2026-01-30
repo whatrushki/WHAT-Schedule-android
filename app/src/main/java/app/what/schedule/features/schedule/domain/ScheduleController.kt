@@ -4,6 +4,10 @@ import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.launchIO
 import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
@@ -24,6 +28,7 @@ class ScheduleController(
 ) : UIController<ScheduleState, ScheduleAction, ScheduleEvent>(
     ScheduleState()
 ) {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     override fun obtainEvent(viewEvent: ScheduleEvent) = when (viewEvent) {
         ScheduleEvent.Init -> {}
         ScheduleEvent.UpdateSchedule -> syncSchedule(viewState.selectedSearch)
@@ -59,15 +64,21 @@ class ScheduleController(
             }
         }.invokeOnCompletion {
             updateSearches()
-            Auditor.debug("d", "synced")
+            val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
+            Auditor.debug(scheduleTag, "Избранное обновлено")
         }
     }
 
     private fun syncSchedule(search: ScheduleSearch?, useCache: Boolean = true) {
-        Auditor.debug("d", "search $search")
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
+        Auditor.debug(scheduleTag, "Синхронизация расписания: $search, кеш: $useCache")
+        
         viewModelScope.launchSafe(
             debug = debugMode,
             onFailure = {
+                Auditor.err(scheduleTag, "Ошибка синхронизации расписания", it)
+                crashlytics.setCustomKey("schedule_sync_error", it.message ?: "unknown")
+                crashlytics.recordException(it)
                 updateState { copy(scheduleState = RemoteState.Error(it)) }
             }
         ) {
@@ -86,11 +97,20 @@ class ScheduleController(
             )
         }
 
-        Auditor.debug("d", "Api: $apiRepository")
-
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
         settings.lastSearch.set(search)
-        val data = apiRepository.getSchedule(search, useCache, viewState.schedules.isEmpty()).also {
-            Auditor.debug("d", it.toString())
+        val data = apiRepository.getSchedule(search, useCache, viewState.schedules.isEmpty())
+        
+        when (data) {
+            is ScheduleResponse.Available -> {
+                Auditor.debug(scheduleTag, "Расписание успешно получено, дней: ${data.schedules.size}")
+            }
+            ScheduleResponse.Empty -> {
+                Auditor.debug(scheduleTag, "Расписание пустое")
+            }
+            ScheduleResponse.UpToDate -> {
+                Auditor.debug(scheduleTag, "Расписание актуально")
+            }
         }
 
         updateState {

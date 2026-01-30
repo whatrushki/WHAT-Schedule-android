@@ -2,7 +2,11 @@
 
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.retry
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import com.fleeksoft.ksoup.Ksoup
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -19,6 +23,7 @@ fun List<GoogleDriveParser.Item>.folders() =
 class GoogleDriveParser(
     private val client: HttpClient
 ) {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     companion object {
         private val googleDriveMonths =
             listOf("ян", "фе", "мар", "ап", "май", "июн", "июл", "ав", "се", "ок", "но", "де")
@@ -42,10 +47,13 @@ class GoogleDriveParser(
     }
 
     suspend fun getFolderContent(folderId: String): List<Item> {
-        Auditor.debug("d", "getFolderContent: https://drive.google.com/drive/folders/$folderId")
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "gdrive")
+        Auditor.debug(netTag, "Загрузка содержимого папки Google Drive: $folderId")
+        crashlytics.setCustomKey("gdrive_folder_id", folderId)
+        
         var items: List<Item> = emptyList()
-        retry(5, 200) {
-            Auditor.debug("d", "getFolderContent: attempt $it")
+        retry(5, 200) { attempt ->
+            Auditor.debug(netTag, "Попытка $attempt загрузки содержимого папки")
             val response =
                 client.get("https://drive.google.com/drive/folders/$folderId").bodyAsText()
             val document = Ksoup.parse(response)
@@ -69,12 +77,16 @@ class GoogleDriveParser(
                     }
                 }
 
-                Auditor.debug("date", "ddddate: $date")
                 return@map if ('.' in name) Item.File(id, name, date)
                 else Item.Folder(id, name, date)
             }
         }
 
+        Auditor.debug(netTag, "Загружено элементов из Google Drive: ${items.size}")
+        crashlytics.setCustomKey("gdrive_items_count", items.size)
+        val filesCount = items.count { it is Item.File }
+        val foldersCount = items.count { it is Item.Folder }
+        Auditor.debug(netTag, "Файлов: $filesCount, папок: $foldersCount")
         return items
     }
 }

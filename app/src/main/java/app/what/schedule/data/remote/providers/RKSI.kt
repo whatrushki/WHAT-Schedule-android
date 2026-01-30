@@ -4,6 +4,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
@@ -71,6 +75,7 @@ class RKSI(
     private val fileManager: FileManager,
     private val scope: CoroutineScope
 ) : Institution {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.rksi.ru"
         override fun create() = RKSI(get(), get(), get(), get())
@@ -81,17 +86,29 @@ class RKSI(
     private val scheduleTabletGoogleDriveId by scope.asyncLazy { getScheduleTabletGoogleDriveId() }
 
     override suspend fun getTeachers(): List<Teacher> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
+        Auditor.debug(netTag, "Загрузка списка преподавателей")
+        
         val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
         val document = Ksoup.parse(response)
-        return document.getElementById("teacher")!!.getElementsByTag("option")
+        val teachers = document.getElementById("teacher")!!.getElementsByTag("option")
             .map { Teacher(it.text(), it.attr("value")) }
+        
+        Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
+        return teachers
     }
 
     override suspend fun getGroups(): List<Group> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
+        Auditor.debug(netTag, "Загрузка списка групп")
+        
         val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
         val document = Ksoup.parse(response)
-        return document.getElementById("group")!!.getElementsByTag("option")
+        val groups = document.getElementById("group")!!.getElementsByTag("option")
             .map { Group(it.text(), it.attr("value")) }
+        
+        Auditor.debug(netTag, "Загружено групп: ${groups.size}")
+        return groups
     }
 
     override suspend fun getTeacherSchedule(
@@ -122,8 +139,8 @@ class RKSI(
         val response = client.get("$BASE_URL/news/$page").bodyAsText()
         val document = Ksoup.parse(response)
         val rawData = document.getElementsByClass("flexnews")
-
-        Auditor.debug("d", "news " + rawData.size)
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
+        Auditor.debug(netTag, "Получено новостей: ${rawData.size}")
 
         val data = rawData.map {
             val url = BASE_URL + it.getElementsByTag("a").attr("href")
@@ -141,7 +158,7 @@ class RKSI(
             NewListItem(id, url, bannerUrl, title, description, date, tags)
         }
 
-        Auditor.debug("d", "news " + data.fastJoinToString())
+        Auditor.debug(netTag, "Обработано новостей: ${data.size}")
 
         return data
     }
@@ -181,7 +198,6 @@ class RKSI(
         val list = mutableListOf<NewContent>()
 
         tree.children().drop(1).forEach {
-            Auditor.debug("d", it.html())
 
             when {
                 it.`is`("h3") -> NewContent.Item.Subtitle(it.text()).addTo(list)
@@ -230,21 +246,24 @@ class RKSI(
         lastModified: LocalDateTime?,
         showReplacements: Boolean
     ): ScheduleResponse {
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
+        
+        Auditor.debug(scheduleTag, "Запрос расписания для ${if (parseMode == ParseMode.GROUP) "группы" else "преподавателя"}: $value")
+        crashlytics.setCustomKey("schedule_request_type", parseMode.name)
+        crashlytics.setCustomKey("schedule_request_value", value)
+        crashlytics.setCustomKey("institution", "rksi")
+        
         val files1 = googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await())
         val files2 = googleDriveApi.getFolderContent(files1.folders().first().id)
         val files = (files1 + files2).files()
 
-        Auditor.debug("D", "ddasdsad $requiresData")
-
-        Auditor.debug(
-            "D",
-            "ddasdsad " + lastModified.toString() + files.fastJoinToString { it.lastModified.toString() })
+        Auditor.debug(scheduleTag, "Требуются данные: $requiresData, последнее изменение: $lastModified")
 
         if (!requiresData && files.any { lastModified != null && it.lastModified > lastModified }
-                .not())
+                .not()) {
+            Auditor.debug(scheduleTag, "Расписание актуально, возврат UpToDate")
             return ScheduleResponse.UpToDate
-
-        Auditor.debug("D", "value ${value.trim()}")
+        }
 
         val response = client.submitForm(
             url = "$BASE_URL/mobile_schedule",
@@ -262,8 +281,8 @@ class RKSI(
         val document = Ksoup.parse(response)
         var dataRaw: List<String>
         val daySchedulesRaw = document.getElementsByClass("schedule_item")
-
-        Auditor.debug("D", "dsr " + daySchedulesRaw.text())
+        
+        Auditor.debug(scheduleTag, "Найдено дней в расписании: ${daySchedulesRaw.size}")
 
         val replacements = CoroutineScope(IO).async {
             getAllReplacements(
@@ -274,7 +293,6 @@ class RKSI(
             )
         }
 
-        Auditor.debug("d", "replacements: ${replacements.await()}")
 
         val daySchedules = daySchedulesRaw.mapIndexed { index, it ->
             dataRaw = it.getElementsByTag("b").text().split(" ")
@@ -359,10 +377,7 @@ class RKSI(
                 lesson.copy(number = number)
             }
 
-            Auditor.debug(
-                "d",
-                "lessons: ${lessons.joinToString { "${it.date} ${it.startTime} ${it.subject}\n" }}"
-            )
+            Auditor.debug(scheduleTag, "Обработано уроков для $date: ${lessons.size}")
 
             if (showReplacements && index < 2) {
                 lessons = lessons
@@ -382,23 +397,23 @@ class RKSI(
             )
         }
 
-        return ScheduleResponse.Available.FromSource(daySchedules, files.also {
-            Auditor.debug(
-                "d",
-                "lastModified: ${it.fastJoinToString { it.lastModified.toString() }}"
-            )
-        }.maxOf { it.lastModified })
+        val maxModified = files.maxOf { it.lastModified }
+        Auditor.debug(scheduleTag, "Расписание успешно получено, последнее изменение: $maxModified")
+        return ScheduleResponse.Available.FromSource(daySchedules, maxModified)
     }
 
     private suspend fun getScheduleTabletGoogleDriveId(): String {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
+        Auditor.debug(netTag, "Получение ID папки с расписанием из Google Drive")
+        
         val response = client.get("https://www.rksi.ru/schedule").bodyAsText()
-        Auditor.debug("d", "dd: 1")
         val document = Ksoup.parse(response)
-        Auditor.debug("d", "dd: 2")
         val tabletUrl = document.getElementsMatchingText("Планшетка").last()!!.attr("href")
-        Auditor.debug("d", "dd: 3")
-
-        return tabletUrl.split("/").last()
+        val driveId = tabletUrl.split("/").last()
+        
+        Auditor.debug(netTag, "ID папки Google Drive: $driveId")
+        crashlytics.setCustomKey("gdrive_folder_id", driveId)
+        return driveId
     }
 
     private suspend fun getAllReplacements(
@@ -414,7 +429,8 @@ class RKSI(
             }
         }
 
-        Auditor.debug("d", "d: 1")
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
+        Auditor.debug(scheduleTag, "Начало получения замен из Google Drive")
 
         val currentDate = LocalDate.now()
 
@@ -425,8 +441,6 @@ class RKSI(
                 (date >= currentDate).also { _ -> it.additionalData["date"] = date }
             }
 
-        Auditor.debug("d", "d: 2")
-
         val building1TabletsParsingProcess =
             itemsOfFirstBuilding.files().filterByModifiedDateAndPutData()
                 .map {
@@ -436,7 +450,6 @@ class RKSI(
                     )
                 }
 
-        Auditor.debug("d", "d: 3")
         val building2TabletsParsingProcess =
             itemsOfSecondBuilding.files().filterByModifiedDateAndPutData(true)
                 .map {
@@ -446,12 +459,12 @@ class RKSI(
                     )
                 }
 
-        Auditor.debug("d", "d: 4")
         val tablet1Replacements = building1TabletsParsingProcess.awaitAll()
         val tablet2Replacements = building2TabletsParsingProcess.awaitAll()
-        Auditor.debug("d", "d: 5")
-        return tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull()
-            .flatten()
+        val totalReplacements = tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull().flatten()
+        
+        Auditor.debug(scheduleTag, "Всего найдено замен: ${totalReplacements.size}")
+        return totalReplacements
     }
 
     private fun createTabletParsingAsyncTask(
@@ -462,7 +475,7 @@ class RKSI(
         file: GoogleDriveParser.Item.File,
         predicate: (String, String) -> Boolean
     ) = CoroutineScope(IO).async {
-        Auditor.debug("d", "d->: 11")
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
         val tablet =
             getTablet(
                 date,
@@ -470,13 +483,19 @@ class RKSI(
                 lastModified != null && file.lastModified > lastModified,
                 file
             ) ?: return@async null
-        Auditor.debug("d", "d->: 12 ${tablet.canRead()} ${tablet.exists()}")
-        Auditor.debug("d", "d->: 12")
+        
+        if (!tablet.exists() || !tablet.canRead()) {
+            Auditor.warn(scheduleTag, "Файл планшетки недоступен: ${tablet.path}")
+            return@async null
+        }
+        
         val workbook1 = tablet.inputStream().use { inputStream ->
             WorkbookFactory.create(inputStream)
         }
-        Auditor.debug("d", "d->: 13")
-        return@async parseLessonsFromWorkbook(workbook1, columns, date, predicate)
+        
+        val lessons = parseLessonsFromWorkbook(workbook1, columns, date, predicate)
+        Auditor.debug(scheduleTag, "Обработано замен из планшетки здания $building для $date: ${lessons.size}")
+        return@async lessons
     }
 
     private suspend fun getTablet(
@@ -512,28 +531,24 @@ class RKSI(
         file: GoogleDriveParser.Item.File,
         fileName: String
     ): Boolean {
+        val fileTag = buildTag(LogScope.FILE, LogCat.NET, "rksi")
         try {
-            Auditor.debug("d", "dd: 4")
-            Auditor.debug("d", "dd: 5")
-            Auditor.debug("d", "dd: 6 $fileName")
-
-            Auditor.debug("d", "dd: 7")
-
+            Auditor.debug(fileTag, "Загрузка планшетки из Google Drive: $fileName")
+            crashlytics.setCustomKey("tablet_file_name", fileName)
+            
             val downloadedTablet = client.get(file.getDownloadLink()).readRawBytes()
-
-            Auditor.debug("d", "dd: 8")
-
             fileManager.writeBytes(
                 FileManager.DirectoryType.CACHE,
                 fileName,
                 downloadedTablet
             )
 
-            Auditor.debug("d", "dd: 9")
-
+            Auditor.debug(fileTag, "Планшетка успешно загружена: $fileName")
             return true
         } catch (e: Exception) {
-            Auditor.debug("d", "dd: 10")
+            Auditor.err(fileTag, "Ошибка загрузки планшетки: $fileName", e)
+            crashlytics.setCustomKey("tablet_download_error", fileName)
+            crashlytics.recordException(e)
             return false
         }
     }
@@ -565,14 +580,6 @@ class RKSI(
                 else (0 until columns).mapIndexedNotNull { colIndex, i ->
                     val firstCellIndex = i * 3
 
-//                    Auditor.debug(
-//                        "d",
-//                        "d"
-//                        "coord: (${row.getCell(firstCellIndex)};${row.getCell(firstCellIndex + 2)};${
-//                            row.getCell(firstCellIndex + 1)
-//                        })"
-//                    )
-
                     val auditory = row.getCell(firstCellIndex)
                         ?.toString()
                         ?.ifEmpty { return@mapIndexedNotNull null }
@@ -591,12 +598,6 @@ class RKSI(
                         ?.ifEmpty { return@mapIndexedNotNull null }
                         ?: return@mapIndexedNotNull null
 
-                    Auditor.debug("d", "auditory: $auditory, group: $groups, teacher: $teacher")
-
-                    Auditor.debug(
-                        "d",
-                        "lessonNumber: $lessonNumber ${sheet.sheetName} ${"Пара" in sheet.sheetName}"
-                    )
 
                     groups.map {
                         OneTimeUnit(
@@ -645,7 +646,6 @@ private fun List<Lesson>.withReplacements(
     replacements: List<Lesson>,
     schedule: List<LessonTime>
 ): List<Lesson> {
-    Auditor.debug("d", "$this \n $replacements")
     val unionSchedule = mutableMapOf<Int, Pair<Lesson?, Lesson?>>()
 
     replacements.forEach {
@@ -660,19 +660,15 @@ private fun List<Lesson>.withReplacements(
         val replacement = it.value.first
         val lesson = it.value.second
 
-        Auditor.debug("d", it.toString())
-        Auditor.debug("d", replacement.toString())
-        Auditor.debug("d", lesson.toString())
-
         return@map if (replacements.isNotEmpty()) {
             if (replacement == null && lesson != null)
                 lesson.copy(state = LessonState.REMOVED)
             else if (replacement != null && lesson == null) {
                 val lessonTime = schedule.firstOrNull { it.number == replacement.number }
-                if (lessonTime == null) Auditor.debug(
-                    "d",
-                    "EXTRA $schedule ${replacement.number}"
-                )
+                if (lessonTime == null) {
+                    val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE, "rksi")
+                    Auditor.warn(scheduleTag, "Не найдено время для замены номер ${replacement.number}")
+                }
                 replacement.copy(
                     state = LessonState.ADDED,
                     startTime = lessonTime!!.startTime,

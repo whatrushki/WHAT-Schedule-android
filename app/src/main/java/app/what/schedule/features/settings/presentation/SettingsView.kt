@@ -40,6 +40,7 @@ import app.what.foundation.core.Listener
 import app.what.foundation.core.UIComponent
 import app.what.foundation.data.settings.dependsOn
 import app.what.foundation.data.settings.types.asColorPalette
+import app.what.foundation.data.settings.types.asSheet
 import app.what.foundation.data.settings.types.asSingleChoice
 import app.what.foundation.data.settings.types.asSwitch
 import app.what.foundation.ui.Gap
@@ -57,12 +58,16 @@ import app.what.schedule.features.settings.domain.models.SettingsEvent
 import app.what.schedule.features.settings.domain.models.SettingsState
 import app.what.schedule.features.settings.presentation.components.AboutAppContent
 import app.what.schedule.features.settings.presentation.components.asInstitutionChoice
+import app.what.schedule.ui.components.PolicyView
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Clear
 import app.what.schedule.ui.theme.icons.filled.Code
 import app.what.schedule.ui.theme.icons.filled.Crown
 import app.what.schedule.ui.theme.icons.filled.ImageRoller
+import app.what.schedule.utils.Analytics
 import app.what.schedule.utils.AppUtils
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.analytics
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.context.unloadKoinModules
@@ -196,6 +201,7 @@ private fun SettingsHeader(
 
 @Composable
 fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
+    val fb = Firebase.analytics
     val dialog = rememberDialogController()
 
     return listOf(
@@ -203,9 +209,16 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
             "Основные", "базовые параметры", WHATIcons.Crown,
             content = listOf(
                 app.institution.asInstitutionChoice {
+                    Analytics.logUniversitySelect(it ?: "not selected")
                     app.lastSearch.set(null)
                     unloadKoinModules(controllers)
                     utils.restart()
+                },
+                app.isAnalyticsEnabled.asSwitch {
+                    fb.setAnalyticsCollectionEnabled(it)
+                },
+                app.thePolicy.asSheet { _, _ ->
+                    PolicyView()
                 }
             )
         ),
@@ -213,11 +226,18 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
         category(
             "Внешний вид", "тема, цвета, анимации", WHATIcons.ImageRoller,
             content = listOf(
-                app.themeType.asSingleChoice(enumValues<ThemeType>()) { it.displayName },
-                app.themeStyle.asSingleChoice(enumValues<ThemeStyle>()) { it.displayName },
-                app.themeColor.asColorPalette()
-                    .dependsOn(app.themeStyle) { it == ThemeStyle.CustomColor },
-                app.useAnimation.asSwitch()
+                app.themeType.asSingleChoice(enumValues<ThemeType>(), { it.displayName }) {
+                    Analytics.logSettingChanged(app.themeType.key, it.toString())
+                },
+                app.themeStyle.asSingleChoice(enumValues<ThemeStyle>(), { it.displayName }) {
+                    Analytics.logSettingChanged(app.themeStyle.key, it.toString())
+                },
+                app.themeColor.asColorPalette {
+                    Analytics.logSettingChanged(app.themeColor.key, it.toString())
+                }.dependsOn(app.themeStyle) { it == ThemeStyle.CustomColor },
+                app.useAnimation.asSwitch {
+                    Analytics.logSettingChanged(app.useAnimation.key, it.toString())
+                }
             )
         ),
 

@@ -4,6 +4,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
@@ -54,6 +58,7 @@ class RINH(
     private val client: HttpClient,
     private val scope: CoroutineScope
 ) : Institution {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://www.iubip.ru"
         private const val NEWS_BASE_URL = "https://rsue.ru"
@@ -69,20 +74,27 @@ class RINH(
         .get("$SCHEDULE_BASE_URL/v1/schedule/search?format=json")
         .body<List<RINHApi.Schedule.Responses.ScheduleSearch>>()
 
-    private suspend fun getSchedule(value: String) = client
-        .get(withContext(IO) {
-            "$SCHEDULE_BASE_URL/v1/schedule/lessons/${
-                URLEncoder.encode(
-                    value,
-                    "UTF-8"
-                ).replace("+", "%20")
-            }?format=json"
-        })
-        .body<RINHApi.Schedule.Responses.GetSchedule>()
-        .toDaySchedules()
-        .takeIf(List<DaySchedule>::isNotEmpty)
-        ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
-        ?: ScheduleResponse.Empty
+    private suspend fun getSchedule(value: String): ScheduleResponse {
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rinh")
+        Auditor.debug(scheduleTag, "Запрос расписания: $value")
+        crashlytics.setCustomKey("schedule_value", value)
+        crashlytics.setCustomKey("institution", "rinh")
+        
+        val encodedValue = withContext(IO) {
+            URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+        }
+        
+        val schedules = client
+            .get("$SCHEDULE_BASE_URL/v1/schedule/lessons/$encodedValue?format=json")
+            .body<RINHApi.Schedule.Responses.GetSchedule>()
+            .toDaySchedules()
+            .takeIf(List<DaySchedule>::isNotEmpty)
+            ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
+            ?: ScheduleResponse.Empty
+        
+        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        return schedules
+    }
 
 
     override suspend fun getGroupSchedule(
@@ -97,22 +109,38 @@ class RINH(
         additional: AdditionalData
     ): ScheduleResponse = getSchedule(teacher)
 
-    override suspend fun getGroups(): List<Group> = getGroupsAndTeachers
-        .await()
-        .filter { "," !in it.name && "." !in it.name && "№" !in it.name }
-        .map { Group(it.name.trim()) }
+    override suspend fun getGroups(): List<Group> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rinh")
+        Auditor.debug(netTag, "Загрузка списка групп")
+        
+        val groups = getGroupsAndTeachers
+            .await()
+            .filter { "," !in it.name && "." !in it.name && "№" !in it.name }
+            .map { Group(it.name.trim()) }
+        
+        Auditor.debug(netTag, "Загружено групп: ${groups.size}")
+        return groups
+    }
 
-    override suspend fun getTeachers(): List<Teacher> = getGroupsAndTeachers
-        .await()
-        .filter { "," in it.name || "." in it.name || "№" in it.name }
-        .map { Teacher(it.name) }
+    override suspend fun getTeachers(): List<Teacher> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rinh")
+        Auditor.debug(netTag, "Загрузка списка преподавателей")
+        
+        val teachers = getGroupsAndTeachers
+            .await()
+            .filter { "," in it.name || "." in it.name || "№" in it.name }
+            .map { Teacher(it.name) }
+        
+        Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
+        return teachers
+    }
 
     override suspend fun getNews(page: Int): List<NewListItem> {
         val response = client.get("$NEWS_BASE_URL/universitet/novosti/?PAGEN_2=$page").bodyAsText()
         val document = Ksoup.parse(response)
         val rawData = document.getElementsByClass("news-item")
-
-        Auditor.debug("d", "news " + rawData.size)
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rinh")
+        Auditor.debug(netTag, "Получено новостей: ${rawData.size}")
 
         val data = rawData.map {
             val url = it.getElementsByTag("a").attr("href")
@@ -129,12 +157,15 @@ class RINH(
             NewListItem(id, url, bannerUrl, title, description, date, tags)
         }
 
-        Auditor.debug("d", "news " + data.fastJoinToString())
+        Auditor.debug(netTag, "Обработано новостей: ${data.size}")
 
         return data
     }
 
     override suspend fun getNewDetail(id: String): NewItem {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rinh")
+        Auditor.debug(netTag, "Загрузка деталей новости: $id")
+        
         val url = "$NEWS_BASE_URL/universitet/novosti/novosti.php?ELEMENT_ID=$id"
         val response = client.get(url).bodyAsText()
         val document = Ksoup.parse(response)
@@ -150,6 +181,7 @@ class RINH(
         val content = parseNewContent(document.getElementById("text-news")!!)
             .then(document.getElementsByClass("slider-news").first()?.let { parseNewContent(it) })
 
+        Auditor.debug(netTag, "Новость успешно загружена: $title")
         return NewItem(id, url, bannerUrl, title, description, tags, date, content)
     }
 

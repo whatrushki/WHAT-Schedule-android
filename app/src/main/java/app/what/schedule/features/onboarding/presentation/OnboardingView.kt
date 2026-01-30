@@ -55,9 +55,13 @@ import app.what.schedule.data.local.settings.rememberAppValues
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.features.onboarding.domain.models.OnboardingEvent
 import app.what.schedule.features.onboarding.domain.models.OnboardingState
+import app.what.schedule.ui.components.PolicyView
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Crown
 import app.what.schedule.ui.theme.icons.filled.Support
+import app.what.schedule.utils.Analytics
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.analytics
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
@@ -122,7 +126,10 @@ fun OnboardingView(
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 },
-                onFinish = { listener(OnboardingEvent.FinishOnboarding) }
+                onFinish = {
+                    Analytics.logUniversitySelect(state.selectedInstitutionId ?: "not seleted")
+                    listener(OnboardingEvent.FinishOnboarding)
+                }
             )
         }
     }
@@ -172,6 +179,7 @@ fun IntroPage() {
 @Composable
 fun LegalAndAnalyticsPage() {
     val app = rememberAppValues()
+    val fb = Firebase.analytics
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -201,34 +209,12 @@ fun LegalAndAnalyticsPage() {
 
         Gap(32)
 
-        app.isAnalyticsEnabled.asSwitch().content(Modifier)
+        app.isAnalyticsEnabled.asSwitch {
+            fb.setAnalyticsCollectionEnabled(it)
+        }.content(Modifier)
 
-        app.readThePolicy.asSheet { _, _ ->
-            Column(Modifier.padding(12.dp)) {
-                Text(
-                    "Политика конфиденциальности",
-                    style = typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Gap(8)
-                Text(
-                    "Здесь должен быть очень важный текст о том, как мы не собираем ваши личные данные, кроме анонимной статистики (если вы разрешили). Мы используем Firebase Crashlytics для отлова багов.",
-                    style = typography.bodyMedium
-                )
-
-                Gap(24)
-
-                Text(
-                    "Условия использования",
-                    style = typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Gap(8)
-                Text(
-                    "Приложение предоставляется 'как есть'. Автор не несет ответственности за пропущенные пары из-за ошибок в расписании (хотя мы очень стараемся).",
-                    style = typography.bodyMedium
-                )
-            }
+        app.thePolicy.asSheet { _, _ ->
+            PolicyView()
         }.content(Modifier)
     }
 }

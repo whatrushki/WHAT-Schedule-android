@@ -35,7 +35,7 @@ fun PreferenceStorage.Value<String>.asInstitutionChoice(
     val dialog = rememberDialogController()
     val selected by value.collect()
 
-    Column {
+    Column(Modifier.padding(8.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -67,7 +67,6 @@ fun PreferenceStorage.Value<String>.asInstitutionChoice(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .bclick {
-
                         set(it.metadata.id)
                         dialog.close()
                         sideEffect(it.metadata.id)

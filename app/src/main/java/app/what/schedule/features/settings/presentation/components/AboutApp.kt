@@ -61,6 +61,7 @@ import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.ImageRoller
 import app.what.schedule.ui.theme.icons.filled.Telegram
+import app.what.schedule.utils.Analytics
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -72,7 +73,7 @@ fun AboutAppContent(
     val devSettingsUnlocked by appValues.devSettingsUnlocked.collect()
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
-    
+
     var versionClickCount by useState(0)
     var showFireworks by useState(false)
 
@@ -85,6 +86,7 @@ fun AboutAppContent(
                 Toast.LENGTH_LONG
             ).show()
 
+            Analytics.logEasterEggFound("version taps in 'about app'")
             appValues.devSettingsUnlocked.set(true)
         }
     }
@@ -115,9 +117,9 @@ fun AboutAppContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             DevProfile(
-                avatarUrl = "https://github.com/topanim.png",
-                name = "topanim",
-                role = "Android Developer"
+                avatarUrl = BuildConfig.APP_OWNER_GITHUB_AVATAR_URL,
+                name = BuildConfig.APP_OWNER_GITHUB_NICKNAME,
+                role = BuildConfig.APP_OWNER_ROLE
             )
 
 
@@ -127,30 +129,27 @@ fun AboutAppContent(
                 SocialChip(
                     icon = WHATIcons.ImageRoller,
                     text = "GitHub",
-                    onClick = { uriHandler.openUri("https://github.com/topanim") }
+                    onClick = { uriHandler.openUri(BuildConfig.APP_OWNER_GITHUB_URL) }
                 )
                 SocialChip(
                     icon = WHATIcons.Telegram,
                     text = "Telegram",
                     color = Color(0xFF2AABEE),
-                    onClick = { uriHandler.openUri("https://t.me/whatrushik") }
+                    onClick = { uriHandler.openUri(BuildConfig.APP_OWNER_TELEGRAM_URL) }
                 )
             }
 
-            // Статистика репозитория
             RepoStatsCard(
-                owner = "whatrushki",
-                repo = "WHAT-Schedule-android",
-                repoUrl = "https://github.com/whatrushki/WHAT-Schedule-android",
+                owner = BuildConfig.APP_GITHUB_URL.split("/").dropLast(1).last(),
+                repo = BuildConfig.APP_GITHUB_URL.split("/").last(),
+                repoUrl = BuildConfig.APP_GITHUB_URL,
                 uriHandler = uriHandler
             )
 
-            // CTA - Call To Action
             JoinTeamCard(
-                onClick = { uriHandler.openUri("https://t.me/whatrushik") }
+                onClick = { uriHandler.openUri(BuildConfig.APP_OWNER_TELEGRAM_URL) }
             )
 
-            // Версия приложения (Кликабельная)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "WHAT Schedule v${BuildConfig.VERSION_NAME}",
@@ -162,7 +161,6 @@ fun AboutAppContent(
                         .padding(8.dp)
                 )
 
-                // Подсказка для пасхалки (появляется после 3 кликов)
                 AnimatedVisibility(versionClickCount in 3..9) {
                     Text(
                         text = "${10 - versionClickCount}...",
@@ -173,7 +171,6 @@ fun AboutAppContent(
             }
         }
 
-        // 3. Слой салюта (поверх всего)
         if (showFireworks) {
             SimpleFireworks(modifier = Modifier.fillMaxSize())
         }
@@ -332,7 +329,6 @@ private fun JoinTeamCard(onClick: () -> Unit) {
     }
 }
 
-// --- Простая система частиц для салюта на Canvas ---
 @Composable
 private fun SimpleFireworks(modifier: Modifier = Modifier) {
     val particles = remember { List(50) { FireworkParticle() } }
@@ -349,8 +345,6 @@ private fun SimpleFireworks(modifier: Modifier = Modifier) {
         val centerY = size.height / 2
 
         particles.forEachIndexed { index, particle ->
-            // Симуляция взрыва: частицы разлетаются от центра
-            // Используем index для смещения фазы, чтобы салют был хаотичным
             val progress = (time + index * 0.02f) % 1f
             val radius = progress * size.width * 0.6f
             val alpha = 1f - progress // Исчезает к концу
@@ -360,7 +354,7 @@ private fun SimpleFireworks(modifier: Modifier = Modifier) {
 
             drawCircle(
                 color = particle.color.copy(alpha = alpha.coerceIn(0f, 1f)),
-                radius = particle.size * (1f - progress * 0.5f), // Уменьшается
+                radius = particle.size * (1f - progress * 0.5f),
                 center = Offset(x, y)
             )
         }

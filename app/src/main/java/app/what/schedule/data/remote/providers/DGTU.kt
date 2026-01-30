@@ -4,6 +4,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
@@ -53,6 +57,7 @@ class DGTU(
     private val client: HttpClient,
     private val scope: CoroutineScope
 ) : Institution {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://edu.donstu.ru/api"
         private const val NEWS_BASE_URL = "https://news.donstu.ru"
@@ -73,53 +78,95 @@ class DGTU(
         group: String,
         showReplacements: Boolean,
         additional: AdditionalData
-    ): ScheduleResponse = client
-        .get(
-            "$SCHEDULE_BASE_URL/Rasp?idGroup=$group&sdate=${
-                LocalDate.now().format(DateTimeFormatter.ISO_DATE)
-            }"
-        )
-        .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
-        .data.rasp.toDaySchedules()
+    ): ScheduleResponse {
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "dgtu")
+        Auditor.debug(scheduleTag, "Запрос расписания группы: $group")
+        crashlytics.setCustomKey("schedule_group", group)
+        crashlytics.setCustomKey("institution", "dgtu")
+        
+        val response = client
+            .get(
+                "$SCHEDULE_BASE_URL/Rasp?idGroup=$group&sdate=${
+                    LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+                }"
+            )
+            .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
+        
+        val schedules = response.data.rasp.toDaySchedules()
+        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        return schedules
+    }
 
     override suspend fun getTeacherSchedule(
         teacher: String,
         showReplacements: Boolean,
         additional: AdditionalData
-    ): ScheduleResponse = client
-        .get(
-            "$SCHEDULE_BASE_URL/Rasp?idTeacher=$teacher&sdate=${
-                LocalDate.now().format(DateTimeFormatter.ISO_DATE)
-            }"
-        )
-        .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
-        .data.rasp.toDaySchedules()
+    ): ScheduleResponse {
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "dgtu")
+        Auditor.debug(scheduleTag, "Запрос расписания преподавателя: $teacher")
+        crashlytics.setCustomKey("schedule_teacher", teacher)
+        crashlytics.setCustomKey("institution", "dgtu")
+        
+        val response = client
+            .get(
+                "$SCHEDULE_BASE_URL/Rasp?idTeacher=$teacher&sdate=${
+                    LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+                }"
+            )
+            .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
+        
+        val schedules = response.data.rasp.toDaySchedules()
+        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        return schedules
+    }
 
-    override suspend fun getGroups(): List<Group> = client
-        .get("$SCHEDULE_BASE_URL/raspGrouplist?year=${listYears.await().last()}")
-        .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUGroup>>>()
-        .data.map { Group(it.name, it.id.toString(), it.kurs) }
-        .sortedBy { it.name }
+    override suspend fun getGroups(): List<Group> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
+        Auditor.debug(netTag, "Загрузка списка групп")
+        
+        val year = listYears.await().last()
+        Auditor.debug(netTag, "Используемый год: $year")
+        
+        val groups = client
+            .get("$SCHEDULE_BASE_URL/raspGrouplist?year=$year")
+            .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUGroup>>>()
+            .data.map { Group(it.name, it.id.toString(), it.kurs) }
+            .sortedBy { it.name }
+        
+        Auditor.debug(netTag, "Загружено групп: ${groups.size}")
+        return groups
+    }
 
-    override suspend fun getTeachers(): List<Teacher> = client
-        .get("$SCHEDULE_BASE_URL/raspTeacherlist?year=${listYears.await().last()}")
-        .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUTeacher>>>()
-        .data.map {
-            Teacher(it.name.split(" ").let {
-                it[0] + it.mapIndexedNotNull { index, s ->
-                    if (index in 1..2 && s.isNotEmpty()) "${s[0]}." else null
-                }.joinToString("")
-            }, it.id.toString())
-        }
-        .sortedBy { it.name }
+    override suspend fun getTeachers(): List<Teacher> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
+        Auditor.debug(netTag, "Загрузка списка преподавателей")
+        
+        val year = listYears.await().last()
+        Auditor.debug(netTag, "Используемый год: $year")
+        
+        val teachers = client
+            .get("$SCHEDULE_BASE_URL/raspTeacherlist?year=$year")
+            .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUTeacher>>>()
+            .data.map {
+                Teacher(it.name.split(" ").let {
+                    it[0] + it.mapIndexedNotNull { index, s ->
+                        if (index in 1..2 && s.isNotEmpty()) "${s[0]}." else null
+                    }.joinToString("")
+                }, it.id.toString())
+            }
+            .sortedBy { it.name }
+        
+        Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
+        return teachers
+    }
 
     override suspend fun getNews(page: Int): List<NewListItem> {
         val url = "$NEWS_BASE_URL/news/?PAGEN_2=$page"
         val response = client.get(url).bodyAsText()
         val document = Ksoup.parse(response)
         val rawData = document.getElementsByClass("news-card")
-
-        Auditor.debug("d", "news " + rawData.size)
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
+        Auditor.debug(netTag, "Получено новостей: ${rawData.size}")
 
         val data = rawData.map {
             val url = it.getElementsByTag("a").attr("href")
@@ -137,12 +184,15 @@ class DGTU(
             NewListItem(id, url, bannerUrl, title, description, date, tags)
         }
 
-        Auditor.debug("d", "news " + data.fastJoinToString())
+        Auditor.debug(netTag, "Обработано новостей: ${data.size}")
 
         return data
     }
 
     override suspend fun getNewDetail(id: String): NewItem {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
+        Auditor.debug(netTag, "Загрузка деталей новости: $id")
+        
         val url = "$NEWS_BASE_URL/news/?PAGEN_2=$id"
         val response = client.get("$NEWS_BASE_URL/news/$id").bodyAsText()
         val document = Ksoup.parse(response)
@@ -159,6 +209,7 @@ class DGTU(
         val content =
             parseNewContent(document.selectFirst("div.app-section._gutter-md.container._md.text-content")!!)
 
+        Auditor.debug(netTag, "Новость успешно загружена: $title")
         return NewItem(
             id,
             url,
@@ -177,8 +228,6 @@ class DGTU(
         val list = mutableListOf<NewContent>()
 
         tree.children().forEach {
-            Auditor.debug("d", it.outerHtml())
-
             val contentItem = when {
                 it.`is`("p") && it.text()
                     .isNotBlank() -> NewContent.Item.Text(AnnotatedString.fromHtml(it.html()))
@@ -277,8 +326,7 @@ private object DGTUApi {
             @Serializable
             data class GetSchedule(
                 val isCyclicalSchedule: Boolean,
-                val rasp: List<DGTULesson>,
-//                val info: LessonInfo #не нужно
+                val rasp: List<DGTULesson>
             )
 
             @Serializable

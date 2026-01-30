@@ -1,5 +1,6 @@
 [versions]
 agp = "8.12.3"
+firebaseBom = "34.8.0"
 glanceAppwidget = "1.1.1"
 kotlin = "2.2.20"
 coreKtx = "1.17.0"
@@ -41,6 +42,9 @@ androidx-glance = { module = "androidx.glance:glance", version.ref = "glanceAppw
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glanceAppwidget" }
 androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glanceAppwidget" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 poi = { module = "org.apache.poi:poi", version.ref = "poi" }
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }

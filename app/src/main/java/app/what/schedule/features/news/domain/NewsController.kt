@@ -4,6 +4,10 @@ import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.models.NewListItem
@@ -19,6 +23,7 @@ class NewsController(
 ) : UIController<NewsState, NewsAction, NewsEvent>(
     NewsState()
 ) {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     override fun obtainEvent(viewEvent: NewsEvent) = when (viewEvent) {
         NewsEvent.Init -> {}
         NewsEvent.OnListEndingScrolled -> requestNextPage()
@@ -38,26 +43,33 @@ class NewsController(
     }
 
     private fun requestNextPage(rollback: Boolean = false) {
-        Auditor.debug("d", "request next page ${viewState.page}")
+        val newsTag = buildTag(LogScope.NEWS, LogCat.NET)
+        val page = if (rollback) 1 else viewState.page
+        Auditor.debug(newsTag, "Запрос новостей, страница: $page")
+        
         updateState {
             copy(
                 newsState = RemoteState.Loading,
-                page = if (rollback) 1 else viewState.page
+                page = page
             )
         }
 
         viewModelScope.launchSafe(
             debug = debugMode, onFailure = {
+                Auditor.err(newsTag, "Ошибка загрузки новостей", it)
+                crashlytics.setCustomKey("news_load_error", it.message ?: "unknown")
+                crashlytics.recordException(it)
                 updateState { copy(newsState = RemoteState.Error(it)) }
             }
         ) {
-            val data = apiRepository.getNews(viewState.page)
+            val data = apiRepository.getNews(page)
+            Auditor.debug(newsTag, "Новости загружены, количество: ${data.size}")
 
             updateState {
                 copy(
                     newsState = RemoteState.Success,
                     news = if (rollback) data else viewState.news + data,
-                    page = viewState.page + 1
+                    page = page + 1
                 )
             }
         }

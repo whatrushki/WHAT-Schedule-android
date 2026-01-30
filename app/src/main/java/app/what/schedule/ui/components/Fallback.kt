@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
@@ -27,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import app.what.foundation.ui.animations.wiggle
+import app.what.foundation.ui.bclick
 import app.what.schedule.R
 
 @Composable
@@ -64,7 +66,7 @@ fun Fallback(
     )
 
 
-    Column(
+    Box(
         modifier = Modifier
             .height(IntrinsicSize.Min)
             .fillMaxWidth(.9f)
@@ -85,20 +87,30 @@ fun Fallback(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp)
+                .padding(bottom = 44.dp)
         )
 
         action ?: return
 
-        Button(
-            onClick = action.second,
-            shape = RoundedCornerShape(topStart = topPadding, topEnd = topPadding, 0.dp, 0.dp)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .height(IntrinsicSize.Min)
+                .zIndex(2f)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topPadding, topPadding, 0.dp, 0.dp))
+                .background(colorScheme.primary)
+                .bclick(block = action.second),
         ) {
             Text(
                 text = action.first,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Medium,
+                color = colorScheme.onPrimary,
                 fontSize = 16.sp,
-                modifier = modifier.fillMaxWidth()
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
             )
         }
     }

@@ -42,6 +42,7 @@ import app.what.schedule.features.news.domain.models.NewsEvent
 import app.what.schedule.features.news.domain.models.NewsState
 import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.components.Fallback
+import app.what.schedule.utils.Analytics
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -59,7 +60,6 @@ fun NewsView(
 
 
     LaunchedEffect(lazyListState.canScrollForward) {
-        Auditor.debug("d", "on end ${!lazyListState.canScrollForward}")
         if (!lazyListState.canScrollForward && state.newsState != RemoteState.Loading) listener(
             NewsEvent.OnListEndingScrolled
         )
@@ -102,10 +102,10 @@ fun NewsView(
                 NewListItemView(Modifier.animateItem(), selectedNewId == it.id, it, {
                     selectedNewId = if (selectedNewId != it.id) it.id else null
                 }) {
+                    Analytics.logNewsOpen(it.id, it.url, it.title)
                     listener(NewsEvent.OnNewEnterClicked(it))
                 }
             }
-
 
             else -> {}
         }
@@ -179,7 +179,6 @@ fun NewListItemView(
         if (item.description?.isNotBlank() == true) {
             Gap(4)
 
-            Auditor.debug("d", item.description)
             Text(
                 item.description.trim(),
                 color = colorScheme.onSurfaceVariant,

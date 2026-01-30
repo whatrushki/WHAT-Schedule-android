@@ -24,7 +24,8 @@ import app.what.foundation.ui.controllers.rememberDialogController
 
 fun <T : Enum<T>> PreferenceStorage.Value<T>.asSingleChoice(
     options: Array<T>,
-    onDisplay: (T) -> String = { it.toString() }
+    onDisplay: (T) -> String = { it.toString() },
+    sideEffect: (T) -> Unit = {}
 ) = object : UIComponent {
     @Composable
     override fun content(modifier: Modifier) {
@@ -40,7 +41,7 @@ fun <T : Enum<T>> PreferenceStorage.Value<T>.asSingleChoice(
                         options = options,
                         selected = state,
                         onDisplay = onDisplay,
-                        onSelect = { set(it); dialog.close() }
+                        onSelect = { sideEffect(it); set(it); dialog.close() }
                     )
                 }
             }

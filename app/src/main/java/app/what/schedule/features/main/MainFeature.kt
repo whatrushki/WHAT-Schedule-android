@@ -13,11 +13,13 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import animatedStarsBackground
 import app.what.foundation.core.Feature
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.applyIf
 import app.what.navigation.core.NavComponent
@@ -42,6 +44,11 @@ import app.what.schedule.features.settings.navigation.settingsRegistry
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Code
 import app.what.schedule.ui.theme.icons.filled.News
+import app.what.schedule.utils.Analytics
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -75,13 +82,21 @@ class MainFeature(
         val useAnimation by appValues.useAnimation.collect()
         val devFeaturesEnabled by appValues.devPanelEnabled.collect()
 
+        LaunchedEffect(Unit) {
+            navigator.c.addOnDestinationChangedListener { _, destination, _ ->
+                val navTag = buildTag(LogScope.CORE, LogCat.NAV)
+                Auditor.debug(navTag, "Навигация: ${destination.route}")
+                Analytics.logScreenView(destination.route ?: "no route")
+                FirebaseCrashlytics.getInstance().setCustomKey("current_screen", destination.route ?: "unknown")
+            }
+        }
+
         Box(
             Modifier
                 .fillMaxSize()
                 .background(colorScheme.background)
                 .applyIf(useAnimation == true) { animatedStarsBackground() }
         ) {
-
             NavigationHost(
                 navigator = navigator,
                 modifier = modifier.windowInsetsPadding(
@@ -102,6 +117,7 @@ class MainFeature(
                 ) {
                     if (!devFeaturesEnabled!!) null
                     else NavAction("Для разработчиков", WHATIcons.Code) {
+                        Analytics.logDevPanelOpen()
                         navigator.c.navigate(DevProvider)
                     }
                 }

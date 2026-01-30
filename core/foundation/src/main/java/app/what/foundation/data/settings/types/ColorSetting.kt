@@ -36,7 +36,8 @@ fun PreferenceStorage.Value<ULong>.asColorPalette(
         Color(0xFFA1FF00), Color(0xFFFF0600), Color(0xFF586BFF),
         Color(0xFFFF68A0), Color(0xFFDAEDFF), Color(0xFFFFFCF0),
         Color(0xFFFFECBE), Color(0xFFFFEEE0), Color(0xFF24FFEA)
-    )
+    ),
+    sideEffect: (Color) -> Unit
 ) = customSetting { modifier ->
     val selectedColorValue by collect()
 
@@ -53,7 +54,7 @@ fun PreferenceStorage.Value<ULong>.asColorPalette(
             PaletteItem(
                 color = color,
                 selected = selectedColorValue == color.value,
-                onClick = { set(color.value) }
+                onClick = { sideEffect(color); set(color.value) }
             )
         }
         Gap(16)

@@ -2,7 +2,10 @@ package app.what.schedule.features.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
+import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -356,7 +359,8 @@ class PrevDayActionCallback : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        Log.d("d", "PrevDayActionCallback called")
+        val widgetTag = buildTag(LogScope.WIDGET, LogCat.UI)
+        Auditor.debug(widgetTag, "Переключение на предыдущий день в виджете")
 
         updateAppWidgetState(context, glanceId) { prefs ->
             val currentIndex = prefs[intPreferencesKey(DAY_INDEX_KEY)] ?: 0
@@ -374,7 +378,8 @@ class NextDayActionCallback : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        Log.d("d", "NextDayActionCallback called")
+        val widgetTag = buildTag(LogScope.WIDGET, LogCat.UI)
+        Auditor.debug(widgetTag, "Переключение на следующий день в виджете")
 
         updateAppWidgetState(context, glanceId) { prefs ->
             val currentIndex = prefs[intPreferencesKey(DAY_INDEX_KEY)] ?: 0

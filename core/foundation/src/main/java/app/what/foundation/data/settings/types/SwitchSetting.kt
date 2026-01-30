@@ -8,11 +8,13 @@ import app.what.foundation.core.UIComponent
 import app.what.foundation.data.settings.PreferenceStorage
 import app.what.foundation.data.settings.views.BaseSettingRow
 
-fun PreferenceStorage.Value<Boolean>.asSwitch() = object : UIComponent {
-    @Composable override fun content(modifier: Modifier) {
-        val state by collect()
-        BaseSettingRow(this@asSwitch, modifier) {
-            Switch(checked = state ?: false, onCheckedChange = { set(it) })
+fun PreferenceStorage.Value<Boolean>.asSwitch(sideEffect: (Boolean) -> Unit = {}) =
+    object : UIComponent {
+        @Composable
+        override fun content(modifier: Modifier) {
+            val state by collect()
+            BaseSettingRow(this@asSwitch, modifier) {
+                Switch(checked = state ?: false, onCheckedChange = { sideEffect(it); set(it) })
+            }
         }
     }
-}

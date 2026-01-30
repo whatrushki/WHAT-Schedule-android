@@ -5,6 +5,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
@@ -58,6 +62,7 @@ class IUBIP(
     private val client: HttpClient,
     private val scope: CoroutineScope
 ) : Institution {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
     companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.iubip.ru"
 
@@ -71,25 +76,36 @@ class IUBIP(
         group: String,
         showReplacements: Boolean,
         additional: AdditionalData
-    ): ScheduleResponse = client
-        .submitForm(
-            url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
-            formParameters = parameters {
-                append("do", "schedule")
-                append("group", group)
-            }
-        ).let {
-            Json.parseToJsonElement(it.bodyAsText())
-                .jsonObject[group]!!
-                .jsonArray[1]
-                .jsonObject.values.toList()
-                .let { if (it.size > 1) it.slice(0..1) else it }
-                .flatMap {
-                    parseWeek(it.jsonArray.toList()[1])
+    ): ScheduleResponse {
+        val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "iubip")
+        Auditor.debug(scheduleTag, "Запрос расписания группы: $group")
+        crashlytics.setCustomKey("schedule_group", group)
+        crashlytics.setCustomKey("institution", "iubip")
+        
+        val response = client
+            .submitForm(
+                url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
+                formParameters = parameters {
+                    append("do", "schedule")
+                    append("group", group)
                 }
-        }.takeIf(List<DaySchedule>::isNotEmpty)
-        ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
-        ?: ScheduleResponse.Empty
+            )
+        
+        val schedules = Json.parseToJsonElement(response.bodyAsText())
+            .jsonObject[group]!!
+            .jsonArray[1]
+            .jsonObject.values.toList()
+            .let { if (it.size > 1) it.slice(0..1) else it }
+            .flatMap {
+                parseWeek(it.jsonArray.toList()[1])
+            }
+            .takeIf(List<DaySchedule>::isNotEmpty)
+            ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
+            ?: ScheduleResponse.Empty
+        
+        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        return schedules
+    }
 
     private fun parseWeek(week: JsonElement): List<DaySchedule> {
         val days = mutableListOf<DaySchedule>()
@@ -99,7 +115,7 @@ class IUBIP(
 
             val lessons =
                 dayScheduleRaw.jsonObject.entries.map { (lessonNumRaw, otUnitsRaw) ->
-                    val number = lessonNumRaw.trim().toInt().also { Auditor.debug("D", "num $it") }
+                    val number = lessonNumRaw.trim().toInt()
                     val time = IUBIPLessonsSchedule.COMMON.first { it.number == number }
                     val otUnits = otUnitsRaw.jsonArray.map {
                         val auditory = it.jsonObject["AUD"]!!.jsonPrimitive.toString()
@@ -164,17 +180,25 @@ class IUBIP(
         additional: AdditionalData
     ): ScheduleResponse = ScheduleResponse.Empty
 
-    override suspend fun getGroups(): List<Group> = client
-        .submitForm(
-            url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
-            formParameters = parameters {
-                append("do", "groups")
+    override suspend fun getGroups(): List<Group> {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
+        Auditor.debug(netTag, "Загрузка списка групп")
+        
+        val groups = client
+            .submitForm(
+                url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
+                formParameters = parameters {
+                    append("do", "groups")
+                }
+            )
+            .body<Map<String, Map<String, Int>>>().values
+            .flatMap {
+                it.keys.map { Group(it) }
             }
-        )
-        .body<Map<String, Map<String, Int>>>().values
-        .flatMap {
-            it.keys.map { Group(it) }
-        }
+        
+        Auditor.debug(netTag, "Загружено групп: ${groups.size}")
+        return groups
+    }
 
     override suspend fun getTeachers(): List<Teacher> = emptyList()
 
@@ -182,8 +206,8 @@ class IUBIP(
         val response = client.get("$BASE_URL/news/?PAGEN_1=$page").bodyAsText()
         val document = Ksoup.parse(response)
         val rawData = document.getElementsByClass("news__item")
-
-        Auditor.debug("d", "news " + rawData.size)
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
+        Auditor.debug(netTag, "Получено новостей: ${rawData.size}")
 
         val data = rawData.map {
             val url = it.getElementsByTag("a").attr("href")
@@ -202,12 +226,15 @@ class IUBIP(
             NewListItem(id, url, bannerUrl, title, description, date, tags)
         }
 
-        Auditor.debug("d", "news " + data.fastJoinToString())
+        Auditor.debug(netTag, "Обработано новостей: ${data.size}")
 
         return data
     }
 
     override suspend fun getNewDetail(id: String): NewItem {
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
+        Auditor.debug(netTag, "Загрузка деталей новости: $id")
+        
         val url = "$BASE_URL/news/$id/"
         val response = client.get(url).bodyAsText()
         val document = Ksoup.parse(response)
@@ -221,18 +248,17 @@ class IUBIP(
         val content =
             parseNewContent(document.getElementsByClass("content-block__detail-news").first()!!)
 
+        Auditor.debug(netTag, "Новость успешно загружена: $title")
         return NewItem(id, url, bannerUrl, title, description, tags, date, content)
     }
 
     private fun parseNewContent(tree: Element): NewContent {
         val list = mutableListOf<NewContent>()
+        val netTag = buildTag(LogScope.NETWORK, LogCat.NET)
 
         tree.children().forEach {
-            Auditor.debug("d", it.outerHtml())
-
             val contentItem = when {
                 it.`is`(".detail-news__text") && it.text().isNotBlank() -> {
-                    Auditor.debug("d", it.textNodes().map { it.text() }.toString())
                     NewContent.Container.Column(
                         it.html().replace("&nbsp;", "").replace("\"", "")
                             .split("<br>\n<br>", "<br>").mapNotNull {

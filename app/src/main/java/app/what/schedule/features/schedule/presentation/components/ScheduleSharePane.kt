@@ -41,6 +41,7 @@ import app.what.schedule.ui.theme.icons.filled.Export
 import app.what.schedule.ui.theme.icons.filled.Telegram
 import app.what.schedule.ui.theme.icons.filled.VK
 import app.what.schedule.ui.theme.icons.filled.Whatsapp
+import app.what.schedule.utils.Analytics
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -49,7 +50,7 @@ import java.util.Locale
 val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                                        schedules: List<DaySchedule> ->
     val context = LocalContext.current
-    val selectedDays = useStateList<DaySchedule>()
+    val selectedDays = useStateList(schedules.first())
 
     Column(
         Modifier.verticalScroll(rememberScrollState())
@@ -82,7 +83,7 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                         else TextStyle.FULL_STANDALONE,
                         Locale.getDefault()
                     )
-                ) { if (it in selectedDays) selectedDays.remove(it) else selectedDays.add(it) }
+                ) { if (it in selectedDays && selectedDays.size > 1) selectedDays.remove(it) else selectedDays.add(it) }
             }
         }
 

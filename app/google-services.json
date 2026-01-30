@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "766299503532",
+    "project_id": "what-schedule-a5dac",
+    "storage_bucket": "what-schedule-a5dac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:766299503532:android:f4b88811232436f8639809",
+        "android_client_info": {
+          "package_name": "app.what.schedule"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDj-BDbKo-IdTNWSXCjrrNniL9yOMi91Zk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

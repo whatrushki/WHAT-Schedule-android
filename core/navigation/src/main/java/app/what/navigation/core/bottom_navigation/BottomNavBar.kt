@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,9 +32,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.Show
 import app.what.foundation.ui.animations.AnimatedEnter
+import app.what.foundation.ui.useState
 import app.what.navigation.core.Navigator
 import app.what.navigation.core.rememberNavigator
 import kotlin.math.roundToInt
@@ -53,7 +54,7 @@ fun BottomNavBar(
     screens: Iterable<NavItem>,
     action: (NavDestination?) -> NavAction?
 ) {
-    var currentDestination by remember { mutableStateOf(navigator.c.currentDestination) }
+    var currentDestination by useState(navigator.c.currentDestination)
     val action = remember(currentDestination) { action(currentDestination) }
 
     val selectedIndex = screens.indexOfFirst {
@@ -116,10 +117,12 @@ fun BottomNavBar(
                         selected = selectedIndex == index,
                         onClick = {
                             navigator.c.navigate(item.provider) {
-                                launchSingleTop = true
-                                popUpTo(item.provider) {
-                                    inclusive = false
+                                popUpTo(navigator.c.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
+
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     )

@@ -42,7 +42,7 @@ abstract class PreferenceStorage(protected val prefs: SharedPreferences) {
     class Value<T : Any>(
         private val prefs: SharedPreferences,
         private val preferencesFlow: MutableSharedFlow<String>,
-        private val key: String,
+        val key: String,
         private val defaultValue: T?,
         private val serializer: KSerializer<T>,
         val title: String,

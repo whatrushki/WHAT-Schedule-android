@@ -51,6 +51,11 @@ fun rememberAppValues() = LocalAppValues.current
 class AppValues(context: Context) : PreferenceStorage(
     context.getSharedPreferences("MY_APP_PREFERENCES", Context.MODE_PRIVATE)
 ) {
+    val userId = createValue(
+        "user_id", null, String.serializer(),
+        "Идентификатор пользоваетля", "Уникальный ID установки"
+    )
+
     val isFirstLaunch = createValue(
         "is_first_launch", true, Boolean.serializer(),
         "Первый запуск", "Отслеживание первого запуска приложения"
@@ -91,8 +96,8 @@ class AppValues(context: Context) : PreferenceStorage(
         "Анализ пользования", "Разрешите собирать анонимную статистику пользования"
     )
 
-    val readThePolicy = createValue(
-        "read_the_policy", true, Boolean.serializer(),
+    val thePolicy = createValue(
+        "the_policy", null, String.serializer(),
         "Политика конфиденциальности", "Ознакомлены с политикой и условиями пользования"
     )
 

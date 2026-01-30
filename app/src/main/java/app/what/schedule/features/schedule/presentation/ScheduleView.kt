@@ -58,6 +58,7 @@ import app.what.schedule.features.schedule.presentation.components.SearchButton
 import app.what.schedule.features.schedule.presentation.components.ViewType
 import app.what.schedule.ui.components.Fallback
 import app.what.schedule.ui.components.ScheduleSearchPane
+import app.what.schedule.utils.Analytics
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -154,6 +155,7 @@ fun ScheduleView(
                         .clip(CircleShape)
                         .background(colorScheme.surfaceContainer)
                         .bclick(state.value.schedules.isNotEmpty()) {
+                            Analytics.logShare("schedule", "")
                             sheetController.open(content = scheduleExportSheet)
                         }
                 ) {
@@ -176,11 +178,13 @@ fun ScheduleView(
                 )
             }
 
-            is RemoteState.Error -> Fallback(
-                "Произошла непредвиденная ошибка",
-                Modifier.fillMaxSize(),
-                "Попробовать снова" to { listener(ScheduleEvent.OnRefresh) }
-            )
+            is RemoteState.Error -> AnimatedEnter {
+                Fallback(
+                    "Произошла непредвиденная ошибка",
+                    Modifier.fillMaxSize(),
+                    "Попробовать снова" to { listener(ScheduleEvent.OnRefresh) }
+                )
+            }
 
             RemoteState.Success -> {
                 ScheduleCalendar(weeks, weeksPagerState, daysPagerState) {
