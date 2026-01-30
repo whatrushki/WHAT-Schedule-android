@@ -1,6 +1,14 @@
 import java.util.Properties
+import java.text.SimpleDateFormat
+import java.util.Date
+
+fun generateVersionCode(): Int {
+    return SimpleDateFormat("yyMMddHH").format(Date()).toInt()
+}
 
 plugins {
+    id("com.google.firebase.crashlytics")
+    id("com.google.gms.google-services")
     id("com.google.devtools.ksp")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,13 +24,21 @@ android {
         applicationId = "app.what.schedule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28012601
-        versionName = "0.9.9-beta"
+        versionCode = generateVersionCode()
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "PRIVACY_POLICY_URL", "\"https://raw.githubusercontent.com/whatrushki/WHAT-Schedule-android/refs/heads/master/PRIVACY_POLICY.md\"")
+        buildConfigField("String", "APP_OWNER_ROLE", "\"Android Developer\"")
+        buildConfigField("String", "APP_OWNER_GITHUB_AVATAR_URL", "\"https://github.com/topanim.png\"")
+        buildConfigField("String", "APP_OWNER_GITHUB_NICKNAME", "\"topanim\"")
+        buildConfigField("String", "APP_OWNER_GITHUB_URL", "\"https://github.com/topanim\"")
+        buildConfigField("String", "APP_OWNER_TELEGRAM_URL", "\"https://t.me/whatrushik\"")
+        buildConfigField("String", "APP_GITHUB_URL", "\"https://github.com/whatrushki/WHAT-Schedule-android\"")
     }
 
     signingConfigs {
@@ -92,6 +108,10 @@ dependencies {
 
     ksp(libs.room.compiler)
 
+    implementation(platform(libs.firebase.bom))
+
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.bundles.ktor)
     implementation(libs.bundles.koin)
     implementation(libs.bundles.room)
