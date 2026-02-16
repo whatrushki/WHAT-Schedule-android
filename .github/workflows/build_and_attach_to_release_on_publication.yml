@@ -27,7 +27,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin' # Обязательный параметр для v4
-          java-version: '17'
+          java-version: '21'
 
       - name: Checkout keystore repo
         uses: actions/checkout@v4

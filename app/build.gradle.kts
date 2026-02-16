@@ -92,6 +92,11 @@ android {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
     packaging {
         resources.pickFirsts.add("META-INF/*")
     }
