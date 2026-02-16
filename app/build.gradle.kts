@@ -16,6 +16,10 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 android {
     namespace = "app.what.schedule"
     compileSdk = 36
@@ -25,7 +29,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = generateVersionCode()
-        versionName = "1.0.0"
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -79,15 +83,6 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -105,6 +100,7 @@ android {
 dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
+
 
     ksp(libs.room.compiler)
 
