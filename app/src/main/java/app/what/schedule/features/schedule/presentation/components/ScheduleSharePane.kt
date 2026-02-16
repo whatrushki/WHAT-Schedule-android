@@ -1,6 +1,7 @@
 package app.what.schedule.features.schedule.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,10 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
-import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.SegmentTab
 import app.what.foundation.ui.Show
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useStateList
@@ -37,11 +38,9 @@ import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.api.models.LessonType
 import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.ui.theme.icons.WHATIcons
-import app.what.schedule.ui.theme.icons.filled.Export
 import app.what.schedule.ui.theme.icons.filled.Telegram
 import app.what.schedule.ui.theme.icons.filled.VK
 import app.what.schedule.ui.theme.icons.filled.Whatsapp
-import app.what.schedule.utils.Analytics
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -61,30 +60,51 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
             fontWeight = FontWeight.Bold,
             fontSize = 42.sp,
             color = colorScheme.primary,
-            modifier = Modifier
-                .padding(12.dp)
+            modifier = Modifier.padding(12.dp)
         )
 
-        MultiChoiceSegmentedButtonRow(
-            space = (-4).dp,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
-                .padding(12.dp)
                 .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
         ) {
+            Gap(4)
+
             schedules.forEachIndexed { index, it ->
-                SegmentTab(
-                    index = index,
-                    count = schedules.size,
-                    selected = it in selectedDays,
-                    icon = null,
-                    label = "${it.date.dayOfMonth}" + "\n"
-                            + it.date.dayOfWeek.getDisplayName(
-                        if (schedules.size > 2) TextStyle.SHORT_STANDALONE
-                        else TextStyle.FULL_STANDALONE,
-                        Locale.getDefault()
+                val selected = it in selectedDays
+                val contentColor = if (selected) colorScheme.onPrimary
+                else colorScheme.onSecondaryContainer
+
+                Box(
+                    Modifier
+                        .clip(shapes.medium)
+                        .background(
+                            if (selected) colorScheme.primary
+                            else colorScheme.secondaryContainer
+                        )
+                        .bclick {
+                            if (it in selectedDays && selectedDays.size > 1)
+                                selectedDays.remove(it) else selectedDays.add(it)
+                        }
+                ) {
+                    Text(
+                        "${it.date.dayOfMonth}" + "\n"
+                                + it.date.dayOfWeek.getDisplayName(
+                            if (schedules.size > 2) TextStyle.SHORT_STANDALONE
+                            else TextStyle.FULL_STANDALONE,
+                            Locale.getDefault()
+                        ),
+                        modifier = Modifier.padding(16.dp, 8.dp),
+                        color = contentColor,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp
                     )
-                ) { if (it in selectedDays && selectedDays.size > 1) selectedDays.remove(it) else selectedDays.add(it) }
+                }
             }
+
+            Gap(4)
         }
 
         Gap(12)
@@ -95,54 +115,31 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
         ) {
             Gap(12)
 
-            ShareButton(
-                icon = WHATIcons.Export,
-                color = Color.Gray
-            ) {
-                ShareUtils.share(
-                    context, ShareVariant.Clipboard,
-                    createShareTextFromDaySchedules(scheduleSearch, selectedDays)
-                )
+            listOf(
+                Triple(
+                    Icons.Default.MoreVert,
+                    colorScheme.secondaryContainer,
+                    ShareVariant.SystemDefault
+                ),
+                Triple(WHATIcons.Telegram, Color(0xFF2AABEE), ShareVariant.Telegram),
+                Triple(WHATIcons.VK, Color(0xFF2196F3), ShareVariant.VK),
+                Triple(WHATIcons.Whatsapp, Color(0xFF4CAF50), ShareVariant.WhatsApp),
+            ).forEach {
+                ShareButton(
+                    icon = it.first,
+                    color = it.second,
+                    if (it.third == ShareVariant.Telegram) 46 else 34
+                ) {
+                    ShareUtils.share(
+                        context, it.third,
+                        createShareTextFromDaySchedules(scheduleSearch, selectedDays)
+                    )
+                }
+
+                Gap(8)
             }
 
-            Gap(8)
-
-            ShareButton(
-                icon = WHATIcons.Telegram,
-                iconSize = 44,
-                color = Color(0xFF2AABEE)
-            ) {
-                ShareUtils.share(
-                    context, ShareVariant.Telegram,
-                    createShareTextFromDaySchedules(scheduleSearch, selectedDays)
-                )
-            }
-
-            Gap(8)
-
-            ShareButton(
-                icon = WHATIcons.VK,
-                color = Color(0xFF2196F3)
-            ) {
-                ShareUtils.share(
-                    context, ShareVariant.VK,
-                    createShareTextFromDaySchedules(scheduleSearch, selectedDays)
-                )
-            }
-
-            Gap(8)
-
-            ShareButton(
-                icon = WHATIcons.Whatsapp,
-                color = Color(0xFF4CAF50)
-            ) {
-                ShareUtils.share(
-                    context, ShareVariant.WhatsApp,
-                    createShareTextFromDaySchedules(scheduleSearch, selectedDays)
-                )
-            }
-
-            Gap(12)
+            Gap(4)
         }
 
         Gap(16)
@@ -189,6 +186,7 @@ fun createShareTextFromDaySchedules(
                     LessonType.CLASS_HOUR -> "🍁"
                     LessonType.LABORATORY -> "🪻"
                     LessonType.CREDIT -> "🍂"
+                    LessonType.OBLIGATION -> "💸"
                 } + " **${it.number}** пара __${it.startTime}–${it.endTime} " + when (it.state) {
                     LessonState.COMMON -> ""
                     LessonState.ADDED -> "(⚡)"

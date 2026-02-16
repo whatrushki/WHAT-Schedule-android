@@ -4,10 +4,6 @@ import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.models.NewListItem
@@ -15,6 +11,10 @@ import app.what.schedule.domain.NewsRepository
 import app.what.schedule.features.news.domain.models.NewsAction
 import app.what.schedule.features.news.domain.models.NewsEvent
 import app.what.schedule.features.news.domain.models.NewsState
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
 class NewsController(
@@ -46,7 +46,7 @@ class NewsController(
         val newsTag = buildTag(LogScope.NEWS, LogCat.NET)
         val page = if (rollback) 1 else viewState.page
         Auditor.debug(newsTag, "Запрос новостей, страница: $page")
-        
+
         updateState {
             copy(
                 newsState = RemoteState.Loading,

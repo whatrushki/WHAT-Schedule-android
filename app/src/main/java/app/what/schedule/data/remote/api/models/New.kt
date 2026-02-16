@@ -80,6 +80,7 @@ sealed interface NewContent {
                     is Item.Info -> appendLine("$indent• Info: ${content.data}")
                     is Item.Quote -> appendLine("$indent• Quote: ${content.author.name} -> ${content.data}")
                     is Item.SimpleText -> appendLine("$indent• Simple Text: \"${content.data}\"")
+                    is Item.Video -> appendLine("$indent• Image: ${content.data}")
                 }
             }
         }
@@ -103,5 +104,8 @@ sealed interface NewContent {
         class ImageCarousel(val data: List<String>) : Item
         class Image(val data: String) : Item
         class Table(val data: List<List<String>>) : Item
+        sealed class Video(val data: String) : Item {
+            class VK(data: String) : Video(data)
+        }
     }
 }

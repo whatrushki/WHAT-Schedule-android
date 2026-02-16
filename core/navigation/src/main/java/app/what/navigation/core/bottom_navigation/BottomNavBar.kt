@@ -76,7 +76,7 @@ fun BottomNavBar(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+            .padding(start = 24.dp, end = 24.dp, bottom = 8.dp)
             .systemBarsPadding()
     ) {
         Box(
@@ -117,12 +117,8 @@ fun BottomNavBar(
                         selected = selectedIndex == index,
                         onClick = {
                             navigator.c.navigate(item.provider) {
-                                popUpTo(navigator.c.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-
+                                popUpTo(navigator.c.graph.findStartDestination().id)
                                 launchSingleTop = true
-                                restoreState = true
                             }
                         }
                     )

@@ -87,7 +87,8 @@ class MainFeature(
                 val navTag = buildTag(LogScope.CORE, LogCat.NAV)
                 Auditor.debug(navTag, "Навигация: ${destination.route}")
                 Analytics.logScreenView(destination.route ?: "no route")
-                FirebaseCrashlytics.getInstance().setCustomKey("current_screen", destination.route ?: "unknown")
+                FirebaseCrashlytics.getInstance()
+                    .setCustomKey("current_screen", destination.route ?: "unknown")
             }
         }
 

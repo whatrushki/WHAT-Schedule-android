@@ -45,10 +45,8 @@ class LogFilter : Filter<LogEntry> {
     private val tagFilters = mutableListOf<String>()
     private val textFilters = mutableListOf<String>()
 
-    // true = показывать только логи с Throwable
     private var hasErrorsOnly = false
 
-    // "today", "hour", "5min"
     private var timeFilter: String? = null
 
     override fun clearFilters() {
@@ -99,7 +97,6 @@ class LogFilter : Filter<LogEntry> {
                     timeFilter = cleanToken.substringAfter(":").lowercase()
                 }
 
-                // Всё остальное — текстовый поиск по сообщению и тегу
                 else -> {
                     if (cleanToken.isNotBlank()) {
                         textFilters.add(cleanToken)
@@ -117,7 +114,6 @@ class LogFilter : Filter<LogEntry> {
 
         // 2. Тег (частичное совпадение)
         if (tagFilters.isNotEmpty()) {
-            // Если ни один из фильтров тега не содержится в теге лога -> false
             val matchesTag = tagFilters.any { filterTag ->
                 value.tag.contains(filterTag, ignoreCase = true)
             }
@@ -145,15 +141,13 @@ class LogFilter : Filter<LogEntry> {
                     logTime >= startOfDay
                 }
 
-                "hour" -> (now - logTime) <= 3600000 // 1 час
-                "5min" -> (now - logTime) <= 300000  // 5 минут
+                "hour" -> (now - logTime) <= 3600000
+                "5min" -> (now - logTime) <= 300000
                 else -> true
             }
             if (!matchesTime) return false
         }
 
-        // 5. Текстовый поиск (Ищет в message ИЛИ в tag)
-        // Логика: Если введены слова, лог должен содержать ХОТЯ БЫ ОДНО из них
         if (textFilters.isNotEmpty()) {
             val matchesText = textFilters.any { filterText ->
                 value.message.contains(filterText, ignoreCase = true) ||
@@ -305,7 +299,10 @@ fun LogItem(logEntry: LogEntry) {
 
         // Сообщение
         Text(
-            text = logEntry.message,
+            text = logEntry.message + when (logEntry.level) {
+                LogLevel.ERROR, LogLevel.CRITICAL -> "\n" + logEntry.throwable?.message + "\n" + logEntry.throwable?.stackTrace.contentToString()
+                else -> ""
+            },
             color = textColor,
             fontSize = 12.sp,
             maxLines = if (expanded) Int.MAX_VALUE else 2,

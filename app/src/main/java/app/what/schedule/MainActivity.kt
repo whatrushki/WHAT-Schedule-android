@@ -23,14 +23,12 @@ import app.what.schedule.utils.Analytics
 import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
-import com.google.firebase.Firebase
-import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

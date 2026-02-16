@@ -54,9 +54,7 @@ class GitHubUpdateService(
                     version = latestRelease.tagName,
                     releaseNotes = latestRelease.body,
                     downloadUrl = apkAsset.browserDownloadUrl,
-                    fileSize = apkAsset.size,
-                    publishDate = latestRelease.publishedAt,
-                    isPreRelease = latestRelease.prerelease
+                    fileSize = apkAsset.size
                 )
 
                 UpdateResult.Available(updateInfo)

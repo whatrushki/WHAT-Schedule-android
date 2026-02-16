@@ -22,7 +22,9 @@ data class Lesson(
     val type: LessonType,
     val state: LessonState = LessonState.COMMON
 ) {
-    operator fun plus(other: Lesson) = copy(otUnits = otUnits + other.otUnits)
+    infix operator fun plus(other: Lesson) = copy(otUnits = otUnits + other.otUnits)
+    infix operator fun plus(other: List<Lesson>) =
+        copy(otUnits = otUnits + other.flatMap(Lesson::otUnits))
 
     fun equalsWithReplacement(other: Lesson): Boolean {
         return otUnits.toSet() == other.otUnits.toSet()
@@ -45,7 +47,7 @@ enum class LessonState {
 }
 
 enum class LessonType {
-    COMMON, ADDITIONAL, CLASS_HOUR, LECTURE, PRACTISE, LABORATORY, CREDIT;
+    COMMON, ADDITIONAL, CLASS_HOUR, LECTURE, PRACTISE, LABORATORY, CREDIT, OBLIGATION;
 
     val isStandard get() = this != ADDITIONAL && this != CLASS_HOUR && this != LABORATORY && this != CREDIT
     val isNonStandard get() = !isStandard
@@ -134,6 +136,16 @@ sealed class ScheduleSearch {
         result = 31 * result + id.hashCode()
         return result
     }
+
+    fun copy(
+        name: String = this.name,
+        id: String = this.id,
+        favorite: Boolean = this.favorite
+    ) = when (this) {
+        is Group -> Group(name, id, favorite)
+        is Teacher -> Teacher(name, id, favorite)
+    }
+
 }
 
 fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id, favorite)

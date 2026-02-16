@@ -12,6 +12,9 @@ _Вырасти свой идеальный график — просто, бы�
 [<img src=".github/res/badge_github.png?raw=true" alt="Get it on GitHub" height="82"
 align="center">](https://github.com/whatrushki/WHAT-Schedule-android/releases/latest/download/what-schedule.apk)
 
+[<img src=".github/res/badge_rustore.png?raw=true" alt="Get it on RuStore" height="82"
+align="center">](https://www.rustore.ru/catalog/app/app.what.schedule)
+
 ## 🎋 Screenshots
 
 | ![Image 1](.github/res/image1.png) | ![Image 2](.github/res/image2.png) | ![Image 3](.github/res/image3.png) |

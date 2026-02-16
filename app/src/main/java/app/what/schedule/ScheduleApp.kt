@@ -4,9 +4,12 @@ import android.app.Application
 import androidx.room.Room
 import app.what.foundation.services.AppLogger
 import app.what.foundation.services.AppLogger.Companion.Auditor
+import app.what.foundation.services.auto_update.AppUpdateManager
+import app.what.foundation.services.auto_update.GitHubUpdateManager
 import app.what.foundation.services.auto_update.GitHubUpdateService
+import app.what.foundation.services.auto_update.RuStoreUpdateManager
 import app.what.foundation.services.auto_update.UpdateConfig
-import app.what.foundation.services.auto_update.UpdateManager
+import app.what.foundation.services.auto_update.isInstalledFromRuStore
 import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
@@ -26,7 +29,12 @@ import app.what.schedule.utils.AppUtils
 import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
@@ -51,6 +59,11 @@ import javax.net.ssl.X509TrustManager
 class ScheduleApp : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            FirebaseApp.initializeApp(this)
+        }
+
         val crashlytics = FirebaseCrashlytics.getInstance()
         crashlytics.setCustomKey("app_version", BuildConfig.VERSION_NAME)
         crashlytics.setCustomKey("app_version_code", BuildConfig.VERSION_CODE)
@@ -58,7 +71,7 @@ class ScheduleApp : Application() {
         AppLogger.initialize(applicationContext)
         CrashHandler.initialize(applicationContext, CrashActivity::class.java)
             .setSideEffect(crashlytics::recordException)
-        
+
         val initTag = buildTag(LogScope.CORE, LogCat.INIT)
         Auditor.info(initTag, "Приложение запущено")
 
@@ -67,7 +80,9 @@ class ScheduleApp : Application() {
             modules(generalModule, controllers)
         }
 
-        val appValues = getKoin().get<AppValues>()
+        val koin = getKoin()
+
+        val appValues = koin.get<AppValues>()
         if (appValues.userId.get() == null) {
             val userId = UUID.randomUUID().toString()
             crashlytics.setUserId(userId)
@@ -76,6 +91,15 @@ class ScheduleApp : Application() {
             Auditor.debug(initTag, "Создан новый пользователь: $userId")
         } else {
             Auditor.debug(initTag, "Пользователь уже существует: ${appValues.userId.get()}")
+        }
+
+        SingletonImageLoader.setSafe {
+            ImageLoader.Builder(this)
+                .crossfade(true)
+                .components {
+                    add(KtorNetworkFetcherFactory({ koin.get<HttpClient>() }))
+                }
+                .build()
         }
     }
 }
@@ -95,15 +119,22 @@ val generalModule = module {
     single { AppUtils(get()) }
     single { GoogleDriveParser(get()) }
     single { FileManager(get()) }
-    single {
-        UpdateManager(
-            get(), get(), UpdateConfig(
-                "whatrushki", "WHAT-Schedule-android",
-                BuildConfig.VERSION_NAME
-            ), get()
-        )
+    single<AppUpdateManager> {
+        when {
+            !androidContext().isInstalledFromRuStore() -> GitHubUpdateManager(
+                GitHubUpdateService(get()),
+                androidContext(),
+                UpdateConfig(
+                    BuildConfig.APP_GITHUB_URL.split("/").reversed()[1],
+                    BuildConfig.APP_GITHUB_URL.split("/").reversed()[0],
+                    BuildConfig.VERSION_NAME
+                ),
+                get()
+            )
+
+            else -> RuStoreUpdateManager(androidContext(), get())
+        }
     }
-    single { GitHubUpdateService(get()) }
 
 
     single { InstitutionManager(get(), get()) }

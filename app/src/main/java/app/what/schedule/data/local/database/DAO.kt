@@ -152,13 +152,13 @@ interface GroupsDAO {
     suspend fun selectById(id: Long): GroupDBO
 
     @Query("SELECT * FROM `groups` WHERE `groups`.institutionId = :institutionId AND `groups`.groupId = :id")
-    suspend fun selectByGroupId(institutionId: String, id: String): GroupDBO
+    suspend fun selectByGroupId(institutionId: String, id: String): GroupDBO?
 
     @Query("SELECT `groups`.id FROM `groups` WHERE `groups`.institutionId = :institutionId AND `groups`.groupId = :id")
     suspend fun selectIdByGroupId(institutionId: String, id: String): Long?
 
-    @Query("SELECT * FROM `groups` WHERE `groups`.name = :name")
-    suspend fun selectByName(name: String): GroupDBO
+    @Query("SELECT * FROM `groups` WHERE  `groups`.institutionId = :institutionId AND `groups`.name = :name")
+    suspend fun selectByName(institutionId: String, name: String): GroupDBO?
 
     @Query("SELECT * FROM `groups` WHERE `groups`.year = :year")
     suspend fun selectByYear(year: Int): GroupDBO
@@ -185,13 +185,13 @@ interface TeachersDAO {
     suspend fun selectById(id: Long): TeacherDBO
 
     @Query("SELECT * FROM teachers WHERE teachers.institutionId = :institutionId AND teachers.teacherId = :id")
-    suspend fun selectByTeacherId(institutionId: String, id: String): TeacherDBO
+    suspend fun selectByTeacherId(institutionId: String, id: String): TeacherDBO?
 
     @Query("SELECT teachers.id FROM teachers WHERE teachers.institutionId = :institutionId AND teachers.teacherId = :id")
     suspend fun selectIdByTeacherId(institutionId: String, id: String): Long?
 
-    @Query("SELECT * FROM teachers WHERE teachers.name = :name")
-    suspend fun selectByName(name: String): TeacherDBO
+    @Query("SELECT * FROM teachers WHERE  teachers.institutionId = :institutionId AND teachers.name = :name")
+    suspend fun selectByName(institutionId: String, name: String): TeacherDBO?
 
     @Delete
     suspend fun delete(teacher: TeacherDBO)

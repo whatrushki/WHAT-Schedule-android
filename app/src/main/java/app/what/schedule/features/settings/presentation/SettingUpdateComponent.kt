@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -22,20 +21,20 @@ import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.what.foundation.core.UIComponent
+import app.what.foundation.services.auto_update.AppUpdateManager
 import app.what.foundation.services.auto_update.DownloadState
 import app.what.foundation.services.auto_update.UpdateInfo
-import app.what.foundation.services.auto_update.UpdateManager
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.animations.wiggle
 import app.what.foundation.ui.bclick
 import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.ApkInstall
 import app.what.schedule.ui.theme.icons.filled.Download
 import app.what.schedule.ui.theme.icons.filled.DownloadError
 import app.what.schedule.ui.theme.icons.filled.ReleaseAlert
@@ -46,13 +45,9 @@ object SettingUpdateComponent : UIComponent {
 
     @Composable
     override fun content(modifier: Modifier) {
-        val manager = koinInject<UpdateManager>()
+        val manager = koinInject<AppUpdateManager>()
         val updateInfo = manager.updateInfo
         val downloadState = manager.downloadState
-
-        LaunchedEffect(Unit) {
-            manager.checkForUpdates()
-        }
 
         AnimatedVisibility(
             visible = updateInfo != null,
@@ -67,7 +62,7 @@ object SettingUpdateComponent : UIComponent {
                     .padding(16.dp, 8.dp)
                     .clip(shapes.medium)
                     .background(colorScheme.primaryContainer)
-                    .bclick { manager.handleAction(info) }
+                    .bclick { manager.handleAction() }
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,7 +70,7 @@ object SettingUpdateComponent : UIComponent {
 
                     if (downloadState is DownloadState.Downloading || downloadState is DownloadState.Preparing) {
                         val progress =
-                            (downloadState as? DownloadState.Downloading)?.progress?.progress ?: 0f
+                            (downloadState as? DownloadState.Downloading)?.progress?.toFloat() ?: 0f
 
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LinearProgressIndicator(
@@ -115,13 +110,13 @@ object SettingUpdateComponent : UIComponent {
 
             is DownloadState.Downloading -> Triple(
                 "Скачивание...",
-                Icons.Rounded.Refresh,
+                WHATIcons.Download,
                 "Файл загружается в Downloads"
             )
 
             is DownloadState.Completed -> Triple(
                 "Обновление скачано!",
-                WHATIcons.Download,
+                WHATIcons.ApkInstall,
                 "Нажмите, чтобы установить"
             )
 

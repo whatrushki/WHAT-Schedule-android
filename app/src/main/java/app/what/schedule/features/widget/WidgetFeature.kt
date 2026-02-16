@@ -2,10 +2,6 @@ package app.what.schedule.features.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
-import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -53,6 +49,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.schedule.R
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.local.settings.ThemeStyle
@@ -64,6 +61,9 @@ import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.utils.GlanceUtils.isSystemInDarkTheme
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import com.materialkolor.ktx.DynamicScheme
 import com.materialkolor.toColorScheme
 import kotlinx.coroutines.Dispatchers.IO

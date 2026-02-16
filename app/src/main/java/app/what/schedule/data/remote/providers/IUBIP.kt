@@ -3,12 +3,7 @@ package app.what.schedule.data.remote.providers
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
@@ -28,8 +23,12 @@ import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.api.models.OneTimeUnit
 import app.what.schedule.data.remote.api.models.Teacher
 import app.what.schedule.data.remote.utils.parseMonth
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.submitForm
@@ -63,6 +62,7 @@ class IUBIP(
     private val scope: CoroutineScope
 ) : Institution {
     private val crashlytics = FirebaseCrashlytics.getInstance()
+
     companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.iubip.ru"
 
@@ -81,7 +81,7 @@ class IUBIP(
         Auditor.debug(scheduleTag, "Запрос расписания группы: $group")
         crashlytics.setCustomKey("schedule_group", group)
         crashlytics.setCustomKey("institution", "iubip")
-        
+
         val response = client
             .submitForm(
                 url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
@@ -90,7 +90,7 @@ class IUBIP(
                     append("group", group)
                 }
             )
-        
+
         val schedules = Json.parseToJsonElement(response.bodyAsText())
             .jsonObject[group]!!
             .jsonArray[1]
@@ -102,8 +102,11 @@ class IUBIP(
             .takeIf(List<DaySchedule>::isNotEmpty)
             ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
             ?: ScheduleResponse.Empty
-        
-        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+
+        Auditor.debug(
+            scheduleTag,
+            "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}"
+        )
         return schedules
     }
 
@@ -183,7 +186,7 @@ class IUBIP(
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
         Auditor.debug(netTag, "Загрузка списка групп")
-        
+
         val groups = client
             .submitForm(
                 url = "${BASE_URL}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
@@ -195,7 +198,7 @@ class IUBIP(
             .flatMap {
                 it.keys.map { Group(it) }
             }
-        
+
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
@@ -234,7 +237,7 @@ class IUBIP(
     override suspend fun getNewDetail(id: String): NewItem {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
         Auditor.debug(netTag, "Загрузка деталей новости: $id")
-        
+
         val url = "$BASE_URL/news/$id/"
         val response = client.get(url).bodyAsText()
         val document = Ksoup.parse(response)

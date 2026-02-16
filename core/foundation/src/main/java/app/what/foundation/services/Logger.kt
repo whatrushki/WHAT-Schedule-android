@@ -103,6 +103,7 @@ class AppLogger private constructor(context: Context) {
             LogLevel.WARNING -> Log.WARN
             else -> Log.ERROR
         }
+
         Log.println(logcatPriority, tag, entry.toFormattedString())
 
         if (!isLoggingPaused) {
@@ -113,7 +114,7 @@ class AppLogger private constructor(context: Context) {
 
         scope.launch {
             synchronized(logFile) {
-                logFile.appendText(entry.toFormattedString() + "\n")
+                logFile.appendText(entry.toFormattedString()  + "\n" + throwable?.stackTrace + "\n")
             }
         }
     }

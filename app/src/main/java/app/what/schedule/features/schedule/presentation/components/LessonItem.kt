@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,7 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.core.Listener
 import app.what.foundation.ui.Gap
+import app.what.foundation.ui.Show
 import app.what.foundation.ui.applyIf
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.capplyIf
@@ -48,8 +52,8 @@ import app.what.schedule.data.remote.api.models.Lesson
 import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.api.models.LessonType
 import app.what.schedule.data.remote.api.models.OneTimeUnit
+import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.data.remote.api.models.Teacher
-import app.what.schedule.data.remote.api.models.toScheduleSearch
 import app.what.schedule.data.remote.utils.formatTime
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.ui.theme.icons.WHATIcons
@@ -57,6 +61,9 @@ import app.what.schedule.ui.theme.icons.filled.Building
 import app.what.schedule.ui.theme.icons.filled.Group
 import app.what.schedule.ui.theme.icons.filled.Person
 import app.what.schedule.ui.theme.icons.filled.Room
+import app.what.schedule.ui.theme.icons.filled.Run
+import com.materialkolor.ktx.DynamicScheme
+import com.materialkolor.toColorScheme
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -209,9 +216,12 @@ private fun EventView(
                 OtUnitsView(
                     viewType = viewType,
                     otUnits = data.otUnits,
-                    listener = listener,
-                    commonViewAccentColor,
-                    Arrangement.SpaceEvenly
+                    color = commonViewAccentColor,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    expanded = false,
+                    onSearchClicked = {
+                        listener(ScheduleEvent.OnSearchClicked(it))
+                    }
                 )
             }
         }
@@ -228,7 +238,7 @@ private fun CommonView(
 ) {
     val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
     val (expanded, setExpanded) = useState(false)
-    val (expandable, setExpandable) = useState(true)
+    val (expandable, setExpandable) = useState(data.otUnits.size > 3)
 
     Box(
         modifier
@@ -283,7 +293,15 @@ private fun CommonView(
 
                 Gap(8)
 
-                OtUnitsView(viewType, data.otUnits, listener)
+                OtUnitsView(
+                    viewType,
+                    data.otUnits,
+                    expanded,
+                    setExpandable,
+                    onSearchClicked = {
+                        listener(ScheduleEvent.OnSearchClicked(it))
+                    }
+                )
             }
         }
     }
@@ -344,7 +362,9 @@ private fun Tag(
 private fun OtUnitsView(
     viewType: ViewType,
     otUnits: List<OneTimeUnit>,
-    listener: Listener<ScheduleEvent>,
+    expanded: Boolean,
+    setExpandable: (Boolean) -> Unit = {},
+    onSearchClicked: (ScheduleSearch) -> Unit,
     color: Color = colorScheme.secondary,
     horizontalArrangement: Arrangement.Horizontal =
         Arrangement.spacedBy(if (viewType == ViewType.TEACHER) 16.dp else 8.dp)
@@ -354,20 +374,26 @@ private fun OtUnitsView(
         .animateContentSize(),
     horizontalArrangement = horizontalArrangement
 ) {
-    otUnits.forEach {
+    val unionUnits = otUnits.size > 3
+    otUnits.subList(0, if (unionUnits) 1 else otUnits.size).forEach {
         Column {
             AdditionalInfo(
                 color = color,
                 icon = if (viewType == ViewType.STUDENT) WHATIcons.Person
                 else WHATIcons.Group,
-                text = if (viewType == ViewType.TEACHER) it.group.name
-                else it.teacher.name,
-                modifier = Modifier.bclick {
-                    listener(
-                        ScheduleEvent.OnSearchClicked(
-                            if (viewType == ViewType.TEACHER) it.group.toScheduleSearch()
-                            else it.teacher.toScheduleSearch()
-                        )
+                texts = if (unionUnits) otUnits.map {
+                    if (viewType == ViewType.TEACHER) it.group.name
+                    else it.teacher.name
+                } else listOf(
+                    if (viewType == ViewType.TEACHER) it.group.name
+                    else it.teacher.name
+                ),
+                maxLines = if (viewType == ViewType.TEACHER && !expanded) 1 else Int.MAX_VALUE,
+                setExpandable = setExpandable,
+                onClick = {
+                    onSearchClicked(
+                        if (viewType == ViewType.TEACHER) ScheduleSearch.Group(it)
+                        else ScheduleSearch.Teacher(it)
                     )
                 }
             )
@@ -375,13 +401,13 @@ private fun OtUnitsView(
             AdditionalInfo(
                 color = color,
                 icon = WHATIcons.Room,
-                text = it.auditory
+                texts = listOf(it.auditory)
             )
 
             AdditionalInfo(
                 color = color,
                 icon = WHATIcons.Building,
-                text = it.building.ifEmpty { "_" }
+                texts = listOf(it.building.ifEmpty { "_" })
             )
         }
     }
@@ -422,7 +448,7 @@ private fun CommonViewSubject(
             else TextDecoration.None
         ),
         onTextLayout = {
-            setExpandable(it.hasVisualOverflow)
+            if (it.hasVisualOverflow) setExpandable(it.hasVisualOverflow)
             if (it.lineCount > 1) setSubjectFontSize(12)
         }
     )
@@ -485,12 +511,13 @@ private fun CommonViewLeftSegment(
 @Composable
 private fun AdditionalInfo(
     icon: ImageVector,
-    text: String,
+    texts: List<String>,
+    maxLines: Int = Int.MAX_VALUE,
     color: Color = colorScheme.secondary,
-    modifier: Modifier = Modifier
-) = Row(
-    modifier = modifier, verticalAlignment = Alignment.CenterVertically
-) {
+    setExpandable: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier,
+    onClick: ((String) -> Unit)? = null
+) = Row(modifier = modifier, verticalAlignment = Alignment.Top) {
     Icon(
         imageVector = icon,
         contentDescription = null,
@@ -500,163 +527,259 @@ private fun AdditionalInfo(
 
     Gap(8)
 
+    FlowRow(
+        maxLines = maxLines
+    ) {
+        texts.forEachIndexed { i, it ->
+            Text(
+                text = it + if (i != texts.lastIndex) ", " else "",
+                color = color,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                style = typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                modifier = Modifier.bclick(onClick != null) { onClick?.invoke(it) }
+
+            )
+        }
+    }
+}
+
+@Composable
+fun BreakInfo(minutes: Int, active: Boolean = false) = Row(
+    Modifier.padding(horizontal = 32.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    WHATIcons.Run.Show(
+        modifier = Modifier.size(20.dp),
+        color = if (active) colorScheme.primary
+        else colorScheme.outline
+    )
+
+    Gap(10)
+
+    val hours = minutes / 60
+    val mins = minutes % 60
+
     Text(
-        text = text,
-        color = color,
-        style = typography.bodyMedium.copy(
-            fontWeight = FontWeight.SemiBold
-        )
+        buildString {
+            append("Перерыв")
+            if (hours != 0) append(" $hours ч.")
+            if (mins != 0) append(" $mins мин.")
+        },
+        color = if (active) colorScheme.primary
+        else colorScheme.outline,
+        fontSize = 14.sp
     )
 }
 
 @Preview(showBackground = true)
 @Composable
-fun LessonPreview() = Column {
-    MaterialTheme {
-        val currentTime = LocalTime.of(13, 40).freeze()
+fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toColorScheme()) {
+    Column(
+        Modifier
+            .background(colorScheme.background)
+            .verticalScroll(rememberScrollState())
+    ) {
+        val currentTime = LocalTime.of(10, 45).freeze() // During second lesson
         Gap(12)
 
-        val lesson = LessonUI(
+        // Morning lessons with realistic times
+        val lesson1 = LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 1,
-                subject = "Основы дискретной математики и философии науки",
+                subject = "Математический анализ",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
-                state = LessonState.REMOVED,
-                otUnits = listOf(
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    ), OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Кузнецов А.В."),
-                        building = "2",
-                        auditory = "131"
-                    )
-                )
-            ), viewType = ViewType.STUDENT, currentTime = currentTime
-        ) {}
-        Gap(12)
-
-        val classHour = LessonUI(
-            data = Lesson(
-                date = LocalDate.now(),
-                number = 1,
-                subject = "Классный час",
-                type = LessonType.CLASS_HOUR,
-                state = LessonState.REMOVED,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
-                otUnits = listOf(
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    ),
-                )
-            ), viewType = ViewType.TEACHER, currentTime = currentTime
-        ) {}
-        Gap(12)
-
-        val lesson2 = LessonUI(
-            data = Lesson(
-                date = LocalDate.now(),
-                number = 1,
-                subject = "Основы дискретной математики и философии науки",
-                type = LessonType.COMMON,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
-                state = LessonState.CHANGED,
-                otUnits = listOf(
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    ), OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Кузнецов А.В."),
-                        building = "2",
-                        auditory = "131"
-                    )
-                )
-            ), viewType = ViewType.STUDENT, currentTime = currentTime
-        ) {}
-        Gap(12)
-
-        val lesson3 = LessonUI(
-            data = Lesson(
-                date = LocalDate.now(),
-                number = 1,
-                subject = "Доп.занятие",
-                type = LessonType.COMMON,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
-                state = LessonState.ADDED,
-                otUnits = listOf(
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    )
-                )
-            ), viewType = ViewType.STUDENT, currentTime = currentTime
-        ) {}
-        Gap(12)
-
-        val classHour2 = LessonUI(
-            data = Lesson(
-                date = LocalDate.now(),
-                number = 1,
-                subject = "Классный час",
-                type = LessonType.CLASS_HOUR,
-                state = LessonState.CHANGED,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
-                otUnits = listOf(
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    ),
-                    OneTimeUnit(
-                        group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
-                        auditory = "101"
-                    ),
-                )
-            ), viewType = ViewType.TEACHER, currentTime = currentTime
-        ) {}
-        Gap(12)
-
-        val lesson4 = LessonUI(
-            data = Lesson(
-                date = LocalDate.now(),
-                number = 1,
-                subject = "Доп.занятие",
-                type = LessonType.ADDITIONAL,
-                startTime = LocalTime.of(13, 10),
-                endTime = LocalTime.of(14, 40),
+                startTime = LocalTime.of(8, 30),
+                endTime = LocalTime.of(10, 0),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(
+                        group = Group("ПМИ-21"),
+                        teacher = Teacher("Петрова Е.В."),
+                        building = "Главный корпус",
+                        auditory = "301"
+                    )
+                )
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        // Break between lessons
+        BreakInfo(30) // 30 min break
+        Gap(12)
+
+        // Current lesson (in progress at 10:45)
+        val lesson2 = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 2,
+                subject = "Базы данных",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(10, 30),
+                endTime = LocalTime.of(12, 0),
+                state = LessonState.COMMON,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-22"),
+                        teacher = Teacher("Соколов Д.М."),
+                        building = "2",
+                        auditory = "215"
+                    ),
+                    OneTimeUnit(
                         group = Group("ИС-23"),
-                        teacher = Teacher("Савельев А.В."),
-                        building = "1",
+                        teacher = Teacher("Соколов Д.М."),
+                        building = "2",
+                        auditory = "215"
+                    )
+                )
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        BreakInfo(15) // 15 min break
+        Gap(12)
+
+        // Changed lesson (room changed)
+        val lesson3 = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 3,
+                subject = "Программирование на Kotlin",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(12, 15),
+                endTime = LocalTime.of(13, 45),
+                state = LessonState.CHANGED,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-22"),
+                        teacher = Teacher("Иванов А.А."),
+                        building = "3",
+                        auditory = "405 (бывш. 302)"
+                    )
+                )
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        // Lunch break
+        BreakInfo(60) // Lunch hour
+        Gap(12)
+
+        // Additional lesson
+        val lesson4 = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 4,
+                subject = "Факультатив: Машинное обучение",
+                type = LessonType.ADDITIONAL,
+                startTime = LocalTime.of(14, 45),
+                endTime = LocalTime.of(16, 15),
+                state = LessonState.COMMON,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-21, ИС-22"),
+                        teacher = Teacher("Смирнов П.Р."),
+                        building = "Лабораторный корпус",
                         auditory = "101"
                     )
                 )
-            ), viewType = ViewType.STUDENT, currentTime = currentTime
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
         ) {}
+        Gap(12)
 
+        // Cancelled lesson (REMOVED state)
+        val lesson5 = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 5,
+                subject = "Философия",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(16, 30),
+                endTime = LocalTime.of(18, 0),
+                state = LessonState.REMOVED,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-22"),
+                        teacher = Teacher("Козлова М.И."),
+                        building = "1",
+                        auditory = "202"
+                    )
+                )
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        // Teacher view example with multiple groups
+        val teacherView = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 1,
+                subject = "Физика",
+                type = LessonType.COMMON,
+                startTime = LocalTime.of(8, 30),
+                endTime = LocalTime.of(10, 0),
+                state = LessonState.COMMON,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("Физ-21"),
+                        teacher = Teacher("Николаев В.П."),
+                        building = "Главный корпус",
+                        auditory = "115"
+                    ),
+                    OneTimeUnit(
+                        group = Group("Физ-22"),
+                        teacher = Teacher("Николаев В.П."),
+                        building = "Главный корпус",
+                        auditory = "115"
+                    ),
+                    OneTimeUnit(
+                        group = Group("Физ-23"),
+                        teacher = Teacher("Николаев В.П."),
+                        building = "Главный корпус",
+                        auditory = "115"
+                    )
+                )
+            ),
+            viewType = ViewType.TEACHER,
+            currentTime = currentTime
+        ) {}
+        Gap(12)
+
+        // Class hour
+        val classHour = LessonUI(
+            data = Lesson(
+                date = LocalDate.now(),
+                number = 2,
+                subject = "Классный час",
+                type = LessonType.CLASS_HOUR,
+                startTime = LocalTime.of(10, 30),
+                endTime = LocalTime.of(11, 15),
+                state = LessonState.COMMON,
+                otUnits = listOf(
+                    OneTimeUnit(
+                        group = Group("ИС-22"),
+                        teacher = Teacher("Куратор: Соколов Д.М."),
+                        building = "1",
+                        auditory = "актовый зал"
+                    )
+                )
+            ),
+            viewType = ViewType.STUDENT,
+            currentTime = currentTime
+        ) {}
         Gap(12)
     }
 }

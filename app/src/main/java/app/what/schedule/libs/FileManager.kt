@@ -40,7 +40,10 @@ class FileManager(private val context: Context) {
         return try {
             val file = getFile(type, fileName)
             file.parentFile?.mkdirs()
-            Auditor.debug(buildTag(LogScope.FILE, LogCat.DB), "Открытие потока записи: $fileName, тип: $type")
+            Auditor.debug(
+                buildTag(LogScope.FILE, LogCat.DB),
+                "Открытие потока записи: $fileName, тип: $type"
+            )
             file.outputStream()
         } catch (e: Exception) {
             Auditor.err(fileTag, "Ошибка открытия потока записи: $fileName", e)

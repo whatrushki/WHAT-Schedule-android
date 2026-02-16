@@ -2,12 +2,7 @@ package app.what.schedule.data.remote.providers
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
@@ -28,8 +23,12 @@ import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.api.models.OneTimeUnit
 import app.what.schedule.data.remote.api.models.Teacher
 import app.what.schedule.data.remote.utils.LocalDateTimeSerializer
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -58,6 +57,7 @@ class DGTU(
     private val scope: CoroutineScope
 ) : Institution {
     private val crashlytics = FirebaseCrashlytics.getInstance()
+
     companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://edu.donstu.ru/api"
         private const val NEWS_BASE_URL = "https://news.donstu.ru"
@@ -83,7 +83,7 @@ class DGTU(
         Auditor.debug(scheduleTag, "Запрос расписания группы: $group")
         crashlytics.setCustomKey("schedule_group", group)
         crashlytics.setCustomKey("institution", "dgtu")
-        
+
         val response = client
             .get(
                 "$SCHEDULE_BASE_URL/Rasp?idGroup=$group&sdate=${
@@ -91,9 +91,12 @@ class DGTU(
                 }"
             )
             .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
-        
+
         val schedules = response.data.rasp.toDaySchedules()
-        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        Auditor.debug(
+            scheduleTag,
+            "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}"
+        )
         return schedules
     }
 
@@ -106,7 +109,7 @@ class DGTU(
         Auditor.debug(scheduleTag, "Запрос расписания преподавателя: $teacher")
         crashlytics.setCustomKey("schedule_teacher", teacher)
         crashlytics.setCustomKey("institution", "dgtu")
-        
+
         val response = client
             .get(
                 "$SCHEDULE_BASE_URL/Rasp?idTeacher=$teacher&sdate=${
@@ -114,25 +117,28 @@ class DGTU(
                 }"
             )
             .body<ApiResponse<DGTUApi.Schedule.Responses.GetSchedule>>()
-        
+
         val schedules = response.data.rasp.toDaySchedules()
-        Auditor.debug(scheduleTag, "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}")
+        Auditor.debug(
+            scheduleTag,
+            "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}"
+        )
         return schedules
     }
 
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
         Auditor.debug(netTag, "Загрузка списка групп")
-        
+
         val year = listYears.await().last()
         Auditor.debug(netTag, "Используемый год: $year")
-        
+
         val groups = client
             .get("$SCHEDULE_BASE_URL/raspGrouplist?year=$year")
             .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUGroup>>>()
             .data.map { Group(it.name, it.id.toString(), it.kurs) }
             .sortedBy { it.name }
-        
+
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
@@ -140,22 +146,22 @@ class DGTU(
     override suspend fun getTeachers(): List<Teacher> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
         Auditor.debug(netTag, "Загрузка списка преподавателей")
-        
+
         val year = listYears.await().last()
         Auditor.debug(netTag, "Используемый год: $year")
-        
+
         val teachers = client
             .get("$SCHEDULE_BASE_URL/raspTeacherlist?year=$year")
             .body<ApiResponse<List<DGTUApi.Schedule.Responses.DGTUTeacher>>>()
             .data.map {
                 Teacher(it.name.split(" ").let {
-                    it[0] + it.mapIndexedNotNull { index, s ->
+                    it[0] + " " + it.mapIndexedNotNull { index, s ->
                         if (index in 1..2 && s.isNotEmpty()) "${s[0]}." else null
                     }.joinToString("")
                 }, it.id.toString())
             }
             .sortedBy { it.name }
-        
+
         Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
         return teachers
     }
@@ -192,7 +198,7 @@ class DGTU(
     override suspend fun getNewDetail(id: String): NewItem {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
         Auditor.debug(netTag, "Загрузка деталей новости: $id")
-        
+
         val url = "$NEWS_BASE_URL/news/?PAGEN_2=$id"
         val response = client.get("$NEWS_BASE_URL/news/$id").bodyAsText()
         val document = Ksoup.parse(response)
@@ -275,16 +281,24 @@ class DGTU(
 
 
     private fun List<DGTUApi.Schedule.Responses.DGTULesson>.toDaySchedules() =
-        groupBy { it.date.toLocalDate() }.map { (day, lessons) ->
-            DaySchedule(day, LessonsScheduleType.COMMON, lessons.map { it.toLesson(day) })
+        map { it.toLesson(it.date.toLocalDate()) }.groupBy { it.date }.map { (day, lessons) ->
+            DaySchedule(
+                day, LessonsScheduleType.COMMON,
+                lessons.groupBy { it.number }.map { (key, less) ->
+                    less[0] + less.slice(1 until less.size)
+                }
+            )
         }.takeIf(List<DaySchedule>::isNotEmpty)
             ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
             ?: ScheduleResponse.Empty
 
     private fun DGTUApi.Schedule.Responses.DGTULesson.toLesson(date: LocalDate): Lesson {
         val rawData = this.auditory.split("-")
-        val building = rawData[0]
-        val auditory = rawData[1]
+        val (building, auditory) = try {
+            rawData[0] to rawData[1]
+        } catch (_: Exception) {
+            "-" to rawData.joinToString("")
+        }
 
         return Lesson(
             date = date,
@@ -292,17 +306,17 @@ class DGTU(
             startTime = this.startTime.toLocalTime(),
             endTime = endTime.toLocalTime(),
             subject = subject,
-            type = LessonType.COMMON,
-            state = if (replacement) LessonState.CHANGED
+            type = if (this.number == 0) LessonType.OBLIGATION else LessonType.COMMON,
+            state = if (replacement == true) LessonState.CHANGED
             else LessonState.COMMON,
-            otUnits = listOf(
+            otUnits = group.split(",").map {
                 OneTimeUnit(
-                    group = Group(group, codeGroup.toString()),
+                    group = Group(it.trim(), codeGroup.toString()),
                     teacher = Teacher(teacher, codeTeacher.toString()),
                     building = building,
                     auditory = auditory
                 )
-            )
+            }
         )
     }
 }
@@ -370,13 +384,13 @@ private object DGTUApi {
                 @SerialName("группа") val group: String,
                 @SerialName("custom1") val custom1: String,
                 @SerialName("часы") val hours: String,
-                @SerialName("неделяНачала") val weekOfStart: Int,
-                @SerialName("неделяОкончания") val weekOfEnd: Int,
-                @SerialName("замена") val replacement: Boolean,
-                @SerialName("кодПреподавателя") val codeTeacher: Int,
-                @SerialName("кодГруппы") val codeGroup: Int,
+                @SerialName("неделяНачала") val weekOfStart: Int?,
+                @SerialName("неделяОкончания") val weekOfEnd: Int?,
+                @SerialName("замена") val replacement: Boolean?,
+                @SerialName("кодПреподавателя") val codeTeacher: Int?,
+                @SerialName("кодГруппы") val codeGroup: Int?,
                 @SerialName("фиоПреподавателя") val teacherName: String,
-                @SerialName("кодПользователя") val codeUser: Int,
+                @SerialName("кодПользователя") val codeUser: Int?,
                 @SerialName("элементЦиклРасписания") val cycleElement: Boolean,
                 @SerialName("элементГрафика") val graphElement: Boolean,
                 @SerialName("тема") val theme: String?,

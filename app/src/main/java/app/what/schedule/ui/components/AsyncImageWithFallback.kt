@@ -37,11 +37,15 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.applyIf
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useState
 import app.what.schedule.utils.DownloadUtils
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
@@ -83,7 +87,14 @@ fun AsyncImageWithFallback(
             }
 
             else -> {
-                // Можно добавить placeholder ошибки, например иконку
+                (state as? AsyncImagePainter.State.Error)?.let {
+                    Auditor.err(
+                        buildTag(LogScope.UI, LogCat.NET, "img"),
+                        "Image loading error",
+                        it.result.throwable
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Build, null, tint = colorScheme.primary)
                 }
