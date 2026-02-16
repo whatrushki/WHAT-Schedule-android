@@ -24,6 +24,7 @@ class GoogleDriveParser(
     private val client: HttpClient
 ) {
     private val crashlytics = FirebaseCrashlytics.getInstance()
+
     companion object {
         private val googleDriveMonths =
             listOf("ян", "фе", "мар", "ап", "май", "июн", "июл", "ав", "се", "ок", "но", "де")
@@ -50,7 +51,7 @@ class GoogleDriveParser(
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "gdrive")
         Auditor.debug(netTag, "Загрузка содержимого папки Google Drive: $folderId")
         crashlytics.setCustomKey("gdrive_folder_id", folderId)
-        
+
         var items: List<Item> = emptyList()
         retry(5, 200) { attempt ->
             Auditor.debug(netTag, "Попытка $attempt загрузки содержимого папки")

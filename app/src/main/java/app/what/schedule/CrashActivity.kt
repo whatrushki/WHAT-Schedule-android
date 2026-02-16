@@ -21,14 +21,14 @@ class CrashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        Auditor.critic("app.crash", intent.getStringExtra("CRASH_REPORT") ?: "")
+
         enableEdgeToEdge()
         setContent {
             // НЕ ПЕРЕМЕЩАТЬ!!
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.setNavigationBarContrastEnforced(false)
             }
-
-
 
             AppTheme(koinInject<AppValues>()) {
                 CrashScreen(

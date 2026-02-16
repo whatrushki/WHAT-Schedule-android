@@ -33,7 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.data.RemoteState
-import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useState
@@ -58,11 +57,9 @@ fun NewsView(
     var selectedNewId by useState<String?>(null)
     val lazyListState = rememberLazyListState()
 
-
     LaunchedEffect(lazyListState.canScrollForward) {
-        if (!lazyListState.canScrollForward && state.newsState != RemoteState.Loading) listener(
-            NewsEvent.OnListEndingScrolled
-        )
+        if (!lazyListState.canScrollForward && state.newsState != RemoteState.Loading)
+            listener(NewsEvent.OnListEndingScrolled)
     }
 
     LazyColumn(
@@ -98,7 +95,7 @@ fun NewsView(
                 )
             }
 
-            RemoteState.Success -> items(state.news, key = { it.id }) {
+            RemoteState.Success, RemoteState.Loading -> items(state.news, key = { it.id }) {
                 NewListItemView(Modifier.animateItem(), selectedNewId == it.id, it, {
                     selectedNewId = if (selectedNewId != it.id) it.id else null
                 }) {
@@ -107,7 +104,7 @@ fun NewsView(
                 }
             }
 
-            else -> {}
+            else -> Unit
         }
     }
 }

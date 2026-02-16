@@ -81,14 +81,15 @@ import io.ktor.utils.io.readRemaining
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.io.readString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import kotlin.coroutines.coroutineContext
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -203,7 +204,7 @@ object NetworkMonitor {
         if (_requests.size > 1000) _requests.removeAt(_requests.lastIndex)
     }
 
-    fun updateRequest(id: UUID, update: (NetworkRequest) -> NetworkRequest) {
+    suspend fun updateRequest(id: UUID, update: suspend (NetworkRequest) -> NetworkRequest) {
         val index = _requests.indexOfFirst { it.id == id }
         if (index != -1) {
             _requests[index] = update(_requests[index])
@@ -223,11 +224,10 @@ object NetworkMonitor {
     }
 }
 
-
+private val json = Json { prettyPrint = true }
 val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
     val callIdKey = AttributeKey<UUID>("CallId")
 
-    // 1. Старт запроса
     on(SendingRequest) { request, content ->
         val callId = UUID.randomUUID()
         request.attributes.put(callIdKey, callId)
@@ -247,14 +247,11 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
         NetworkMonitor.trackRequest(netRequest)
     }
 
-    // 2. Ловим Ошибки подключения (No Internet, Timeout)
-    // Внедряемся в pipeline, чтобы поймать exception
     client.sendPipeline.intercept(HttpSendPipeline.Engine) {
         val callId = context.attributes.getOrNull(callIdKey) ?: return@intercept
         try {
             proceed()
         } catch (e: Exception) {
-            // Если упало здесь — значит сети нет или таймаут
             NetworkMonitor.updateRequest(callId) {
                 it.copy(
                     error = "${e::class.simpleName}: ${e.message}",
@@ -265,7 +262,6 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
         }
     }
 
-    // 3. Успешный (или неуспешный HTTP) ответ
     onResponse { response ->
         val callId = response.call.attributes.getOrNull(callIdKey) ?: return@onResponse
         val responseTime = System.currentTimeMillis()
@@ -280,12 +276,24 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
         }
 
         try {
-            val bodyText = response.bodyAsText()
+
             NetworkMonitor.updateRequest(callId) {
+                val isImage = it.responseHeaders["Content-Type"]?.contains("image") ?: false
+
+                val (text, size) = if (!isImage) {
+                    val body = response.bodyAsText()
+                    try {
+                        json.encodeToString(json.decodeFromString<JsonElement>(body))
+
+                    } catch (_: Exception) {
+                        body
+                    }.let { it to it.length.toLong() }
+                } else "image" to (it.responseHeaders["Content-Length"]?.toLong() ?: 0L)
+
                 it.copy(
                     endTime = System.currentTimeMillis(),
-                    responseBody = bodyText,
-                    responseSize = bodyText.length.toLong()
+                    responseBody = if (isImage) "image" else text,
+                    responseSize = size
                 )
             }
         } catch (e: Exception) {
@@ -305,7 +313,7 @@ suspend fun OutgoingContent.decodeContent(): String {
 
         is OutgoingContent.WriteChannelContent -> {
             val channel = ByteChannel(true)
-            GlobalScope.launch(coroutineContext + CoroutineName("decodeContent")) {
+            GlobalScope.launch(currentCoroutineContext() + CoroutineName("decodeContent")) {
                 writeTo(channel)
                 channel.close()
             }
@@ -321,10 +329,8 @@ class NetworkFilter : Filter<NetworkRequest> {
     private val methodFilters = mutableListOf<String>()
     private val statusFilters = mutableListOf<Int>()
     private val textFilters =
-        mutableListOf<String>() // Переименовал urlFilters в textFilters для ясности
+        mutableListOf<String>()
 
-    // true = is:success (200..299)
-    // false = is:error (400+, 500+, Network Error)
     private var isSuccessFilter: Boolean? = null
 
     override fun clearFilters() {

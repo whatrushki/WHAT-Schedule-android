@@ -3,7 +3,6 @@ package app.what.schedule.features.newsDetail.domain
 import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
-import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.models.NewListItem

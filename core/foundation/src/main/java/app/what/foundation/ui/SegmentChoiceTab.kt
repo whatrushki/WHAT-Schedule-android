@@ -61,15 +61,17 @@ fun RowScope.SegmentTab(
 }
 
 object SegmentChoiceTab {
-    fun itemShape(index: Int, count: Int) = when (index) {
-        0 -> RoundedCornerShape(
+    fun itemShape(index: Int, count: Int) = when  {
+        count == 1 -> RoundedCornerShape(24.dp)
+
+        index == 0 -> RoundedCornerShape(
             topStart = 24.dp,
             topEnd = 8.dp,
             bottomStart = 24.dp,
             bottomEnd = 8.dp
         )
 
-        count - 1 -> RoundedCornerShape(
+        index == count - 1 -> RoundedCornerShape(
             topStart = 8.dp,
             topEnd = 24.dp,
             bottomStart = 8.dp,
