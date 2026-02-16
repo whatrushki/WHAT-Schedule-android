@@ -4,10 +4,6 @@ import androidx.lifecycle.viewModelScope
 import app.what.foundation.core.UIController
 import app.what.foundation.data.RemoteState
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.launchIO
 import app.what.foundation.utils.launchSafe
 import app.what.schedule.data.local.settings.AppValues
@@ -18,6 +14,10 @@ import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.features.schedule.domain.models.ScheduleAction
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.features.schedule.domain.models.ScheduleState
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 
@@ -72,7 +72,7 @@ class ScheduleController(
     private fun syncSchedule(search: ScheduleSearch?, useCache: Boolean = true) {
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
         Auditor.debug(scheduleTag, "Синхронизация расписания: $search, кеш: $useCache")
-        
+
         viewModelScope.launchSafe(
             debug = debugMode,
             onFailure = {
@@ -82,7 +82,9 @@ class ScheduleController(
                 updateState { copy(scheduleState = RemoteState.Error(it)) }
             }
         ) {
-            updateSchedule(search, useCache)
+            val searchId = apiRepository.findSearchId(search)
+            if (search != null && searchId != null)
+                updateSchedule(search.copy(id = searchId), useCache)
         }
     }
 
@@ -100,14 +102,19 @@ class ScheduleController(
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
         settings.lastSearch.set(search)
         val data = apiRepository.getSchedule(search, useCache, viewState.schedules.isEmpty())
-        
+
         when (data) {
             is ScheduleResponse.Available -> {
-                Auditor.debug(scheduleTag, "Расписание успешно получено, дней: ${data.schedules.size}")
+                Auditor.debug(
+                    scheduleTag,
+                    "Расписание успешно получено, дней: ${data.schedules.size}"
+                )
             }
+
             ScheduleResponse.Empty -> {
                 Auditor.debug(scheduleTag, "Расписание пустое")
             }
+
             ScheduleResponse.UpToDate -> {
                 Auditor.debug(scheduleTag, "Расписание актуально")
             }
