@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -26,6 +27,9 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.bclick
 import app.what.schedule.data.remote.api.models.LessonsScheduleType
 import app.what.schedule.data.remote.api.models.ScheduleSearch
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.Group
+import app.what.schedule.ui.theme.icons.filled.Person
 
 @Composable
 fun SearchButton(
@@ -40,12 +44,18 @@ fun SearchButton(
         .bclick(block = onClick)
 ) {
     Row(
-        Modifier
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
             .padding(16.dp, 14.dp)
             .fillMaxWidth()
     ) {
         Icon(
-            Icons.Default.Search,
+            when (search) {
+                is ScheduleSearch.Group -> WHATIcons.Group
+                is ScheduleSearch.Teacher -> WHATIcons.Person
+                null -> Icons.Default.Search
+            },
+            modifier = Modifier.size(20.dp),
             tint = colorScheme.onPrimaryContainer,
             contentDescription = "search"
         )
@@ -58,14 +68,11 @@ fun SearchButton(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = when (search) {
-                    is ScheduleSearch.Group -> "Группа: " + search.name
-                    is ScheduleSearch.Teacher -> "Преп.: " + search.name
-                    null -> "Поиск..."
-                },
+                text = search?.name ?: "Поиск...",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = colorScheme.secondary
+                color = colorScheme.secondary,
+                modifier = Modifier.weight(1f)
             )
 
 
@@ -96,7 +103,7 @@ fun SearchButtonPreview() = Column {
     Gap(8)
 
     SearchButton(
-        ScheduleSearch.Teacher("Иванов И. И."),
+        null,
         LessonsScheduleType.COMMON,
         onClick = {}
     )

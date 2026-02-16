@@ -2,12 +2,7 @@ package app.what.schedule.data.remote.providers
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.util.fastJoinToString
 import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
@@ -35,14 +30,16 @@ import app.what.schedule.libs.FileManager
 import app.what.schedule.libs.GoogleDriveParser
 import app.what.schedule.libs.files
 import app.what.schedule.libs.folders
+import app.what.schedule.utils.LogCat
+import app.what.schedule.utils.LogScope
+import app.what.schedule.utils.buildTag
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
-import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.readRawBytes
-import io.ktor.http.parameters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
@@ -76,6 +73,7 @@ class RKSI(
     private val scope: CoroutineScope
 ) : Institution {
     private val crashlytics = FirebaseCrashlytics.getInstance()
+
     companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.rksi.ru"
         override fun create() = RKSI(get(), get(), get(), get())
@@ -88,12 +86,11 @@ class RKSI(
     override suspend fun getTeachers(): List<Teacher> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка преподавателей")
-        
-        val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
-        val document = Ksoup.parse(response)
-        val teachers = document.getElementById("teacher")!!.getElementsByTag("option")
-            .map { Teacher(it.text(), it.attr("value")) }
-        
+
+        val response = client.get("$BASE_URL/mobileschedule/teachers").bodyAsText()
+        val teachers = Ksoup.parse(response).select("a[href*=\"teachers\"]")
+            .map { Teacher(it.text(), it.attr("href").split("/").last()) }
+
         Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
         return teachers
     }
@@ -101,12 +98,11 @@ class RKSI(
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка групп")
-        
-        val response = client.get("$BASE_URL/mobile_schedule").bodyAsText()
-        val document = Ksoup.parse(response)
-        val groups = document.getElementById("group")!!.getElementsByTag("option")
-            .map { Group(it.text(), it.attr("value")) }
-        
+
+        val response = client.get("$BASE_URL/mobileschedule/groups").bodyAsText()
+        val groups = Ksoup.parse(response).select("a[href*=\"groups\"]")
+            .map { Group(it.text(), it.attr("href").split("/").last()) }
+
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
@@ -208,8 +204,15 @@ class RKSI(
                     .isNotBlank() -> NewContent.Item.Text(AnnotatedString.fromHtml(it.html()))
                     .addTo(list)
 
-                it.`is`(".img50") -> it.getElementsByTag("img").forEach {
-                    NewContent.Item.Image(it.attr("src")).addTo(list)
+                it.`is`(".img50") -> it.getElementsByTag("p").forEach {
+                    val style = it.attr("style")
+                    if ("background-image" in style) {
+                        NewContent.Item.Image(style.substringAfter("'").substringBeforeLast("'"))
+                            .addTo(list)
+                    } else {
+                        NewContent.Item.Image(it.getElementsByTag("img")[0].attr("src")).addTo(list)
+                    }
+
                 }
 
                 it.`is`("ul") -> NewContent.Item.UnsortedList(
@@ -220,6 +223,10 @@ class RKSI(
                 it.`is`("ol") -> NewContent.Item.SortedList(
                     it.getElementsByTag("li")
                         .map { it.text().capitalizeFirstChar(UiLocale.current) }).addTo(list)
+
+                it.`is`(".video-container") ->
+                    NewContent.Item.Video.VK(it.getElementsByTag("iframe").attr("src"))
+                        .addTo(list)
             }
         }
         val images = mutableListOf<String>()
@@ -247,17 +254,23 @@ class RKSI(
         showReplacements: Boolean
     ): ScheduleResponse {
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
-        
-        Auditor.debug(scheduleTag, "Запрос расписания для ${if (parseMode == ParseMode.GROUP) "группы" else "преподавателя"}: $value")
+
+        Auditor.debug(
+            scheduleTag,
+            "Запрос расписания для ${if (parseMode == ParseMode.GROUP) "группы" else "преподавателя"}: $value"
+        )
         crashlytics.setCustomKey("schedule_request_type", parseMode.name)
         crashlytics.setCustomKey("schedule_request_value", value)
         crashlytics.setCustomKey("institution", "rksi")
-        
+
         val files1 = googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await())
         val files2 = googleDriveApi.getFolderContent(files1.folders().first().id)
         val files = (files1 + files2).files()
 
-        Auditor.debug(scheduleTag, "Требуются данные: $requiresData, последнее изменение: $lastModified")
+        Auditor.debug(
+            scheduleTag,
+            "Требуются данные: $requiresData, последнее изменение: $lastModified"
+        )
 
         if (!requiresData && files.any { lastModified != null && it.lastModified > lastModified }
                 .not()) {
@@ -265,23 +278,15 @@ class RKSI(
             return ScheduleResponse.UpToDate
         }
 
-        val response = client.submitForm(
-            url = "$BASE_URL/mobile_schedule",
-            formParameters = parameters {
-                if (parseMode == ParseMode.GROUP) {
-                    append("group", value)
-                    append("stt", "Показать!")
-                } else {
-                    append("teacher", value)
-                    append("stp", "Показать!")
-                }
-            }
+        val response = client.get(
+            "$BASE_URL/mobileschedule/" +
+                    (if (parseMode == ParseMode.GROUP) "groups/" else "teachers/") +
+                    value
         ).bodyAsText()
 
-        val document = Ksoup.parse(response)
         var dataRaw: List<String>
-        val daySchedulesRaw = document.getElementsByClass("schedule_item")
-        
+        val daySchedulesRaw = Ksoup.parse(response).getElementsByClass("schedule_item")
+
         Auditor.debug(scheduleTag, "Найдено дней в расписании: ${daySchedulesRaw.size}")
 
         val replacements = CoroutineScope(IO).async {
@@ -293,21 +298,21 @@ class RKSI(
             )
         }
 
-
         val daySchedules = daySchedulesRaw.mapIndexed { index, it ->
-            dataRaw = it.getElementsByTag("b").text().split(" ")
+            dataRaw =
+                it.getElementsByClass("schedule_title")[0].text().split(", ").first().split(" ")
             val date = LocalDate.now()
                 .withDayOfMonth(dataRaw.first().toInt())
-                .withMonth(parseMonth(dataRaw[1].substring(0, dataRaw[1].length - 1)))
+                .withMonth(parseMonth(dataRaw.last()))
 
             var lessons: List<Lesson>
             lessons = it.getElementsByTag("p").mapNotNull { lessonRaw ->
                 if (lessonRaw.html().contains("href")) return@mapNotNull null
                 val content = lessonRaw.html().split("<br>")
 
-                dataRaw = content.first().split(" — ")
-                val startDate = parseTime(dataRaw.first())
-                val endDate = parseTime(dataRaw.last())
+                dataRaw = content.first().split("—")
+                val startTime = parseTime(dataRaw.first().trim())
+                val endTime = parseTime(dataRaw.last().trim())
                 val subject = content[1].substring(3, content[1].length - 4)
 
                 dataRaw = content.last().split(", ")
@@ -338,8 +343,8 @@ class RKSI(
                     date = date,
                     number = 0,
                     otUnits = otUnits,
-                    startTime = startDate,
-                    endTime = endDate,
+                    startTime = startTime,
+                    endTime = endTime,
                     subject = subject,
                     type = lessonType
                 )
@@ -405,12 +410,12 @@ class RKSI(
     private suspend fun getScheduleTabletGoogleDriveId(): String {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Получение ID папки с расписанием из Google Drive")
-        
+
         val response = client.get("https://www.rksi.ru/schedule").bodyAsText()
         val document = Ksoup.parse(response)
         val tabletUrl = document.getElementsMatchingText("Планшетка").last()!!.attr("href")
         val driveId = tabletUrl.split("/").last()
-        
+
         Auditor.debug(netTag, "ID папки Google Drive: $driveId")
         crashlytics.setCustomKey("gdrive_folder_id", driveId)
         return driveId
@@ -461,8 +466,10 @@ class RKSI(
 
         val tablet1Replacements = building1TabletsParsingProcess.awaitAll()
         val tablet2Replacements = building2TabletsParsingProcess.awaitAll()
-        val totalReplacements = tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull().flatten()
-        
+        val totalReplacements =
+            tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull()
+                .flatten()
+
         Auditor.debug(scheduleTag, "Всего найдено замен: ${totalReplacements.size}")
         return totalReplacements
     }
@@ -483,18 +490,21 @@ class RKSI(
                 lastModified != null && file.lastModified > lastModified,
                 file
             ) ?: return@async null
-        
+
         if (!tablet.exists() || !tablet.canRead()) {
             Auditor.warn(scheduleTag, "Файл планшетки недоступен: ${tablet.path}")
             return@async null
         }
-        
+
         val workbook1 = tablet.inputStream().use { inputStream ->
             WorkbookFactory.create(inputStream)
         }
-        
+
         val lessons = parseLessonsFromWorkbook(workbook1, columns, date, predicate)
-        Auditor.debug(scheduleTag, "Обработано замен из планшетки здания $building для $date: ${lessons.size}")
+        Auditor.debug(
+            scheduleTag,
+            "Обработано замен из планшетки здания $building для $date: ${lessons.size}"
+        )
         return@async lessons
     }
 
@@ -514,7 +524,7 @@ class RKSI(
 
         fun getCachedFile() = fileManager
             .getFile(FileManager.DirectoryType.CACHE, tabletName)
-            ?.takeIf { it.exists() }
+            .takeIf { it.exists() }
 
         suspend fun downloadAndGetCachedFile(): File? {
             val downloaded = findAndDownloadTabletFromGD(file, tabletName)
@@ -535,7 +545,7 @@ class RKSI(
         try {
             Auditor.debug(fileTag, "Загрузка планшетки из Google Drive: $fileName")
             crashlytics.setCustomKey("tablet_file_name", fileName)
-            
+
             val downloadedTablet = client.get(file.getDownloadLink()).readRawBytes()
             fileManager.writeBytes(
                 FileManager.DirectoryType.CACHE,
@@ -667,7 +677,10 @@ private fun List<Lesson>.withReplacements(
                 val lessonTime = schedule.firstOrNull { it.number == replacement.number }
                 if (lessonTime == null) {
                     val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE, "rksi")
-                    Auditor.warn(scheduleTag, "Не найдено время для замены номер ${replacement.number}")
+                    Auditor.warn(
+                        scheduleTag,
+                        "Не найдено время для замены номер ${replacement.number}"
+                    )
                 }
                 replacement.copy(
                     state = LessonState.ADDED,

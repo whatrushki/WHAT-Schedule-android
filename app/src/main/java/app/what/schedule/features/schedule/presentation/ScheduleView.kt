@@ -29,11 +29,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.what.foundation.data.RemoteState
 import app.what.foundation.ui.Gap
@@ -44,13 +47,16 @@ import app.what.foundation.ui.bclick
 import app.what.foundation.ui.capplyIf
 import app.what.foundation.ui.controllers.rememberSheetController
 import app.what.foundation.ui.useChange
+import app.what.foundation.ui.useSave
 import app.what.foundation.ui.useState
 import app.what.foundation.utils.freeze
 import app.what.schedule.data.remote.api.models.DaySchedule
+import app.what.schedule.data.remote.api.models.Lesson
 import app.what.schedule.data.remote.api.models.LessonsScheduleType
 import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.features.schedule.domain.models.ScheduleEvent
 import app.what.schedule.features.schedule.domain.models.ScheduleState
+import app.what.schedule.features.schedule.presentation.components.BreakInfo
 import app.what.schedule.features.schedule.presentation.components.LessonUI
 import app.what.schedule.features.schedule.presentation.components.ScheduleExportPane
 import app.what.schedule.features.schedule.presentation.components.ScheduleShimmer
@@ -58,11 +64,14 @@ import app.what.schedule.features.schedule.presentation.components.SearchButton
 import app.what.schedule.features.schedule.presentation.components.ViewType
 import app.what.schedule.ui.components.Fallback
 import app.what.schedule.ui.components.ScheduleSearchPane
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.Run
 import app.what.schedule.utils.Analytics
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.Locale
 
@@ -104,6 +113,7 @@ fun ScheduleView(
         val (scheduleType, setScheduleType) = useState<LessonsScheduleType?>(null)
         val currentDate = LocalDate.now().freeze()
         val currentTime = useChange(LocalTime.now(), 60) { LocalTime.now() }
+        var showBreaks by useSave(false)
         val scope = rememberCoroutineScope()
         val weeks = state.value.schedules.groupBy { it.date.getWeekNumber() }
         val daysPagerState = rememberPagerState { state.value.schedules.size }
@@ -114,7 +124,7 @@ fun ScheduleView(
 
             scope.launch {
                 weeks.values.forEachIndexed { index, it ->
-                    if (state.value.schedules[daysPagerState.currentPage] in it) {
+                    if (state.value.schedules.getOrNull(daysPagerState.currentPage) in it) {
                         weeksPagerState.animateScrollToPage(index)
                         return@forEachIndexed
                     }
@@ -147,19 +157,19 @@ fun ScheduleView(
             }
 
             AnimatedEnter(state.value.schedules.isNotEmpty()) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .aspectRatio(1f, true)
-                        .clip(CircleShape)
-                        .background(colorScheme.surfaceContainer)
-                        .bclick(state.value.schedules.isNotEmpty()) {
-                            Analytics.logShare("schedule", "")
-                            sheetController.open(content = scheduleExportSheet)
-                        }
+                StyledIconButton(
+                    WHATIcons.Run,
+                    active = if (showBreaks) ActiveState.ACTIVE else ActiveState.DISABLED
+                ) { showBreaks = !showBreaks }
+            }
+
+            AnimatedEnter(state.value.schedules.isNotEmpty()) {
+                StyledIconButton(
+                    Icons.Default.Share,
+                    state.value.schedules.isNotEmpty()
                 ) {
-                    Icons.Default.Share.Show(Modifier.size(24.dp), colorScheme.onSecondaryContainer)
+                    Analytics.logShare("schedule", "")
+                    sheetController.open(content = scheduleExportSheet)
                 }
             }
         }
@@ -193,6 +203,18 @@ fun ScheduleView(
 
                 Gap(8)
 
+                @Composable
+                fun Lesson.Show(date: LocalDate) = LessonUI(
+                    data = this,
+                    listener = listener,
+                    currentTime = if (date == currentDate)
+                        currentTime.value else null,
+                    viewType = when (state.value.selectedSearch) {
+                        is ScheduleSearch.Teacher -> ViewType.TEACHER
+                        else -> ViewType.STUDENT
+                    }
+                )
+
                 AnimatedEnter {
                     HorizontalPager(
                         state = daysPagerState,
@@ -200,24 +222,31 @@ fun ScheduleView(
                         key = { state.value.schedules[it].date.toString() },
                         modifier = Modifier.fillMaxHeight()
                     ) {
+                        val date = state.value.schedules[it].date
+
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (showBreaks) 4.dp else 12.dp),
                             modifier = Modifier.fillMaxHeight()
                         ) {
-                            state.value.schedules[it].lessons.forEach { lesson ->
-                                LessonUI(
-                                    data = lesson,
-                                    listener = listener,
-                                    currentTime = if (state.value.schedules[it].date == currentDate)
-                                        currentTime.value else null,
-                                    viewType = when (state.value.selectedSearch) {
-                                        is ScheduleSearch.Teacher -> ViewType.TEACHER
-                                        else -> ViewType.STUDENT
-                                    }
-                                )
-                            }
+                            state.value.schedules[it].lessons.zipWithNext()
+                                .forEach { (first, second) ->
+                                    first.Show(date)
 
-                            Gap(120)
+                                    AnimatedEnter(showBreaks) {
+                                        BreakInfo(
+                                            first.endTime.until(
+                                                second.startTime,
+                                                ChronoUnit.MINUTES
+                                            ).toInt(),
+                                            currentTime.value in first.startTime..second.startTime
+                                        )
+                                    }
+
+                                }
+
+                            state.value.schedules[it].lessons.last().Show(date)
+
+                            Gap(132)
                         }
                     }
                 }
@@ -225,6 +254,36 @@ fun ScheduleView(
 
             else -> Unit
         }
+    }
+}
+
+enum class ActiveState {
+    DISABLED, NEUTRAL, ACTIVE
+}
+
+@Composable
+fun StyledIconButton(
+    icon: ImageVector,
+    enabled: Boolean = true,
+    active: ActiveState = ActiveState.NEUTRAL,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f, true)
+            .clip(CircleShape)
+            .background(colorScheme.surfaceContainer)
+            .bclick(enabled, onClick)
+    ) {
+        icon.Show(
+            Modifier.size(24.dp), when (active) {
+                ActiveState.ACTIVE -> colorScheme.primary
+                ActiveState.NEUTRAL -> colorScheme.secondary
+                ActiveState.DISABLED -> colorScheme.secondary
+            }
+        )
     }
 }
 
