@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -43,7 +44,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +94,7 @@ fun NewsDetailView(
     val shimmer = rememberShimmer(state.newState == RemoteState.Loading)
     val description = state.newDetailInfo?.description?.takeIf { !it.isEmpty() }
         ?: state.newListInfo.description?.let { buildAnnotatedString { append(it) } }
+    var descriptionIsExpandable by useState(false)
 
     Gap(120)
     Box {
@@ -127,7 +128,12 @@ fun NewsDetailView(
                 ) {
                     state.newDetailInfo?.tags?.takeIf { it.isNotEmpty() }?.let {
                         it.forEach {
-                            FilterChip(true, {}, { Text(it.name) })
+                            FilterChip(
+                                true,
+                                {},
+                                { Text(it.name, overflow = TextOverflow.Ellipsis) },
+                                modifier = Modifier.widthIn(max = 180.dp)
+                            )
                         }
 
                         Gap(8)
@@ -143,7 +149,7 @@ fun NewsDetailView(
                             ),
                             color = colorScheme.secondary,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }
@@ -160,7 +166,6 @@ fun NewsDetailView(
 
                 if (description != null && state.newDetailInfo?.content?.isNotEmpty() == true) {
                     var descriptionIsExpanded by useState(false)
-                    val measurer = rememberTextMeasurer()
                     val style = TextStyle(
                         color = colorScheme.onSurfaceVariant,
                         fontSize = 16.sp,
@@ -172,12 +177,10 @@ fun NewsDetailView(
                         style = style,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = if (descriptionIsExpanded) Int.MAX_VALUE else 5,
-                        modifier = Modifier.bclick(
-                            measurer.measure(
-                                description,
-                                style = style
-                            ).lineCount > 4
-                        ) {
+                        onTextLayout = {
+                            if (it.hasVisualOverflow) descriptionIsExpandable = true
+                        },
+                        modifier = Modifier.bclick(descriptionIsExpandable) {
                             descriptionIsExpanded = !descriptionIsExpanded
                         }
                     )
@@ -547,6 +550,8 @@ fun NewContentPainter(content: List<NewContent>) {
                             }
                         }
                     }
+
+                    is NewContent.Item.Video.VK -> Unit
                 }
             }
         }
