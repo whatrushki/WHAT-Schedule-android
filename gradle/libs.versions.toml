@@ -37,7 +37,6 @@ materialVersion = "1.13.0"
 uiGeometry = "1.10.3"
 material3 = "1.4.0"
 workRuntimeKtx = "2.11.1"
-media3Exoplayer = "1.9.2"
 
 [libraries]
 androidx-glance = { module = "androidx.glance:glance", version.ref = "glanceAppwidget" }

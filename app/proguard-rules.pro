@@ -5,6 +5,14 @@
 -keep class schemas.microsoft.com.** { *; }
 -keep class com.microsoft.schemas.** { *; }
 
+
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.tukaani.xz.**
+-keep class com.github.luben.zstd.** { *; }
+-keep class org.tukaani.xz.** { *; }
+-keep class org.apache.commons.compress.** { *; }
+-dontwarn org.apache.commons.compress.**
+
 # Logging (Log4j)
 -keep class org.apache.logging.log4j.** { *; }
 
