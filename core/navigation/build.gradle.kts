@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 android {
     namespace = "app.what.navigation"
     compileSdk = 36
@@ -23,13 +27,6 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
     }

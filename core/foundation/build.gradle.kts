@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 android {
     namespace = "app.what.foundation"
     compileSdk = 36
@@ -21,20 +25,15 @@ android {
             isMinifyEnabled = false   // Отключить для отладки
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
 }
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.ktor)
     implementation(libs.materialKolor)
+
+    implementation(platform(libs.bom))
+    implementation(libs.appupdate)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
