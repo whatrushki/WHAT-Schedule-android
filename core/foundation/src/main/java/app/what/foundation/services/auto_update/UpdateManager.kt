@@ -2,6 +2,9 @@ package app.what.foundation.services.auto_update
 
 
 import android.content.Context
+import android.content.pm.InstallSourceInfo
+import android.os.Build
+import android.widget.Toast
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.launchIO
 import kotlinx.coroutines.CoroutineScope
@@ -9,10 +12,32 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.io.File
 
-fun Context.isInstalledFromRuStore() =
-    packageManager.getInstallerPackageName(packageName).also {
-        Auditor.debug("d", "installer: $it")
-    } == "ru.vk.store"
+fun getInstallSource(context: Context): InstallSource {
+    val pm = context.packageManager
+    val packageName = context.packageName
+
+    val source =  try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11+
+            val installSourceInfo: InstallSourceInfo = pm.getInstallSourceInfo(packageName)
+            installSourceInfo.installingPackageName
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstallerPackageName(packageName)
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    return when {
+        source?.contains("ru") == true || source?.contains("vk") == true -> InstallSource.RuStore
+        else -> InstallSource.APK
+    }
+}
+
+enum class InstallSource {
+    APK, RuStore
+}
+
 
 sealed interface UpdateResult {
     object NotAvailable : UpdateResult

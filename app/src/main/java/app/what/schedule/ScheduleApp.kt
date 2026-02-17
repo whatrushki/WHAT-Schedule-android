@@ -1,15 +1,17 @@
 package app.what.schedule
 
 import android.app.Application
+import android.widget.Toast
 import androidx.room.Room
 import app.what.foundation.services.AppLogger
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.services.auto_update.AppUpdateManager
 import app.what.foundation.services.auto_update.GitHubUpdateManager
 import app.what.foundation.services.auto_update.GitHubUpdateService
+import app.what.foundation.services.auto_update.InstallSource
 import app.what.foundation.services.auto_update.RuStoreUpdateManager
 import app.what.foundation.services.auto_update.UpdateConfig
-import app.what.foundation.services.auto_update.isInstalledFromRuStore
+import app.what.foundation.services.auto_update.getInstallSource
 import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
@@ -101,6 +103,13 @@ class ScheduleApp : Application() {
                 }
                 .build()
         }
+
+        val source = getInstallSource(this)
+
+        when (source) {
+            InstallSource.APK -> Auditor.debug("d", "Apk")
+            InstallSource.RuStore -> Auditor.debug("d", "RuStore")
+        }
     }
 }
 
@@ -120,8 +129,14 @@ val generalModule = module {
     single { GoogleDriveParser(get()) }
     single { FileManager(get()) }
     single<AppUpdateManager> {
-        when {
-            !androidContext().isInstalledFromRuStore() -> GitHubUpdateManager(
+
+        val context = androidContext()
+        val source = getInstallSource(context)
+
+        when (source) {
+
+            InstallSource.RuStore -> RuStoreUpdateManager(context, get())
+            InstallSource.APK -> GitHubUpdateManager(
                 GitHubUpdateService(get()),
                 androidContext(),
                 UpdateConfig(
@@ -131,8 +146,6 @@ val generalModule = module {
                 ),
                 get()
             )
-
-            else -> RuStoreUpdateManager(androidContext(), get())
         }
     }
 

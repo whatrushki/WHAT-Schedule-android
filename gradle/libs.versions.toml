@@ -1,6 +1,6 @@
 [versions]
 agp = "8.12.3"
-bom = "2025.08.01"
+rustoreBom = "2025.08.01"
 firebaseBom = "34.9.0"
 glanceAppwidget = "1.1.1"
 kotlin = "2.3.10"
@@ -44,7 +44,7 @@ androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", versi
 androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glanceAppwidget" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 appupdate = { module = "ru.rustore.sdk:appupdate" }
-bom = { module = "ru.rustore.sdk:bom", version.ref = "bom" }
+bom = { module = "ru.rustore.sdk:bom", version.ref = "rustoreBom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }

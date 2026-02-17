@@ -31,7 +31,7 @@ class RuStoreUpdateManager(
         RuStoreAppUpdateManagerFactory.create(context)
     }
 
-    private var _rawUpdateInfo: AppUpdateInfo? = null   // храним оригинал, т.к. он одноразовый
+    private var _rawUpdateInfo: AppUpdateInfo? = null
 
     override var updateInfo by mutableStateOf<UpdateInfo?>(null)
         private set
@@ -42,57 +42,98 @@ class RuStoreUpdateManager(
     private var installStateListener: InstallStateUpdateListener? = null
 
     init {
+        Auditor.debug("RuStoreUpdate", "Инициализация менеджера → регистрируем listener и запускаем проверку обновлений")
         registerListener()
         scope.launchIO {
-            Auditor.debug("d", "start check rustore")
+            Auditor.debug("RuStoreUpdate", "Запуск асинхронной проверки обновлений (IO)")
             checkForUpdates()
         }
     }
 
     override suspend fun checkForUpdates(): UpdateResult = withContext(Dispatchers.IO) {
+        Auditor.info("RuStoreUpdate", "→ checkForUpdates() начата")
+
         suspendCancellableCoroutine { cont ->
             updateManager.getAppUpdateInfo()
                 .addOnSuccessListener { appUpdateInfo ->
-                    _rawUpdateInfo = appUpdateInfo  // сохраняем свежий объект
+                    _rawUpdateInfo = appUpdateInfo
 
-                    if (appUpdateInfo.updateAvailability == UpdateAvailability.UPDATE_AVAILABLE) {
+                    val availability = appUpdateInfo.updateAvailability
+                    val version = appUpdateInfo.availableVersionName
+                    val whatsNew = appUpdateInfo.whatsNew.take(80)
+
+                    Auditor.debug(
+                        "RuStoreUpdate",
+                        "getAppUpdateInfo → успех | " +
+                                "availability = $availability | " +
+                                "version = $version | " +
+                                "whatsNew = \"$whatsNew\" | " +
+                                "bytesDownload = ${appUpdateInfo.fileSize}"
+                    )
+
+                    if (availability == UpdateAvailability.UPDATE_AVAILABLE) {
                         updateInfo = UpdateInfo(
-                            version = appUpdateInfo.availableVersionName,
+                            version = version,
                             releaseNotes = appUpdateInfo.whatsNew
-                            // fileSize и т.д. — в RuStore обычно недоступны
                         )
                         _downloadState.value = DownloadState.Idle
+
+                        Auditor.info("RuStoreUpdate", "Обновление доступно → UpdateInfo установлен, состояние → Idle")
                         cont.resume(UpdateResult.Available(updateInfo!!))
                     } else {
+                        Auditor.info("RuStoreUpdate", "Обновление НЕ доступно (availability = $availability)")
                         cont.resume(UpdateResult.UpToDate)
                     }
                 }
                 .addOnFailureListener { e ->
-                    Auditor.err("d","RuStore check failed", e)
-                    cont.resume(UpdateResult.Error(e.message ?: "RuStore error"))
+                    Auditor.err("RuStoreUpdate", "getAppUpdateInfo → провал", e)
+                    cont.resume(UpdateResult.Error(e.message ?: "RuStore неизвестная ошибка"))
                 }
+        }.also {
+            Auditor.debug("RuStoreUpdate", "← checkForUpdates() завершена → $it")
         }
     }
 
     override fun handleAction() {
-        val rawInfo = _rawUpdateInfo ?: return
+        val raw = _rawUpdateInfo
+        if (raw == null) {
+            Auditor.warn("RuStoreUpdate", "handleAction() → _rawUpdateInfo == null, ничего не делаем")
+            return
+        }
+
+        Auditor.info(
+            "RuStoreUpdate",
+            "handleAction() → текущее состояние = ${downloadState.javaClass.simpleName}, " +
+                    "availability = ${raw.updateAvailability}"
+        )
+
         when (downloadState) {
             is DownloadState.Idle,
-            is DownloadState.Error -> startFlexibleUpdate(rawInfo)
-            is DownloadState.Completed -> {
-                // В RuStore после DOWNLOADED нужно явно вызвать completeUpdate()
-                updateManager.completeUpdate(AppUpdateOptions.Builder()
-                    .appUpdateType(AppUpdateType.FLEXIBLE)
-                    .build())
+            is DownloadState.Error -> {
+                Auditor.debug("RuStoreUpdate", "→ запускаем flexible update (Idle / Error)")
+                startFlexibleUpdate(raw)
             }
-            else -> { /* уже в процессе */ }
+
+            is DownloadState.Completed -> {
+                Auditor.info("RuStoreUpdate", "Состояние COMPLETED → вызываем completeUpdate(FLEXIBLE)")
+                updateManager.completeUpdate(
+                    AppUpdateOptions.Builder()
+                        .appUpdateType(AppUpdateType.FLEXIBLE)
+                        .build()
+                )
+                // После вызова completeUpdate приложение обычно перезапустится автоматически
+            }
+
+            else -> {
+                Auditor.debug("RuStoreUpdate", "handleAction → процесс уже идёт (${downloadState.javaClass.simpleName}), игнорируем")
+            }
         }
     }
 
     private fun startFlexibleUpdate(appUpdateInfo: AppUpdateInfo) {
         if (context !is Activity) {
-            Auditor.err("d", "RuStore update requires Activity context")
-            _downloadState.value = DownloadState.Error("Требуется Activity")
+            Auditor.err("RuStoreUpdate", "startFlexibleUpdate → context не Activity → невозможно начать обновление")
+            _downloadState.value = DownloadState.Error("Требуется контекст Activity")
             return
         }
 
@@ -100,50 +141,88 @@ class RuStoreUpdateManager(
             .appUpdateType(AppUpdateType.FLEXIBLE)
             .build()
 
+        Auditor.info(
+            "RuStoreUpdate",
+            "→ startUpdateFlow() | version = ${appUpdateInfo.availableVersionName} | " +
+                    "bytes = ${appUpdateInfo.fileSize}"
+        )
+
         updateManager.startUpdateFlow(appUpdateInfo, options)
-            .addOnSuccessListener { /* можно логировать */ }
+            .addOnSuccessListener {
+                Auditor.debug("RuStoreUpdate", "startUpdateFlow → успешно запущен поток")
+            }
             .addOnFailureListener { e ->
-                Auditor.err("d", "RuStore startUpdateFlow failed", e)
-                _downloadState.value = DownloadState.Error(e.message ?: "Ошибка запуска обновления")
+                Auditor.err("RuStoreUpdate", "startUpdateFlow → ошибка запуска", e)
+                _downloadState.value = DownloadState.Error(e.message ?: "Не удалось запустить загрузку")
             }
     }
 
     private fun registerListener() {
+        Auditor.debug("RuStoreUpdate", "Регистрация InstallStateUpdateListener")
+
         installStateListener = InstallStateUpdateListener { state ->
-            when (state.installStatus) {
+            val status = state.installStatus
+            val bytes = state.bytesDownloaded
+            val total = state.totalBytesToDownload
+            val percent = if (total > 0) (bytes * 100 / total).coerceIn(0, 100) else 0
+
+            Auditor.debug(
+                "RuStoreUpdate",
+                "← InstallStateUpdate | status = $status | " +
+                        "bytes = $bytes / $total ($percent%) | " +
+                        "errorCode = ${state.installErrorCode}"
+            )
+
+            when (status) {
                 InstallStatus.PENDING -> {
+                    Auditor.info("RuStoreUpdate", "→ PENDING (ожидание начала загрузки)")
                     _downloadState.value = DownloadState.Preparing
                 }
+
                 InstallStatus.DOWNLOADING -> {
-                    val total = state.totalBytesToDownload
-                    val progress = if (total > 0) {
-                        (state.bytesDownloaded * 100 / total).toInt().coerceIn(0, 100)
-                    } else 0
-                    _downloadState.value = DownloadState.Downloading(progress)
+                    Auditor.debug("RuStoreUpdate", "→ DOWNLOADING ($percent%)")
+                    _downloadState.value = DownloadState.Downloading(percent.toInt())
                 }
+
                 InstallStatus.DOWNLOADED -> {
+                    Auditor.info("RuStoreUpdate", "→ DOWNLOADED (файл загружен, готов к установке)")
                     _downloadState.value = DownloadState.Completed()
-                    // Рекомендуется: сразу предложить установить или вызвать completeUpdate()
-                    // updateManager.completeUpdate()
+                    // Здесь можно автоматически предложить установить или ждать нажатия пользователя
                 }
+
                 InstallStatus.FAILED -> {
-                    _downloadState.value = DownloadState.Error("Ошибка установки")
+                    Auditor.err("RuStoreUpdate", "→ FAILED (ошибка загрузки/установки)")
+                    _downloadState.value = DownloadState.Error("Ошибка загрузки или установки")
                 }
-                else -> {}
+
+                InstallStatus.UNKNOWN -> {
+                    Auditor.warn("RuStoreUpdate", "→ UNKNOWN (сброс состояния или прерывание)")
+                    // Часто после отмены пользователем или ошибки
+                }
+
+                else -> {
+                    Auditor.debug("RuStoreUpdate", "→ Необработанный installStatus = $status")
+                }
             }
         }
 
         updateManager.registerListener(installStateListener!!)
+        Auditor.debug("RuStoreUpdate", "Listener успешно зарегистрирован")
     }
 
     override fun cancelDownload() {
-        // RuStore SDK не предоставляет явной отмены загрузки в большинстве версий
-        // Можно только сбросить состояние
+        Auditor.warn("RuStoreUpdate", "cancelDownload() вызван → RuStore SDK не поддерживает явную отмену загрузки")
+        Auditor.debug("RuStoreUpdate", "Сбрасываем UI-состояние в Idle (реальная загрузка может продолжаться)")
         _downloadState.value = DownloadState.Idle
     }
 
     override fun release() {
-        installStateListener?.let { updateManager.unregisterListener(it) }
+        Auditor.info("RuStoreUpdate", "release() → отписываемся от listener и отменяем scope")
+        installStateListener?.let {
+            updateManager.unregisterListener(it)
+            Auditor.debug("RuStoreUpdate", "Listener отписан")
+        }
         scope.cancel()
+        Auditor.debug("RuStoreUpdate", "CoroutineScope отменён")
     }
 }
