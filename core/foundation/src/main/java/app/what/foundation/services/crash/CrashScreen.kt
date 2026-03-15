@@ -1,6 +1,7 @@
 package app.what.foundation.services.crash
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,89 +44,85 @@ fun CrashScreen(
     crashReport: String,
     onRestart: () -> Unit,
     onShare: () -> Unit
+) = Column(
+    modifier = Modifier
+        .fillMaxSize()
+        .background(colorScheme.background)
+        .padding(24.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center
 ) {
     var showDetails by useState(false)
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = colorScheme.background
+    Icon(
+        imageVector = Icons.Default.FavoriteBorder,
+        contentDescription = "Crash",
+        tint = colorScheme.error,
+        modifier = Modifier.size(64.dp)
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = "Приложение остановлено",
+        style = typography.headlineSmall,
+        color = colorScheme.onSurface,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Text(
+        text = "Произошла непредвиденная ошибка. Приносим извинения за неудобства.",
+        style = typography.bodyMedium,
+        color = colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(32.dp))
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Button(
+            onClick = onRestart,
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
+            Text("Перезапустить приложение")
+        }
+
+        Button(
+            onClick = onShare,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.secondaryContainer,
+                contentColor = colorScheme.onSecondaryContainer
+            ),
+            modifier = Modifier.fillMaxWidth(0.8f)
         ) {
             Icon(
-                imageVector = Icons.Default.FavoriteBorder,
-                contentDescription = "Crash",
-                tint = colorScheme.error,
-                modifier = Modifier.size(64.dp)
+                Icons.Default.Share,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Поделиться отчетом")
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Приложение остановлено",
-                style = typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Произошла непредвиденная ошибка. Приносим извинения за неудобства.",
-                style = typography.bodyMedium,
-                color = colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onRestart,
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Text("Перезапустить приложение")
-                }
-
-                Button(
-                    onClick = onShare,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colorScheme.secondaryContainer,
-                        contentColor = colorScheme.onSecondaryContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Поделиться отчетом")
-                }
-
-                TextButton(
-                    onClick = { showDetails = !showDetails }
-                ) {
-                    Text(if (showDetails) "Скрыть детали" else "Показать детали")
-                }
-            }
-
-            if (showDetails) {
-                Spacer(modifier = Modifier.height(16.dp))
-                CrashDetails(crashReport = crashReport)
-            }
+        TextButton(
+            onClick = { showDetails = !showDetails }
+        ) {
+            Text(if (showDetails) "Скрыть детали" else "Показать детали")
         }
     }
+
+    if (showDetails) {
+        Spacer(modifier = Modifier.height(16.dp))
+        CrashDetails(crashReport = crashReport)
+    }
 }
+
 
 @Composable
 fun CrashDetails(crashReport: String) {

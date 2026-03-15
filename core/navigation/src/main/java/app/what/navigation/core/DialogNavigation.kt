@@ -3,6 +3,7 @@ package app.what.navigation.core
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -46,7 +47,7 @@ fun ProvideGlobalDialog(
             Surface(
                 shape = shapes.large,
                 color = colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.animateContentSize().fillMaxWidth()
             ) {
                 AnimatedContent(
                     targetState = controller.content,

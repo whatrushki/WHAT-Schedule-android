@@ -42,7 +42,7 @@ fun BaseSettingRow(
             .padding(24.dp, 8.dp)
     ) {
         value.icon?.let {
-            it.Show(Modifier.size(28.dp), colorScheme.primary)
+            it.Show(colorScheme.primary, 28)
             Gap(16)
         }
 

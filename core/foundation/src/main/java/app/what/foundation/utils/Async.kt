@@ -28,7 +28,7 @@ fun <T> CoroutineScope.asyncLazy(
 
 fun CoroutineScope.launchSafe(
     context: CoroutineContext = IO,
-    retryCount: Int = 0,
+    retryCount: Int = 5,
     debug: Boolean = false,
     onFailure: suspend CoroutineScope.(Exception) -> Unit = {},
     onFinally: suspend CoroutineScope.() -> Unit = {},
@@ -42,8 +42,9 @@ fun CoroutineScope.launchSafe(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (attempt != retryCount) return@repeat
-                if (debug) throw e else onFailure(e)
+                if (debug) throw e
+                else if (attempt != retryCount) return@repeat
+                else onFailure(e)
             }
         }
     } finally {

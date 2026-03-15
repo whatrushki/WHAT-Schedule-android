@@ -26,7 +26,7 @@ fun rememberNavigator(level: Int): Navigator {
     val current = LocalNavController.current
     var parentNavigator = current
 
-    for (i in 1 until level) {
+    for (i in 1..<level) {
         parentNavigator ?: break
         parentNavigator = parentNavigator.parent
     }
