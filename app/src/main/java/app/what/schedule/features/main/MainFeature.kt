@@ -2,12 +2,7 @@ package app.what.schedule.features.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
@@ -15,7 +10,6 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.composable
@@ -24,8 +18,6 @@ import app.what.foundation.core.Feature
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.applyIf
-import app.what.foundation.ui.useState
-import app.what.foundation.utils.launchIO
 import app.what.navigation.core.NavComponent
 import app.what.navigation.core.NavProvider
 import app.what.navigation.core.NavigationHost
@@ -56,7 +48,6 @@ import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -86,7 +77,7 @@ class MainFeature(
         newsRegistry()
         scheduleRegistry()
         devRegistry()
-        composable<AccountProvider> {  controller.getState().ui?.content(Modifier) }
+        composable<AccountProvider> { controller.getState().ui?.content(Modifier) }
     }
 
     @Composable

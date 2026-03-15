@@ -5,7 +5,6 @@ import app.what.foundation.data.RemoteState
 import app.what.schedule.data.remote.api.models.NewListItem
 import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.data.remote.providers.dgtu.DGTUApi.Events.Initiator
-import kotlinx.serialization.SerialName
 import java.time.LocalDate
 import java.time.LocalDateTime
 

@@ -1,6 +1,5 @@
 package app.what.schedule.data.remote.providers.iubip.services
 
-import app.what.foundation.services.AppLogger
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.ScheduleResponse
@@ -23,7 +22,6 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.parameters
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray

@@ -32,7 +32,7 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
         val action = controller.collectActions()
         val state = controller.collectStates()
         val nav = rememberHostNavigator()
-        val midNav =  rememberNavigator(1)
+        val midNav = rememberNavigator(1)
         val globalNav = rememberNavigator(2)
 
         NavigationHost(
@@ -55,11 +55,19 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
             ac ?: return@LaunchedEffect
 
             when (ac) {
-                is DgtuAction.OpenSchedule -> midNav.c.navigate(ScheduleProvider(ac.search.name, ac.search.id, true))
+                is DgtuAction.OpenSchedule -> midNav.c.navigate(
+                    ScheduleProvider(
+                        ac.search.name,
+                        ac.search.id,
+                        true
+                    )
+                )
+
                 is DgtuAction.OpenNews -> midNav.c.navigate(NewsProvider)
                 is DgtuAction.OpenNewDetail -> globalNav.c.navigate(
                     NewsDetailProvider(ac.id, ac.url, ac.bannerUrl, ac.title, ac.description)
                 )
+
                 else -> nav.c.navigate(
                     when (action) {
                         DgtuAction.OpenAuth -> DGTUAuthProvider

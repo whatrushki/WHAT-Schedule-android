@@ -1,64 +1,22 @@
 package app.what.schedule.data.remote.providers.rksi
 
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.fromHtml
 import app.what.foundation.core.Feature
-import app.what.foundation.services.AppLogger.Companion.Auditor
-import app.what.foundation.utils.asyncLazy
-import app.what.schedule.data.remote.api.AccountService
-import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.NewsService
-import app.what.schedule.data.remote.api.ScheduleResponse
 import app.what.schedule.data.remote.api.ScheduleService
 import app.what.schedule.data.remote.api.SourceType
-import app.what.schedule.data.remote.api.models.DaySchedule
-import app.what.schedule.data.remote.api.models.Group
-import app.what.schedule.data.remote.api.models.Lesson
-import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.api.models.LessonTime
 import app.what.schedule.data.remote.api.models.LessonType
-import app.what.schedule.data.remote.api.models.LessonsScheduleType
-import app.what.schedule.data.remote.api.models.NewContent
-import app.what.schedule.data.remote.api.models.NewItem
-import app.what.schedule.data.remote.api.models.NewListItem
-import app.what.schedule.data.remote.api.models.NewTag
-import app.what.schedule.data.remote.api.models.OneTimeUnit
-import app.what.schedule.data.remote.api.models.ParseMode
-import app.what.schedule.data.remote.api.models.ScheduleSearch
-import app.what.schedule.data.remote.api.models.Teacher
 import app.what.schedule.data.remote.providers.rksi.services.RKSINewsService
 import app.what.schedule.data.remote.providers.rksi.services.RKSIScheduleService
-import app.what.schedule.data.remote.utils.parseMonth
-import app.what.schedule.data.remote.utils.parseTime
 import app.what.schedule.libs.FileManager
 import app.what.schedule.libs.GoogleDriveParser
-import app.what.schedule.libs.files
-import app.what.schedule.libs.folders
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.fleeksoft.ksoup.Ksoup
-import com.fleeksoft.ksoup.nodes.Element
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
-import io.ktor.client.statement.readRawBytes
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import java.io.File
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
-
 
 
 private val RKSIMetadata
@@ -85,7 +43,14 @@ class RKSI(
 
     override val metadata: MetaInfo = Factory.metadata
     override val scheduleService: ScheduleService =
-        RKSIScheduleService(BASE_URL, client, googleDriveApi, fileManager, scope, ::generateFileName)
+        RKSIScheduleService(
+            BASE_URL,
+            client,
+            googleDriveApi,
+            fileManager,
+            scope,
+            ::generateFileName
+        )
     override val newsService: NewsService = RKSINewsService(BASE_URL, client)
     override val accountFeature: Feature<*, *>? = null
 }

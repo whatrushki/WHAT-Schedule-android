@@ -15,9 +15,9 @@ data class ScheduleProvider(
 ) : NavProvider() {
     val search
         get() = if (searchId != null && searchName != null) {
-        if (isGroup) ScheduleSearch.Group(searchName, searchId)
-        else ScheduleSearch.Teacher(searchName, searchId)
-    } else null
+            if (isGroup) ScheduleSearch.Group(searchName, searchId)
+            else ScheduleSearch.Teacher(searchName, searchId)
+        } else null
 }
 
 val scheduleRegistry: Registry = {

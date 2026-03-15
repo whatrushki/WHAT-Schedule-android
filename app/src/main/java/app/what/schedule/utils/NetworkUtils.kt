@@ -1,6 +1,5 @@
 package app.what.schedule.utils
 
-import app.what.foundation.services.AppLogger.Companion.Auditor
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.parameter
 import kotlinx.serialization.json.Json

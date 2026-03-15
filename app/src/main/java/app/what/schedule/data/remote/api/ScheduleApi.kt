@@ -1,6 +1,5 @@
 package app.what.schedule.data.remote.api
 
-import androidx.compose.runtime.Composable
 import app.what.foundation.core.Feature
 import app.what.foundation.core.UIComponent
 import app.what.schedule.data.local.settings.AppValues
@@ -68,9 +67,11 @@ fun List<ScheduleResponse>.sum(): ScheduleResponse {
             ScheduleResponse.Empty -> {
 
             }
+
             ScheduleResponse.UpToDate -> {
 
             }
+
             is ScheduleResponse.Available -> {
                 allSchedules.addAll(response.schedules)
                 if (latestModified == null || response.lastModified > latestModified) {
@@ -109,7 +110,7 @@ interface Institution {
 
     val scheduleService: ScheduleService
     val newsService: NewsService
-    
+
     val accountFeature: Feature<*, *>?
 
     fun generateFileName(

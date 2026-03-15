@@ -1,7 +1,6 @@
 package app.what.schedule
 
 import android.app.Application
-import android.widget.Toast
 import androidx.room.Room
 import app.what.foundation.data.settings.PreferenceStorage
 import app.what.foundation.services.AppLogger
@@ -14,11 +13,9 @@ import app.what.foundation.services.auto_update.RuStoreUpdateManager
 import app.what.foundation.services.auto_update.UpdateConfig
 import app.what.foundation.services.auto_update.getInstallSource
 import app.what.foundation.services.crash.CrashHandler
-import app.what.foundation.utils.launchIO
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.InstitutionManager
-import app.what.schedule.data.remote.providers.dgtu.DGTU
 import app.what.schedule.data.remote.providers.dgtu.services.DGTUAccountService
 import app.what.schedule.domain.NewsRepository
 import app.what.schedule.domain.ScheduleRepository
@@ -53,7 +50,6 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.android.getKoin

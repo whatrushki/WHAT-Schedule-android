@@ -13,7 +13,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import io.ktor.http.parameters
 import kotlin.math.absoluteValue
 
 class DGTUAccountService(
@@ -34,16 +33,17 @@ class DGTUAccountService(
         setBody(DGTUApi.Auth.Login(login, password, fingerprint))
     }.body<ApiResponse<ApiResponse<DGTUApi.Auth.LoginResponse>>>()
 
-    suspend fun getUnreadMessagesId(token: String) = client.get("$ACCOUNT_BASE_URL/Mail/CheckMail") {
-        bearerAuth(token)
-    }.body<ApiResponse<DGTUApi.Mails.GetUnreadIdsResponse>>()
+    suspend fun getUnreadMessagesId(token: String) =
+        client.get("$ACCOUNT_BASE_URL/Mail/CheckMail") {
+            bearerAuth(token)
+        }.body<ApiResponse<DGTUApi.Mails.GetUnreadIdsResponse>>()
 
     suspend fun getMails(
         token: String,
         data: DGTUApi.Mails.GetAllRequest
     ) = client.get("$ACCOUNT_BASE_URL/Mail/InboxMail") {
         bearerAuth(token)
-            setData(data)
+        setData(data)
     }.body<ApiResponse<DGTUApi.Mails.GetAllResponse>>()
 
     suspend fun getDetailMail(

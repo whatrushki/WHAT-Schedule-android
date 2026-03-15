@@ -79,7 +79,6 @@ import app.what.schedule.features.insts.dgtu.domain.models.Notification
 import app.what.schedule.features.insts.dgtu.presentation.components.InfoBlock
 import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.theme.icons.WHATIcons
-import app.what.schedule.ui.theme.icons.filled.Crown
 import app.what.schedule.ui.theme.icons.filled.Run
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import java.time.LocalDateTime
@@ -634,7 +633,7 @@ fun EventsListPane(
 ) = LazyColumn(
     Modifier.fillMaxWidth()
 ) {
-    itemsIndexed(state.value.events, key = {  i, it -> it.id }) { i, it ->
+    itemsIndexed(state.value.events, key = { i, it -> it.id }) { i, it ->
         EventListItemView(it, i) { onClick(it) }
     }
 }

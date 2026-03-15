@@ -55,7 +55,12 @@ object StringUtils {
                         val parts = line.split("**")
                         parts.forEachIndexed { index, part ->
                             if (index % 2 == 1) {
-                                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = colors.secondary)) {
+                                withStyle(
+                                    SpanStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.secondary
+                                    )
+                                ) {
                                     append(part)
                                 }
                             } else {

@@ -1,36 +1,17 @@
 package app.what.schedule.data.remote.providers.iubip
 
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.fromHtml
 import app.what.foundation.core.Feature
-import app.what.foundation.services.AppLogger
-import app.what.schedule.data.remote.api.AccountService
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.NewsService
 import app.what.schedule.data.remote.api.ScheduleService
 import app.what.schedule.data.remote.api.SourceType
 import app.what.schedule.data.remote.api.models.LessonTime
-import app.what.schedule.data.remote.api.models.NewContent
-import app.what.schedule.data.remote.api.models.NewItem
-import app.what.schedule.data.remote.api.models.NewListItem
-import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.providers.iubip.services.IUBIPNewsService
 import app.what.schedule.data.remote.providers.iubip.services.IUBIPScheduleService
-import app.what.schedule.data.remote.utils.parseMonth
-import app.what.schedule.utils.LogCat
-import app.what.schedule.utils.LogScope
-import app.what.schedule.utils.buildTag
-import com.fleeksoft.ksoup.Ksoup
-import com.fleeksoft.ksoup.nodes.Element
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
-import kotlinx.coroutines.CoroutineScope
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import java.time.LocalDate
 import java.time.LocalTime
 
 private val IUBIPMetadata
@@ -57,7 +38,7 @@ class IUBIP(
 
     override val scheduleService: ScheduleService =
         IUBIPScheduleService(BASE_URL, client)
-    override val newsService: NewsService=
+    override val newsService: NewsService =
         IUBIPNewsService(BASE_URL, client)
     override val accountFeature: Feature<*, *>? = null
 }

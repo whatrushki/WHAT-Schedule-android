@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -108,12 +107,12 @@ fun MailListItem(data: Mail, modifier: Modifier) = Box(
                     fontSize = 16.sp,
                 )
 
-            Text(
-                formatDateTime(data.sendDateTime),
-                fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariant
-            )
+                Text(
+                    formatDateTime(data.sendDateTime),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = colorScheme.onSurfaceVariant
+                )
             }
 
             Text(
@@ -156,6 +155,7 @@ fun formatDateTime(value: LocalDateTime): String {
         date == today.minusDays(2) -> "позавчера"
         date.year == today.year -> value.format(shortMonthFormatter)
             .replaceFirstChar { it.uppercaseChar() }
+
         else -> value.format(shortMonthFormatter)
             .replaceFirstChar { it.uppercaseChar() }
     }

@@ -1,15 +1,11 @@
 package app.what.schedule.data.remote.providers.dgtu
 
 import app.what.foundation.core.Feature
-import app.what.foundation.data.settings.PreferenceStorage
-import app.what.schedule.data.local.settings.AppValues
-import app.what.schedule.data.remote.api.AccountService
 import app.what.schedule.data.remote.api.Institution
 import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.NewsService
 import app.what.schedule.data.remote.api.ScheduleService
 import app.what.schedule.data.remote.api.SourceType
-import app.what.schedule.data.remote.providers.dgtu.services.DGTUAccountService
 import app.what.schedule.data.remote.providers.dgtu.services.DGTUNewsService
 import app.what.schedule.data.remote.providers.dgtu.services.DGTUScheduleService
 import app.what.schedule.features.insts.dgtu.DgtuFeature
