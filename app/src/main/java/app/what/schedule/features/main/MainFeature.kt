@@ -15,18 +15,24 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.composable
 import animatedStarsBackground
 import app.what.foundation.core.Feature
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.animations.AnimatedEnter
 import app.what.foundation.ui.applyIf
+import app.what.foundation.ui.useState
+import app.what.foundation.utils.launchIO
 import app.what.navigation.core.NavComponent
+import app.what.navigation.core.NavProvider
 import app.what.navigation.core.NavigationHost
 import app.what.navigation.core.Registry
 import app.what.navigation.core.bottom_navigation.BottomNavBar
 import app.what.navigation.core.bottom_navigation.NavAction
+import app.what.navigation.core.bottom_navigation.NavItem
 import app.what.navigation.core.bottom_navigation.navItem
 import app.what.navigation.core.rememberHostNavigator
 import app.what.schedule.data.local.settings.rememberAppValues
@@ -42,15 +48,21 @@ import app.what.schedule.features.schedule.navigation.scheduleRegistry
 import app.what.schedule.features.settings.navigation.SettingsProvider
 import app.what.schedule.features.settings.navigation.settingsRegistry
 import app.what.schedule.ui.theme.icons.WHATIcons
-import app.what.schedule.ui.theme.icons.filled.Code
+import app.what.schedule.ui.theme.icons.filled.FrameBug
 import app.what.schedule.ui.theme.icons.filled.News
+import app.what.schedule.ui.theme.icons.filled.Person
 import app.what.schedule.utils.Analytics
 import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+
+@Serializable
+object AccountProvider : NavProvider()
 
 class MainFeature(
     override val data: MainProvider
@@ -60,19 +72,21 @@ class MainFeature(
 
     override val controller: MainController by inject()
 
-    private companion object {
-        val children = listOf(
-            navItem("Новости", WHATIcons.News, NewsProvider),
-            navItem("Расписание", Icons.Default.DateRange, ScheduleProvider),
-            navItem("Настройки", Icons.Default.Settings, SettingsProvider)
-        )
+    val children: List<NavItem> = mutableListOf(
+        navItem("Новости", WHATIcons.News, NewsProvider),
+        navItem("Расписание", Icons.Default.DateRange, ScheduleProvider()),
+        navItem("Настройки", Icons.Default.Settings, SettingsProvider)
+    ).apply {
+        if (controller.getState().hasProfilePage)
+            add(2, navItem("Профиль", WHATIcons.Person, AccountProvider))
+    }
 
-        val childrenRegistry: Registry = {
-            settingsRegistry()
-            newsRegistry()
-            scheduleRegistry()
-            devRegistry()
-        }
+    val childrenRegistry: Registry = {
+        settingsRegistry()
+        newsRegistry()
+        scheduleRegistry()
+        devRegistry()
+        composable<AccountProvider> {  controller.getState().ui?.content(Modifier) }
     }
 
     @Composable
@@ -81,6 +95,7 @@ class MainFeature(
         val appValues = rememberAppValues()
         val useAnimation by appValues.useAnimation.collect()
         val devFeaturesEnabled by appValues.devPanelEnabled.collect()
+//        var showBottomNavBar by useState(true)
 
         LaunchedEffect(Unit) {
             navigator.c.addOnDestinationChangedListener { _, destination, _ ->
@@ -100,16 +115,12 @@ class MainFeature(
         ) {
             NavigationHost(
                 navigator = navigator,
-                modifier = modifier.windowInsetsPadding(
-                    WindowInsets.systemBars.only(
-                        WindowInsetsSides.Top
-                    )
-                ),
-                start = ScheduleProvider,
+                start = ScheduleProvider(),
                 registry = childrenRegistry
             )
 
             AnimatedEnter(
+//                showBottomNavBar,
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 BottomNavBar(
@@ -117,7 +128,7 @@ class MainFeature(
                     screens = children,
                 ) {
                     if (!devFeaturesEnabled!!) null
-                    else NavAction("Для разработчиков", WHATIcons.Code) {
+                    else NavAction("Для разработчиков", WHATIcons.FrameBug) {
                         Analytics.logDevPanelOpen()
                         navigator.c.navigate(DevProvider)
                     }

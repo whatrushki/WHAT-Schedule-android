@@ -164,7 +164,7 @@ private fun SettingsHeader(
         .height(if (keyboardAsState().value) 20.dp else 240.dp)
 ) {
     if (showBack) IconButton(modifier = Modifier.padding(start = 8.dp), onClick = onBack) {
-        WHATIcons.Clear.Show(Modifier.size(24.dp), colorScheme.primary)
+        WHATIcons.Clear.Show(colorScheme.primary)
     }
 
     Column(
@@ -311,7 +311,7 @@ fun CategoryItem(
             .fillMaxWidth()
             .padding(28.dp, 12.dp)
     ) {
-        icon.Show(Modifier.size(28.dp), colorScheme.primary)
+        icon.Show(colorScheme.primary, 28)
 
         Gap(18)
 

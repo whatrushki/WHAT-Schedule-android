@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -138,121 +138,124 @@ fun ScheduleView(
 
         Gap(16)
 
-
-        Row(
-            Modifier
-                .height(IntrinsicSize.Min)
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            Modifier.statusBarsPadding()
         ) {
-            SearchButton(
-                state.value.selectedSearch,
-                scheduleType,
+            Row(
                 Modifier
-                    .animateContentSize()
-                    .weight(1f)
+                    .height(IntrinsicSize.Min)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                sheetController.open(content = scheduleSearchSheet, full = true)
-            }
-
-            AnimatedEnter(state.value.schedules.isNotEmpty()) {
-                StyledIconButton(
-                    WHATIcons.Run,
-                    active = if (showBreaks) ActiveState.ACTIVE else ActiveState.DISABLED
-                ) { showBreaks = !showBreaks }
-            }
-
-            AnimatedEnter(state.value.schedules.isNotEmpty()) {
-                StyledIconButton(
-                    Icons.Default.Share,
-                    state.value.schedules.isNotEmpty()
+                SearchButton(
+                    state.value.selectedSearch,
+                    scheduleType,
+                    Modifier
+                        .animateContentSize()
+                        .weight(1f)
                 ) {
-                    Analytics.logShare("schedule", "")
-                    sheetController.open(content = scheduleExportSheet)
-                }
-            }
-        }
-
-        Gap(8)
-
-        when (state.value.scheduleState) {
-            RemoteState.Loading -> ScheduleShimmer()
-            RemoteState.Idle -> AnimatedEnter {
-                Fallback(
-                    text = "Для того чтобы появилось расписание нужно выбрать группу",
-                    modifier = Modifier.fillMaxSize(),
-                    action = "Выбрать" to {
-                        sheetController.open(content = scheduleSearchSheet, full = true)
-                    }
-                )
-            }
-
-            is RemoteState.Error -> AnimatedEnter {
-                Fallback(
-                    "Произошла непредвиденная ошибка",
-                    Modifier.fillMaxSize(),
-                    "Попробовать снова" to { listener(ScheduleEvent.OnRefresh) }
-                )
-            }
-
-            RemoteState.Success -> {
-                ScheduleCalendar(weeks, weeksPagerState, daysPagerState) {
-                    scope.launch { daysPagerState.animateScrollToPage(it) }
+                    sheetController.open(content = scheduleSearchSheet, full = true)
                 }
 
-                Gap(8)
+                AnimatedEnter(state.value.schedules.isNotEmpty()) {
+                    StyledIconButton(
+                        WHATIcons.Run,
+                        active = if (showBreaks) ActiveState.ACTIVE else ActiveState.DISABLED
+                    ) { showBreaks = !showBreaks }
+                }
 
-                @Composable
-                fun Lesson.Show(date: LocalDate) = LessonUI(
-                    data = this,
-                    listener = listener,
-                    currentTime = if (date == currentDate)
-                        currentTime.value else null,
-                    viewType = when (state.value.selectedSearch) {
-                        is ScheduleSearch.Teacher -> ViewType.TEACHER
-                        else -> ViewType.STUDENT
-                    }
-                )
-
-                AnimatedEnter {
-                    HorizontalPager(
-                        state = daysPagerState,
-                        verticalAlignment = Alignment.Top,
-                        key = { state.value.schedules[it].date.toString() },
-                        modifier = Modifier.fillMaxHeight()
+                AnimatedEnter(state.value.schedules.isNotEmpty()) {
+                    StyledIconButton(
+                        Icons.Default.Share,
+                        state.value.schedules.isNotEmpty()
                     ) {
-                        val date = state.value.schedules[it].date
+                        Analytics.logShare("schedule", "")
+                        sheetController.open(content = scheduleExportSheet)
+                    }
+                }
+            }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(if (showBreaks) 4.dp else 12.dp),
+            Gap(8)
+
+            when (state.value.scheduleState) {
+                RemoteState.Loading -> ScheduleShimmer()
+                RemoteState.Idle -> AnimatedEnter {
+                    Fallback(
+                        text = "Для того чтобы появилось расписание нужно выбрать группу",
+                        modifier = Modifier.fillMaxSize(),
+                        action = "Выбрать" to {
+                            sheetController.open(content = scheduleSearchSheet, full = true)
+                        }
+                    )
+                }
+
+                is RemoteState.Error -> AnimatedEnter {
+                    Fallback(
+                        "Произошла непредвиденная ошибка",
+                        Modifier.fillMaxSize(),
+                        "Попробовать снова" to { listener(ScheduleEvent.OnRefresh) }
+                    )
+                }
+
+                RemoteState.Success -> {
+                    ScheduleCalendar(weeks, weeksPagerState, daysPagerState) {
+                        scope.launch { daysPagerState.animateScrollToPage(it) }
+                    }
+
+                    Gap(8)
+
+                    @Composable
+                    fun Lesson.Show(date: LocalDate) = LessonUI(
+                        data = this,
+                        listener = listener,
+                        currentTime = if (date == currentDate)
+                            currentTime.value else null,
+                        viewType = when (state.value.selectedSearch) {
+                            is ScheduleSearch.Teacher -> ViewType.TEACHER
+                            else -> ViewType.STUDENT
+                        }
+                    )
+
+                    AnimatedEnter {
+                        HorizontalPager(
+                            state = daysPagerState,
+                            verticalAlignment = Alignment.Top,
+                            key = { state.value.schedules[it].date.toString() },
                             modifier = Modifier.fillMaxHeight()
                         ) {
-                            state.value.schedules[it].lessons.zipWithNext()
-                                .forEach { (first, second) ->
-                                    first.Show(date)
+                            val date = state.value.schedules[it].date
 
-                                    AnimatedEnter(showBreaks) {
-                                        BreakInfo(
-                                            first.endTime.until(
-                                                second.startTime,
-                                                ChronoUnit.MINUTES
-                                            ).toInt(),
-                                            currentTime.value in first.startTime..second.startTime
-                                        )
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(if (showBreaks) 4.dp else 12.dp),
+                                modifier = Modifier.fillMaxHeight()
+                            ) {
+                                state.value.schedules[it].lessons.zipWithNext()
+                                    .forEach { (first, second) ->
+                                        first.Show(date)
+
+                                        AnimatedEnter(showBreaks) {
+                                            BreakInfo(
+                                                first.endTime.until(
+                                                    second.startTime,
+                                                    ChronoUnit.MINUTES
+                                                ).toInt(),
+                                                currentTime.value in first.startTime..second.startTime
+                                            )
+                                        }
+
                                     }
 
-                                }
+                                state.value.schedules[it].lessons.last().Show(date)
 
-                            state.value.schedules[it].lessons.last().Show(date)
-
-                            Gap(132)
+                                Gap(132)
+                            }
                         }
                     }
                 }
-            }
 
-            else -> Unit
+                else -> Unit
+            }
         }
     }
 }
@@ -278,7 +281,7 @@ fun StyledIconButton(
             .bclick(enabled, onClick)
     ) {
         icon.Show(
-            Modifier.size(24.dp), when (active) {
+            when (active) {
                 ActiveState.ACTIVE -> colorScheme.primary
                 ActiveState.NEUTRAL -> colorScheme.secondary
                 ActiveState.DISABLED -> colorScheme.secondary

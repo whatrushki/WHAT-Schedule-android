@@ -160,9 +160,7 @@ fun ShareButton(
         .background(color)
         .bclick(block = onClick)
 ) {
-    icon.Show(
-        Modifier.size(iconSize.dp), Color.White
-    )
+    icon.Show(Color.White, iconSize)
 }
 
 fun createShareTextFromDaySchedules(
