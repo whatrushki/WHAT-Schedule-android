@@ -12,13 +12,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 
 @Serializable
-class ScheduleProvider(
-    val inst: String,
-    val filial: String,
-    val provider: String
-)
-
-@Serializable
 enum class ThemeType(override val displayName: String) : Named {
     Light("Светлая"),
     Dark("Тёмная"),
@@ -114,6 +107,19 @@ class AppValues(context: Context) : PreferenceStorage(
     val debugMode = createValue(
         "debug_mode", false, Boolean.serializer(),
         "Режим отладки", "Включение дополнительной информации для разработки"
+    )
+
+    // DGTU ---------------
+    val dgtuToken = createValue(
+        "dgtu_token",
+        null,
+        String.serializer(),
+    )
+
+    val dgtuStudentId = createValue(
+        "dgtu_userId",
+        null,
+        Int.serializer(),
     )
 }
 

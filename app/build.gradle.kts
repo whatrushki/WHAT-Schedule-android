@@ -29,7 +29,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = generateVersionCode()
-        versionName = "1.0.3"
+        versionName = "1.0.4-beta.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -106,7 +106,6 @@ dependencies {
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
 
-
     ksp(libs.room.compiler)
 
     implementation(platform(libs.firebase.bom))
@@ -118,6 +117,7 @@ dependencies {
     implementation(libs.bundles.room)
     implementation(libs.bundles.coil)
 
+    implementation(libs.qrose)
     implementation(libs.poi)
     implementation(libs.poi.ooxml)
     implementation(libs.process.phoenix)

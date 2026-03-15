@@ -1,14 +1,10 @@
-package app.what.schedule.data.remote.providers
+package app.what.schedule.data.remote.providers.rksi.services
 
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.fromHtml
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.utils.asyncLazy
 import app.what.schedule.data.remote.api.AdditionalData
-import app.what.schedule.data.remote.api.Institution
-import app.what.schedule.data.remote.api.MetaInfo
 import app.what.schedule.data.remote.api.ScheduleResponse
-import app.what.schedule.data.remote.api.SourceType
+import app.what.schedule.data.remote.api.ScheduleService
 import app.what.schedule.data.remote.api.models.DaySchedule
 import app.what.schedule.data.remote.api.models.Group
 import app.what.schedule.data.remote.api.models.Lesson
@@ -16,14 +12,11 @@ import app.what.schedule.data.remote.api.models.LessonState
 import app.what.schedule.data.remote.api.models.LessonTime
 import app.what.schedule.data.remote.api.models.LessonType
 import app.what.schedule.data.remote.api.models.LessonsScheduleType
-import app.what.schedule.data.remote.api.models.NewContent
-import app.what.schedule.data.remote.api.models.NewItem
-import app.what.schedule.data.remote.api.models.NewListItem
-import app.what.schedule.data.remote.api.models.NewTag
 import app.what.schedule.data.remote.api.models.OneTimeUnit
 import app.what.schedule.data.remote.api.models.ParseMode
 import app.what.schedule.data.remote.api.models.ScheduleSearch
 import app.what.schedule.data.remote.api.models.Teacher
+import app.what.schedule.data.remote.providers.rksi.RKSILessonsSchedule
 import app.what.schedule.data.remote.utils.parseMonth
 import app.what.schedule.data.remote.utils.parseTime
 import app.what.schedule.libs.FileManager
@@ -34,7 +27,6 @@ import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
 import com.fleeksoft.ksoup.Ksoup
-import com.fleeksoft.ksoup.nodes.Element
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -46,48 +38,31 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import androidx.compose.ui.text.capitalize as capitalizeFirstChar
-import androidx.compose.ui.text.intl.Locale as UiLocale
 
-
-private val RKSIMetadata
-    get() = MetaInfo(
-        id = "rksi",
-        name = "РКСИ",
-        fullName = "Ростовский-на-Дону Колледж Связи и Информатики",
-        description = "Ростовский-на-Дону Колледж Связи и Информатики",
-        sourceTypes = setOf(SourceType.PARSER, SourceType.EXCEL),
-        sourceUrl = "https://rksi.ru/mobile_schedule"
-    )
-
-class RKSI(
+class RKSIScheduleService(
+    private val baseUrl: String,
     private val client: HttpClient,
     private val googleDriveApi: GoogleDriveParser,
     private val fileManager: FileManager,
-    private val scope: CoroutineScope
-) : Institution {
+    scope: CoroutineScope,
+    private val generateFileName: (
+        additional: AdditionalData,
+        fileExtension: String
+    ) -> String
+) : ScheduleService {
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
-    companion object Factory : Institution.Factory, KoinComponent {
-        private const val BASE_URL = "https://www.rksi.ru"
-        override fun create() = RKSI(get(), get(), get(), get())
-        override val metadata: MetaInfo by lazy { RKSIMetadata }
-    }
-
-    override val metadata: MetaInfo = Factory.metadata
     private val scheduleTabletGoogleDriveId by scope.asyncLazy { getScheduleTabletGoogleDriveId() }
 
     override suspend fun getTeachers(): List<Teacher> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка преподавателей")
 
-        val response = client.get("$BASE_URL/mobileschedule/teachers").bodyAsText()
+        val response = client.get("$baseUrl/mobileschedule/teachers").bodyAsText()
         val teachers = Ksoup.parse(response).select("a[href*=\"teachers\"]")
             .map { Teacher(it.text(), it.attr("href").split("/").last()) }
 
@@ -99,7 +74,7 @@ class RKSI(
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка групп")
 
-        val response = client.get("$BASE_URL/mobileschedule/groups").bodyAsText()
+        val response = client.get("$baseUrl/mobileschedule/groups").bodyAsText()
         val groups = Ksoup.parse(response).select("a[href*=\"groups\"]")
             .map { Group(it.text(), it.attr("href").split("/").last()) }
 
@@ -130,121 +105,6 @@ class RKSI(
         additional["lastModified"] as LocalDateTime?,
         showReplacements
     )
-
-    override suspend fun getNews(page: Int): List<NewListItem> {
-        val response = client.get("$BASE_URL/news/$page").bodyAsText()
-        val document = Ksoup.parse(response)
-        val rawData = document.getElementsByClass("flexnews")
-        val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
-        Auditor.debug(netTag, "Получено новостей: ${rawData.size}")
-
-        val data = rawData.map {
-            val url = BASE_URL + it.getElementsByTag("a").attr("href")
-            val id = url.split("_").last()
-            val bannerUrl = formatImageUrl(it.getElementsByTag("img").attr("src"))
-            val title = it.getElementsByTag("h4").first()!!.text()
-            val description = it.getElementsByTag("div").first()!!.text()
-                .let { it.slice(it.indexOf(" ") + title.length + 1..it.lastIndex) }
-            val date = it.getElementsByTag("span").first()!!.text().let {
-                val tmp = it.split(".").map(String::toInt)
-                LocalDate.of(tmp[2], tmp[1], tmp[0])
-            }
-            val tags = emptyList<NewTag>()
-
-            NewListItem(id, url, bannerUrl, title, description, date, tags)
-        }
-
-        Auditor.debug(netTag, "Обработано новостей: ${data.size}")
-
-        return data
-    }
-
-    private fun <T : Any?> T.addTo(list: MutableList<T>) = list.add(this)
-
-    override suspend fun getNewDetail(id: String): NewItem {
-        val url = "$BASE_URL/news/n_$id"
-        val response = client.get(url).bodyAsText()
-        val document = Ksoup.parse(response)
-
-        val bannerUrl = formatImageUrl(document.getElementsByTag("img").attr("src"))
-        val title = document.getElementsByTag("h1").text().split(" ").dropLast(1).joinToString(" ")
-        val description = document.getElementsByTag("b").html()
-        val date = document.getElementsByTag("h1").text()
-            .split(" ").last().drop(1).dropLast(1).let {
-                val tmp = it.split(".").map(String::toInt)
-                LocalDate.of(tmp[2], tmp[1], tmp[0])
-            }
-        val content = parseNewContent(document.getElementsByTag("main").first()!!)
-
-        return NewItem(
-            id,
-            url,
-            bannerUrl,
-            title,
-            AnnotatedString
-                .fromHtml(description)
-                .takeIf { it.isNotBlank() },
-            tags = emptyList(),
-            date,
-            content
-        )
-    }
-
-    private fun parseNewContent(tree: Element): NewContent {
-        val list = mutableListOf<NewContent>()
-
-        tree.children().drop(1).forEach {
-
-            when {
-                it.`is`("h3") -> NewContent.Item.Subtitle(it.text()).addTo(list)
-                it.`is`("p") && it.getElementsByTag("img").isNotEmpty() ->
-                    NewContent.Item.Image(it.getElementsByTag("img").attr("src")).addTo(list)
-
-                it.`is`("p") && it.text()
-                    .isNotBlank() -> NewContent.Item.Text(AnnotatedString.fromHtml(it.html()))
-                    .addTo(list)
-
-                it.`is`(".img50") -> it.getElementsByTag("p").forEach {
-                    val style = it.attr("style")
-                    if ("background-image" in style) {
-                        NewContent.Item.Image(style.substringAfter("'").substringBeforeLast("'"))
-                            .addTo(list)
-                    } else {
-                        NewContent.Item.Image(it.getElementsByTag("img")[0].attr("src")).addTo(list)
-                    }
-
-                }
-
-                it.`is`("ul") -> NewContent.Item.UnsortedList(
-                    it.getElementsByTag("li").map {
-                        it.text().capitalizeFirstChar(UiLocale.current)
-                    }).addTo(list)
-
-                it.`is`("ol") -> NewContent.Item.SortedList(
-                    it.getElementsByTag("li")
-                        .map { it.text().capitalizeFirstChar(UiLocale.current) }).addTo(list)
-
-                it.`is`(".video-container") ->
-                    NewContent.Item.Video.VK(it.getElementsByTag("iframe").attr("src"))
-                        .addTo(list)
-            }
-        }
-        val images = mutableListOf<String>()
-        for (i in list.indices.reversed()) {
-            val it = list[i]
-            if (it is NewContent.Item.Image) {
-                it.data.addTo(images)
-                list.removeAt(i)
-            } else break
-        }
-
-        if (images.isNotEmpty())
-            list.add(NewContent.Item.ImageCarousel(images))
-
-        return NewContent.Container.Column(list)
-    }
-
-    private fun formatImageUrl(url: String): String = BASE_URL + url
 
     private suspend fun getAndParseSchedule(
         value: String,
@@ -279,7 +139,7 @@ class RKSI(
         }
 
         val response = client.get(
-            "$BASE_URL/mobileschedule/" +
+            "$baseUrl/mobileschedule/" +
                     (if (parseMode == ParseMode.GROUP) "groups/" else "teachers/") +
                     value
         ).bodyAsText()
@@ -442,7 +302,7 @@ class RKSI(
         fun List<GoogleDriveParser.Item.File>.filterByModifiedDateAndPutData(shortYear: Boolean = false) =
             filter {
                 val raw = it.name.split(".").dropLast(1).map(String::toInt)
-                val date = LocalDate.of(raw[2].plus(if (shortYear) 2000 else 0), raw[1], raw[0])
+                val date = LocalDate.of(LocalDate.now().year, raw[1], raw[0])
                 (date >= currentDate).also { _ -> it.additionalData["date"] = date }
             }
 
@@ -518,8 +378,7 @@ class RKSI(
             mapOf(
                 "building" to building,
                 "date" to date.toString()
-            ),
-            fileExtension = "xlsx"
+            ), "xlsx"
         )
 
         fun getCachedFile() = fileManager
@@ -648,9 +507,7 @@ class RKSI(
 
         return lessons
     }
-
 }
-
 
 private fun List<Lesson>.withReplacements(
     replacements: List<Lesson>,
@@ -707,41 +564,4 @@ private fun List<Lesson>.withReplacements(
             } else lesson
         } else lesson!!
     }
-}
-
-object RKSILessonsSchedule {
-    val COMMON = listOf(
-        LessonTime(1, LocalTime.of(8, 0), LocalTime.of(9, 30)),
-        LessonTime(2, LocalTime.of(9, 40), LocalTime.of(11, 10)),
-        LessonTime(3, LocalTime.of(11, 30), LocalTime.of(13, 0)),
-        LessonTime(4, LocalTime.of(13, 10), LocalTime.of(14, 40)),
-        LessonTime(5, LocalTime.of(15, 0), LocalTime.of(16, 30)),
-        LessonTime(6, LocalTime.of(16, 40), LocalTime.of(18, 10)),
-        LessonTime(7, LocalTime.of(18, 20), LocalTime.of(19, 50))
-    )
-
-    val SHORTENED = listOf(
-        LessonTime(1, LocalTime.of(8, 0), LocalTime.of(8, 50)),
-        LessonTime(2, LocalTime.of(9, 0), LocalTime.of(9, 50)),
-        LessonTime(3, LocalTime.of(10, 0), LocalTime.of(10, 50)),
-        LessonTime(4, LocalTime.of(11, 0), LocalTime.of(11, 50)),
-        LessonTime(5, LocalTime.of(12, 0), LocalTime.of(12, 50)),
-        LessonTime(6, LocalTime.of(13, 0), LocalTime.of(13, 50)),
-        LessonTime(7, LocalTime.of(14, 0), LocalTime.of(14, 50))
-    )
-
-    val WITH_CLASS_HOUR = listOf(
-        LessonTime(1, LocalTime.of(8, 0), LocalTime.of(9, 30)),
-        LessonTime(2, LocalTime.of(9, 40), LocalTime.of(11, 10)),
-        LessonTime(3, LocalTime.of(11, 30), LocalTime.of(13, 0)),
-        LessonTime(
-            number = 0,
-            LocalTime.of(13, 5),
-            LocalTime.of(14, 5),
-            type = LessonType.CLASS_HOUR
-        ),
-        LessonTime(4, LocalTime.of(14, 10), LocalTime.of(15, 40)),
-        LessonTime(5, LocalTime.of(16, 0), LocalTime.of(17, 30)),
-        LessonTime(6, LocalTime.of(17, 40), LocalTime.of(19, 10))
-    )
 }

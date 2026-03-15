@@ -225,7 +225,7 @@ fun NewsDetailView(
                                 sheet.open { NewsSharePane(state.newListInfo.url) }
                             }
                     ) {
-                        Icons.Default.Share.Show(Modifier.size(24.dp), colorScheme.onPrimary)
+                        Icons.Default.Share.Show(colorScheme.onPrimary)
                     }
                 }
             }
@@ -317,8 +317,8 @@ fun NewContentPainter(content: List<NewContent>) {
                                     }
                             ) {
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft.Show(
-                                    Modifier.padding(12.dp),
-                                    color = colorScheme.onSurface.copy(alpha = if (prevButtonEnabled) 1f else .3f)
+                                    colorScheme.onSurface.copy(alpha = if (prevButtonEnabled) 1f else .3f),
+                                    modifier = Modifier.padding(12.dp)
                                 )
                             }
 
@@ -341,8 +341,8 @@ fun NewContentPainter(content: List<NewContent>) {
                                     }
                             ) {
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight.Show(
-                                    Modifier.padding(12.dp),
-                                    color = colorScheme.onSurface.copy(alpha = if (nextButtonEnabled) 1f else .3f)
+                                    colorScheme.onSurface.copy(alpha = if (nextButtonEnabled) 1f else .3f),
+                                    modifier = Modifier.padding(12.dp),
                                 )
                             }
                         }
@@ -438,10 +438,7 @@ fun NewContentPainter(content: List<NewContent>) {
 
                         it.data.forEach {
                             Row {
-                                WHATIcons.Features.Show(
-                                    Modifier.size(20.dp),
-                                    color = colorScheme.tertiary
-                                )
+                                WHATIcons.Features.Show(colorScheme.tertiary, 20)
 
                                 Gap(4)
                                 Text(
@@ -477,10 +474,8 @@ fun NewContentPainter(content: List<NewContent>) {
                                 .padding(16.dp)
                         ) {
                             WHATIcons.Question.Show(
-                                Modifier
-                                    .wiggle(15f)
-                                    .size(28.dp),
-                                colorScheme.tertiary
+                                colorScheme.tertiary, 28,
+                                Modifier.wiggle(15f)
                             )
                             Gap(16)
                             Text(
@@ -514,10 +509,8 @@ fun NewContentPainter(content: List<NewContent>) {
                                 )
 
                                 WHATIcons.Quote.Show(
-                                    Modifier
-                                        .wiggle(15f)
-                                        .size(48.dp),
-                                    colorScheme.tertiary
+                                    colorScheme.tertiary, 48,
+                                    Modifier.wiggle(15f)
                                 )
                             }
 

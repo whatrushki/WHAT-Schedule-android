@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
@@ -83,7 +84,7 @@ fun BottomNavBar(
             modifier = Modifier
                 .height(containerHeight)
                 .clip(CircleShape)
-                .background(colorScheme.surfaceContainer)
+                .background(colorScheme.surfaceContainerHigh)
                 .padding(containerPaddings),
         ) {
             // Анимированный индикатор выбранного элемента
@@ -131,14 +132,14 @@ fun BottomNavBar(
         Gap(10)
 
         AnimatedEnter {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 containerColor = colorScheme.primaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 onClick = action.block
             ) {
                 action.icon.Show(
                     color = colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }

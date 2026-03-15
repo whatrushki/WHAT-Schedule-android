@@ -7,6 +7,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.edit
+import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.ui.useState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,7 +31,7 @@ abstract class PreferenceStorage(protected val prefs: SharedPreferences) {
         }
     }
 
-    protected fun <T : Any> createValue(
+    fun <T : Any> createValue(
         key: String,
         defaultValue: T?,
         serializer: KSerializer<T>,
@@ -51,15 +52,14 @@ abstract class PreferenceStorage(protected val prefs: SharedPreferences) {
     ) {
         fun get(): T? = prefs
             .getString(key, null)
-            ?.let { Json.Default.decodeFromString(serializer, it) }
+            ?.let { Json.decodeFromString(serializer, it) }
             ?: defaultValue
-
         fun set(value: T?) {
             prefs.edit {
                 putString(
                     key,
                     if (value == null) null
-                    else Json.Default.encodeToString(serializer, value)
+                    else Json.encodeToString(serializer, value)
                 )
                 apply()
             }

@@ -284,10 +284,8 @@ private fun RepoStatsCard(
         AnimatedEnter(stars != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icons.Default.Star.Show(
-                    Modifier
-                        .size(16.dp)
-                        .wiggle(15f),
-                    Color(0xFFFFB300)
+                    Color(0xFFFFB300), 16,
+                    Modifier.wiggle(15f)
                 )
                 Gap(4)
                 Text(stars ?: "~", style = typography.titleSmall, fontWeight = FontWeight.Bold)

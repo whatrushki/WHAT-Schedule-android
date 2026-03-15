@@ -32,7 +32,7 @@ object StringUtils {
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                color = colors.secondary
+                                color = colors.primary
                             )
                         ) {
                             append(line.removePrefix("## ") + "\n")
@@ -44,7 +44,7 @@ object StringUtils {
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
-                                color = colors.secondary
+                                color = colors.primary
                             )
                         ) {
                             append(line.removePrefix("### ") + "\n")
@@ -55,7 +55,12 @@ object StringUtils {
                         val parts = line.split("**")
                         parts.forEachIndexed { index, part ->
                             if (index % 2 == 1) {
-                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                withStyle(
+                                    SpanStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.secondary
+                                    )
+                                ) {
                                     append(part)
                                 }
                             } else {

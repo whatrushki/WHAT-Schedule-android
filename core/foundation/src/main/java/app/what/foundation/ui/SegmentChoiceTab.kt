@@ -45,10 +45,7 @@ fun RowScope.SegmentTab(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.padding(10.dp, 8.dp)
     ) {
-        icon?.Show(
-            Modifier.size(16.dp),
-            contentColor
-        )
+        icon?.Show(contentColor, 16)
 
         if (label != null) Text(
             label,

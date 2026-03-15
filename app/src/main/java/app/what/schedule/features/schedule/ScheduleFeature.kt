@@ -21,6 +21,12 @@ class ScheduleFeature(
     KoinComponent {
     override val controller: ScheduleController by inject()
 
+    init {
+        val search = data.search
+        if (search != null)
+            listener(ScheduleEvent.OnSearchClicked(search))
+    }
+
     @Composable
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()

@@ -1,8 +1,8 @@
 package app.what.schedule
 
 import android.app.Application
-import android.widget.Toast
 import androidx.room.Room
+import app.what.foundation.data.settings.PreferenceStorage
 import app.what.foundation.services.AppLogger
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.services.auto_update.AppUpdateManager
@@ -16,9 +16,11 @@ import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
 import app.what.schedule.data.local.settings.AppValues
 import app.what.schedule.data.remote.api.InstitutionManager
+import app.what.schedule.data.remote.providers.dgtu.services.DGTUAccountService
 import app.what.schedule.domain.NewsRepository
 import app.what.schedule.domain.ScheduleRepository
 import app.what.schedule.features.dev.presentation.NetworkMonitorPlugin
+import app.what.schedule.features.insts.dgtu.domain.DgtuController
 import app.what.schedule.features.main.domain.MainController
 import app.what.schedule.features.news.domain.NewsController
 import app.what.schedule.features.newsDetail.domain.NewsDetailController
@@ -53,6 +55,8 @@ import kotlinx.serialization.json.Json
 import org.koin.android.ext.android.getKoin
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.bind
 import org.koin.dsl.module
 import java.security.cert.X509Certificate
 import java.util.UUID
@@ -107,29 +111,37 @@ class ScheduleApp : Application() {
         val source = getInstallSource(this)
 
         when (source) {
-            InstallSource.APK -> Auditor.debug("d", "Apk")
-            InstallSource.RuStore -> Auditor.debug("d", "RuStore")
+            InstallSource.APK -> Auditor.debug("d", "install source Apk")
+            InstallSource.RuStore -> Auditor.debug("d", "install source RuStore")
         }
     }
 }
 
 val controllers = module {
-    single<SettingsController> { SettingsController(get(), get()) }
-    single<NewsController> { NewsController(get(), get()) }
+    singleOf(::SettingsController)
+    singleOf(::NewsController)
+    singleOf(::ScheduleController)
+    singleOf(::OnboardingController)
+    singleOf(::MainController)
+    singleOf(::DgtuController)
     factory<NewsDetailController> { params -> NewsDetailController(params.get(), get()) }
-    single<ScheduleController> { ScheduleController(get(), get()) }
-    single<OnboardingController> { OnboardingController(get(), get()) }
-    single<MainController> { MainController() }
 }
 
 val generalModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    single { AppValues(get()) }
-    single { AppUtils(get()) }
-    single { GoogleDriveParser(get()) }
-    single { FileManager(get()) }
-    single<AppUpdateManager> {
 
+    singleOf(::AppValues) bind PreferenceStorage::class
+    singleOf(::AppUtils)
+    singleOf(::GoogleDriveParser)
+    singleOf(::FileManager)
+
+    singleOf(::DGTUAccountService)
+
+    singleOf(::InstitutionManager)
+    singleOf(::ScheduleRepository)
+    singleOf(::NewsRepository)
+
+    single<AppUpdateManager> {
         val context = androidContext()
         val source = getInstallSource(context)
 
@@ -148,11 +160,6 @@ val generalModule = module {
             )
         }
     }
-
-
-    single { InstitutionManager(get(), get()) }
-    single { ScheduleRepository(get(), get(), get()) }
-    single { NewsRepository(get(), get()) }
 
     single {
         Room.databaseBuilder(
@@ -178,10 +185,11 @@ val generalModule = module {
 
             install(ContentNegotiation) {
                 json(Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
                     classDiscriminator = "type"
+                    ignoreUnknownKeys = true
                     prettyPrint = true
+                    isLenient = true
+                    explicitNulls = false
                 })
             }
 

@@ -37,6 +37,8 @@ abstract class UIController<State : Any, Action, Event>(initialState: State) : V
 
     abstract fun obtainEvent(viewEvent: Event)
 
+    fun getState() = viewState
+
     protected fun updateState(state: State) { _viewStates.value = state }
 
     protected fun updateState(reducer: State.() -> State) = _viewStates.update { it.reducer() }

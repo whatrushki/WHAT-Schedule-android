@@ -75,7 +75,7 @@ class ScheduleRepository(
 
         return if (groups.isEmpty()) {
             Auditor.debug(dbTag, "Группы не найдены в БД, загрузка из API")
-            api.getGroups().also {
+            api.scheduleService.getGroups().also {
                 db.withTransaction { it.forEach { saveGroup(getFilialId(), it) } }
                 Auditor.debug(dbTag, "Загружено групп из API: ${it.size}")
             }
@@ -93,7 +93,7 @@ class ScheduleRepository(
 
         return if (teachers.isEmpty()) {
             Auditor.debug(dbTag, "Преподаватели не найдены в БД, загрузка из API")
-            api.getTeachers().also {
+            api.scheduleService.getTeachers().also {
                 db.withTransaction { it.forEach { saveTeacher(getFilialId(), it) } }
                 Auditor.debug(dbTag, "Загружено преподавателей из API: ${it.size}")
             }
@@ -157,8 +157,8 @@ class ScheduleRepository(
             )
 
             val fetchSchedule: suspend (String, Boolean, AdditionalData) -> ScheduleResponse =
-                if (search is ScheduleSearch.Group) api::getGroupSchedule
-                else api::getTeacherSchedule
+                if (search is ScheduleSearch.Group) api.scheduleService::getGroupSchedule
+                else api.scheduleService::getTeacherSchedule
 
             val response = fetchSchedule(
                 search.id, true, mapOf(

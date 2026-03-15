@@ -18,6 +18,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
+fun RowScope.FillGap(modifier: Modifier = Modifier) {
+    Spacer(modifier = modifier.weight(1f))
+}
+
+@Composable
+fun ColumnScope.FillGap(modifier: Modifier = Modifier) {
+    Spacer(modifier = modifier.weight(1f))
+}
+
+
+@Composable
 fun ColumnScope.Gap(size: Dp, modifier: Modifier = Modifier) {
     Spacer(modifier = modifier.height(size))
 }
