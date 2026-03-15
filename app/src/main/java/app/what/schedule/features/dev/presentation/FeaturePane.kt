@@ -18,22 +18,7 @@ import org.koin.core.context.unloadKoinModules
 
 @Composable
 fun FeaturePane() = Column {
-    val navigator = rememberNavigator()
     val settings = koinInject<AppValues>()
-    Button({
-        unloadKoinModules(controllers)
-        loadKoinModules(controllers)
-        settings.lastSearch.set(null)
-        navigator.parent!!.c.navigate(OnboardingProvider) {
-            popUpTo(0) {
-                inclusive = true
-            }
-        }
-    }) {
-        Text("Resellect institution")
-    }
-
-    Gap(8)
 
     Fallback(
         text = "В разработке",

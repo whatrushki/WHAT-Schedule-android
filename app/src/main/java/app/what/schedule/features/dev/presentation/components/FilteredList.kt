@@ -42,7 +42,7 @@ import app.what.foundation.ui.Gap
 import app.what.foundation.ui.Show
 import app.what.foundation.ui.useState
 import app.what.schedule.ui.components.Fallback
-import app.what.schedule.ui.components.SearchTextField
+import app.what.schedule.ui.components.StyledTextField
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Clear
 import app.what.schedule.ui.theme.icons.filled.Export
@@ -147,7 +147,7 @@ fun <T> FilteredList(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SearchTextField(
+            StyledTextField(
                 value = filterText,
                 onValueChange = setFilterText,
                 modifier = Modifier
@@ -167,10 +167,8 @@ fun <T> FilteredList(
                             onClick = { isHelpDialogExpanded = true }
                         ) {
                             WHATIcons.Question.Show(
-                                Modifier
-                                    .rotate(18f)
-                                    .size(18.dp),
-                                colorScheme.onSurface
+                                colorScheme.onSurface, 18,
+                                Modifier.rotate(18f)
                             )
                         }
                     }
@@ -206,10 +204,7 @@ fun <T> FilteredList(
                     .size(48.dp)
                     .background(colorScheme.surfaceContainer, CircleShape)
             ) {
-                WHATIcons.Clear.Show(
-                    Modifier.size(18.dp),
-                    colorScheme.onSurface
-                )
+                WHATIcons.Clear.Show(colorScheme.onSurface, 18)
             }
 
             // Кнопка экспорта
@@ -219,10 +214,7 @@ fun <T> FilteredList(
                     .size(48.dp)
                     .background(colorScheme.surfaceContainer, CircleShape)
             ) {
-                WHATIcons.Export.Show(
-                    Modifier.size(18.dp),
-                    colorScheme.onSurface
-                )
+                WHATIcons.Export.Show(colorScheme.onSurface, 18)
             }
         }
 

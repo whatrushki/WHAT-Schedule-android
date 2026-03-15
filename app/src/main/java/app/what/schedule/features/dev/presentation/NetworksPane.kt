@@ -278,7 +278,9 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
         try {
 
             NetworkMonitor.updateRequest(callId) {
-                val isImage = it.responseHeaders["Content-Type"]?.contains("image") ?: false
+                val isImage = it.responseHeaders["Content-Type"]?.contains("image")
+                    ?: it.responseHeaders["content-type"]?.contains("image")
+                    ?: false
 
                 val (text, size) = if (!isImage) {
                     val body = response.bodyAsText()

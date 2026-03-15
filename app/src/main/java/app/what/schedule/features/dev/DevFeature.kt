@@ -3,6 +3,7 @@ package app.what.schedule.features.dev
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -42,15 +43,21 @@ enum class DevToolsTab(
 @Composable
 fun DevFeature(
     modifier: Modifier = Modifier
-) = Column {
+) = Column(
+    Modifier.statusBarsPadding()
+) {
     var selectedTabIndex by useState(0)
-    val devToolsTabs = DevToolsTab.all().freeze()
+    val devToolsTabs = DevToolsTab.all()
+        .dropLast(1)
+        .freeze()
     val pagerState = rememberPagerState { devToolsTabs.size }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
     }
+
+    Gap(8)
 
     SingleChoiceSegmentedButtonRow(
         space = (-4).dp,
@@ -71,11 +78,7 @@ fun DevFeature(
         }
     }
 
-    Gap(12)
-
-    HorizontalPager(
-        pagerState
-    ) {
+    HorizontalPager(pagerState) {
         when (devToolsTabs[it]) {
             DevToolsTab.LOGS -> LogsPane()
             DevToolsTab.NETWORK -> NetworksPane()
