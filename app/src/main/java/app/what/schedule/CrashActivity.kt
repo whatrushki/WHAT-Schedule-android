@@ -8,12 +8,27 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.content.FileProvider
 import app.what.foundation.services.AppLogger.Companion.Auditor
 import app.what.foundation.services.crash.CrashScreen
+import app.what.foundation.ui.Show
+import app.what.foundation.ui.controllers.rememberDialogController
 import app.what.foundation.utils.ShareUtils
+import app.what.navigation.core.ProvideGlobalDialog
 import app.what.schedule.data.local.settings.AppValues
+import app.what.schedule.features.dev.DevFeature
 import app.what.schedule.ui.theme.AppTheme
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.FrameBug
 import org.koin.compose.koinInject
 import java.io.File
 
@@ -31,11 +46,30 @@ class CrashActivity : ComponentActivity() {
             }
 
             AppTheme(koinInject<AppValues>()) {
-                CrashScreen(
-                    crashReport = intent.getStringExtra("CRASH_REPORT") ?: "",
-                    onRestart = { restartApp() },
-                    onShare = { shareCrashReport() }
-                )
+                ProvideGlobalDialog {
+                    val dialog = rememberDialogController()
+
+                    Box {
+                        FloatingActionButton(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .zIndex(2f)
+                                .systemBarsPadding()
+                                .padding(bottom = 20.dp, end = 20.dp),
+                            onClick = {
+                                dialog.open(full = true) { DevFeature() }
+                            }
+                        ) {
+                            WHATIcons.FrameBug.Show(color = colorScheme.onSecondaryContainer)
+                        }
+
+                        CrashScreen(
+                            crashReport = intent.getStringExtra("CRASH_REPORT") ?: "",
+                            onRestart = { restartApp() },
+                            onShare = { shareCrashReport() }
+                        )
+                    }
+                }
             }
         }
     }

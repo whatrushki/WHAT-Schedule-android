@@ -50,6 +50,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import java.time.LocalDateTime
@@ -58,6 +60,7 @@ import java.time.LocalDateTime
 fun AsyncImageWithFallback(
     url: String?,
     modifier: Modifier = Modifier,
+    headers: Map<String, String> = emptyMap(),
     enableDetailView: Boolean = false
 ) {
     var showFullScreen by useState(false)
@@ -65,6 +68,10 @@ fun AsyncImageWithFallback(
     SubcomposeAsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(url)
+            .httpHeaders(NetworkHeaders.Builder().apply {
+                add("Accept", "image/*,*/*;q=0.8")
+                headers.forEach { (k, v) -> add(k, v) }
+            }.build())
             .crossfade(true)
             .build(),
         contentDescription = null,
