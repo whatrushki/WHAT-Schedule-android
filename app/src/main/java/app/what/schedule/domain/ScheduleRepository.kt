@@ -24,7 +24,6 @@ import app.what.schedule.utils.LogScope
 import app.what.schedule.utils.buildTag
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import kotlinx.coroutines.CoroutineScope
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 class ScheduleRepository(
@@ -34,13 +33,13 @@ class ScheduleRepository(
 ) {
     private val api
         get() = institutionManager.getSavedInstitution().orThrow { "No provider selected" }
-
+    
     private fun getFilialId() = api.metadata.id
-
+    
     suspend fun toggleFavorites(value: ScheduleSearch.Group) {
         val dbTag = buildTag(LogScope.DATABASE, LogCat.DB)
         Auditor.debug(dbTag, "Переключение избранного для группы: ${value.id}")
-
+        
         db.withTransaction {
             val group = db.groupsDao.selectByGroupId(getFilialId(), value.id)!!
             val newFavoriteState = !group.favorite
@@ -51,11 +50,11 @@ class ScheduleRepository(
             )
         }
     }
-
+    
     suspend fun toggleFavorites(value: ScheduleSearch.Teacher) {
         val dbTag = buildTag(LogScope.DATABASE, LogCat.DB)
         Auditor.debug(dbTag, "Переключение избранного для преподавателя: ${value.id}")
-
+        
         db.withTransaction {
             val teacher = db.teachersDao.selectByTeacherId(getFilialId(), value.id)!!
             val newFavoriteState = !teacher.favorite
@@ -66,13 +65,13 @@ class ScheduleRepository(
             )
         }
     }
-
+    
     suspend fun getGroups(): List<Group> {
         val dbTag = buildTag(LogScope.DATABASE, LogCat.DB)
         val groups = db.groupsDao
             .selectByInstitution(getFilialId())
             .map { it.toModel() }
-
+        
         return if (groups.isEmpty()) {
             Auditor.debug(dbTag, "Группы не найдены в БД, загрузка из API")
             api.scheduleService.getGroups().also {
@@ -84,13 +83,13 @@ class ScheduleRepository(
             groups
         }
     }
-
+    
     suspend fun getTeachers(): List<Teacher> {
         val dbTag = buildTag(LogScope.DATABASE, LogCat.DB)
         val teachers = db.teachersDao
             .selectByInstitution(getFilialId())
             .map { it.toModel() }
-
+        
         return if (teachers.isEmpty()) {
             Auditor.debug(dbTag, "Преподаватели не найдены в БД, загрузка из API")
             api.scheduleService.getTeachers().also {
@@ -102,24 +101,25 @@ class ScheduleRepository(
             teachers
         }
     }
-
+    
     suspend fun findSearchId(search: ScheduleSearch?) = when (search) {
         is ScheduleSearch.Group -> db.groupsDao.selectByGroupId(getFilialId(), search.id)?.groupId
             ?: db.groupsDao.selectByName(getFilialId(), search.name)?.groupId
-
+        
         is ScheduleSearch.Teacher -> db.teachersDao.selectByTeacherId(
             getFilialId(),
             search.id
         )?.teacherId
             ?: db.teachersDao.selectByName(getFilialId(), search.name)?.teacherId
-
+        
         null -> null
     }
-
+    
     suspend fun getSchedule(
         search: ScheduleSearch,
         useCache: Boolean,
-        requiresData: Boolean = true
+        requiresData: Boolean = true,
+        cloudSync: Boolean = false
     ): ScheduleResponse {
         Analytics.logScheduleRequest(search.name, search::class.simpleName.toString())
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.DB)
@@ -128,58 +128,71 @@ class ScheduleRepository(
             scheduleTag,
             "Запрос расписания для $searchType: ${search.id}, кеш: $useCache, требуются данные: $requiresData"
         )
-
+        
         val fb = FirebaseCrashlytics.getInstance()
         fb.setCustomKey("schedule_search_type", searchType)
         fb.setCustomKey("schedule_search_id", search.id)
-
+        
         val lastRequest = db.requestsDao.selectLastOfInstitution(getFilialId())
         val cache: RequestSDBO? = db.requestsDao.selectLastWithData(getFilialId(), search.id)
 
-        return if (
-            cache != null
-            && useCache
-            && cache.request.createdAt == LocalDate.now()
-        ) {
-            Auditor.debug(
-                scheduleTag,
-                "Расписание загружено из кеша, дата: ${cache.request.createdAt}"
-            )
-
-            ScheduleResponse.Available.FromCache(
-                cache.daySchedules.map { it.toModel() },
-                cache.request.lastModified
-            )
-        } else {
-            Auditor.debug(
-                scheduleTag,
-                "Загрузка расписания из API, последнее изменение: ${cache?.request?.lastModified}, требуется обновление: ${cache == null || requiresData}"
-            )
-
-            val fetchSchedule: suspend (String, Boolean, AdditionalData) -> ScheduleResponse =
-                if (search is ScheduleSearch.Group) api.scheduleService::getGroupSchedule
-                else api.scheduleService::getTeacherSchedule
-
-            val response = fetchSchedule(
-                search.id, true, mapOf(
-                    "lastModified" to lastRequest?.lastModified,
-                    "requiresData" to (cache == null || requiresData)
+//        return if (
+//            cache != null
+//            && !cloudSync
+//            && useCache
+//            && cache.request.createdAt == LocalDate.now()
+//        ) {
+//
+//
+//            ScheduleResponse.Available.FromCache(
+//                cache.daySchedules.map { it.toModel() },
+//                cache.request.lastModified
+//            )
+//        } else
+        return try {
+            val response = if (useCache && cache != null) {
+                Auditor.debug(
+                    scheduleTag,
+                    "Расписание загружено из кеша, дата: ${cache.request.createdAt}"
                 )
-            )
-
+                
+                ScheduleResponse.Available.FromCache(
+                    cache.daySchedules.map { it.toModel() },
+                    cache.request.lastModified
+                )
+            } else {
+                Auditor.debug(
+                    scheduleTag,
+                    "Загрузка расписания из API, последнее изменение: ${cache?.request?.lastModified}, требуется обновление: ${cache == null || requiresData}"
+                )
+                
+                val fetchSchedule: suspend (String, Boolean, AdditionalData) -> ScheduleResponse =
+                    if (search is ScheduleSearch.Group) api.scheduleService::getGroupSchedule
+                    else api.scheduleService::getTeacherSchedule
+                
+                
+                fetchSchedule(
+                    search.id, true, mapOf(
+                        "lastModified" to if (!cloudSync) lastRequest?.lastModified
+                        else LocalDateTime.of(0, 1, 1, 0, 0, 0),
+                        "requiresData" to (cache == null || requiresData || cloudSync)
+                    )
+                )
+            }
+            
             if (response is ScheduleResponse.Available) {
                 Auditor.debug(
                     scheduleTag,
                     "Расписание успешно получено, сохранение в БД. Дней: ${response.schedules.size}"
                 )
-
+                
                 saveRequest(
                     getFilialId(),
                     search.id,
                     response.lastModified,
                     response.schedules
                 )
-
+                
                 return ScheduleResponse.Available.FromSource(
                     db.requestsDao
                         .selectLastWithData(getFilialId(), search.id)!!
@@ -191,11 +204,18 @@ class ScheduleRepository(
             } else {
                 Auditor.debug(scheduleTag, "Расписание пустое")
             }
-
+            
             response
+        } catch (e: Exception) {
+            Auditor.err(scheduleTag, "Ошибка получения расписания, возвращаю кеш")
+            ScheduleResponse.Error(
+                cache?.daySchedules?.map { it.toModel() },
+                lastRequest?.lastModified,
+                e
+            )
         }
     }
-
+    
     private suspend fun saveGroup(
         institutionId: String,
         it: Group
@@ -206,7 +226,7 @@ class ScheduleRepository(
             groupId = it.id,
         )
     )
-
+    
     private suspend fun saveTeacher(
         institutionId: String,
         it: Teacher
@@ -217,7 +237,7 @@ class ScheduleRepository(
             teacherId = it.id,
         )
     )
-
+    
     private suspend fun saveRequest(
         institutionId: String,
         query: String,
@@ -229,10 +249,10 @@ class ScheduleRepository(
             dbTag,
             "Сохранение расписания в БД: запрос=$query, дней=${daySchedules.size}, последнее изменение=$lastModified"
         )
-
+        
         db.withTransaction {
             db.requestsDao.deleteAll(getFilialId(), query)
-
+            
             val requestId = db.requestsDao.insert(
                 RequestDBO(
                     institutionId = institutionId,
@@ -241,7 +261,7 @@ class ScheduleRepository(
                 )
             )
             Auditor.debug(dbTag, "Создан запрос с ID: $requestId")
-
+            
             daySchedules.forEach { daySchedule ->
                 val dayScheduleId = db.daySchedulesDao.insert(
                     DayScheduleDBO(
@@ -250,7 +270,7 @@ class ScheduleRepository(
                         scheduleType = daySchedule.scheduleType
                     )
                 )
-
+                
                 daySchedule.lessons.forEach { lesson ->
                     val lessonId = db.lessonsDao.insert(
                         LessonDBO(
@@ -263,7 +283,7 @@ class ScheduleRepository(
                             state = lesson.state
                         )
                     )
-
+                    
                     lesson.otUnits.forEach { otUnit ->
                         val groupId = db.groupsDao
                             .selectIdByGroupId(institutionId, otUnit.group.id)
@@ -276,7 +296,7 @@ class ScheduleRepository(
                                     year = otUnit.group.year
                                 )
                             )
-
+                        
                         val teacherId = db.teachersDao
                             .selectIdByTeacherId(institutionId, otUnit.teacher.id)
                             ?: db.teachersDao.selectByName(institutionId, otUnit.teacher.name)?.id
@@ -287,7 +307,7 @@ class ScheduleRepository(
                                     teacherId = otUnit.teacher.id
                                 )
                             )
-
+                        
                         db.otUnitsDao.insert(
                             OneTimeUnitDBO(
                                 lessonId = lessonId,
@@ -301,7 +321,7 @@ class ScheduleRepository(
                 }
             }
         }
-
+        
         val totalLessons = daySchedules.sumOf { it.lessons.size }
         Auditor.debug(
             dbTag,

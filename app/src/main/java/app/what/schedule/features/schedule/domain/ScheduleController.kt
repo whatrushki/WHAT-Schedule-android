@@ -32,30 +32,36 @@ class ScheduleController(
     override fun obtainEvent(viewEvent: ScheduleEvent) = when (viewEvent) {
         ScheduleEvent.Init -> {}
         ScheduleEvent.UpdateSchedule -> syncSchedule(viewState.selectedSearch)
+        ScheduleEvent.OnCloudSync -> syncSchedule(
+            viewState.selectedSearch,
+            useCache = false,
+            cloudSync = true
+        )
+        
         ScheduleEvent.OnRefresh -> syncSchedule(viewState.selectedSearch, false)
         is ScheduleEvent.OnSearchClicked -> syncSchedule(viewEvent.value)
         is ScheduleEvent.OnSearchLongPressed -> toggleFavorites(viewEvent.value)
     }
-
+    
     init {
         init()
     }
-
+    
     val debugMode: Boolean
         get() = settings.debugMode.get() == true
-
+    
     private fun init() {
         val lastSearch = settings.lastSearch.get()
-
+        
         updateState {
             if (lastSearch == null) copy(scheduleState = RemoteState.Idle)
             else copy(selectedSearch = lastSearch)
         }
-
+        
         updateSearches()
         syncSchedule(viewState.selectedSearch, true)
     }
-
+    
     private fun toggleFavorites(value: ScheduleSearch) {
         viewModelScope.launchIO {
             when (value) {
@@ -68,11 +74,15 @@ class ScheduleController(
             Auditor.debug(scheduleTag, "Избранное обновлено")
         }
     }
-
-    private fun syncSchedule(search: ScheduleSearch?, useCache: Boolean = true) {
+    
+    private fun syncSchedule(
+        search: ScheduleSearch?,
+        useCache: Boolean = true,
+        cloudSync: Boolean = false
+    ) {
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
         Auditor.debug(scheduleTag, "Синхронизация расписания: $search, кеш: $useCache")
-
+        
         viewModelScope.launchSafe(
             debug = debugMode,
             onFailure = {
@@ -84,25 +94,31 @@ class ScheduleController(
         ) {
             val searchId = apiRepository.findSearchId(search)
             if (search != null && searchId != null)
-                updateSchedule(search.copy(id = searchId), useCache)
+                updateSchedule(search.copy(id = searchId), useCache, cloudSync)
         }
     }
-
-    private suspend fun updateSchedule(search: ScheduleSearch?, useCache: Boolean) {
+    
+    private suspend fun updateSchedule(
+        search: ScheduleSearch?,
+        useCache: Boolean,
+        cloudSync: Boolean = false
+    ) {
         search ?: return
-
+        
         updateState {
-            copy(
-                selectedSearch = search,
-                schedules = emptyList(),
-                scheduleState = RemoteState.Loading
-            )
+            copy(selectedSearch = search, scheduleState = RemoteState.Loading)
         }
-
+        
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.STATE)
+        val groupChanged = settings.lastSearch.get() != search
         settings.lastSearch.set(search)
-        val data = apiRepository.getSchedule(search, useCache, viewState.schedules.isEmpty())
-
+        val data = apiRepository.getSchedule(
+            search,
+            useCache,
+            viewState.schedules.isEmpty() || groupChanged,
+            cloudSync
+        )
+        
         when (data) {
             is ScheduleResponse.Available -> {
                 Auditor.debug(
@@ -110,33 +126,41 @@ class ScheduleController(
                     "Расписание успешно получено, дней: ${data.schedules.size}"
                 )
             }
-
+            
             ScheduleResponse.Empty -> {
                 Auditor.debug(scheduleTag, "Расписание пустое")
             }
-
+            
             ScheduleResponse.UpToDate -> {
                 Auditor.debug(scheduleTag, "Расписание актуально")
             }
+            
+            else -> {
+                Auditor.debug(scheduleTag, "Не удалось получить расписание")
+            }
         }
-
+        
         updateState {
             when (data) {
+                ScheduleResponse.UpToDate -> copy(scheduleState = RemoteState.Success)
                 is ScheduleResponse.Available -> copy(
                     scheduleState = RemoteState.Success,
                     schedules = data.schedules
                 )
-
+                
+                is ScheduleResponse.Error -> copy(
+                    scheduleState = RemoteState.Error(data.exception),
+                    schedules = data.cachedSchedules ?: emptyList()
+                )
+                
                 ScheduleResponse.Empty -> copy(
                     scheduleState = RemoteState.Empty,
                     schedules = emptyList()
                 )
-
-                ScheduleResponse.UpToDate -> copy(scheduleState = RemoteState.Success)
             }
         }
     }
-
+    
     private fun updateSearches() {
         viewModelScope.launchSafe(
             onFailure = {
@@ -146,11 +170,11 @@ class ScheduleController(
             }
         ) {
             updateState { copy(scheduleSearchesState = RemoteState.Loading) }
-
+            
             val ut = async { apiRepository.getTeachers().map { it.toScheduleSearch() } }
             val ug = async { apiRepository.getGroups().map { it.toScheduleSearch() } }
             val data = awaitAll(ut, ug).flatten()
-
+            
             updateState {
                 copy(
                     scheduleSearches = data,
