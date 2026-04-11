@@ -76,7 +76,7 @@ val WHATIcons.Building: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Building!!
     }
 

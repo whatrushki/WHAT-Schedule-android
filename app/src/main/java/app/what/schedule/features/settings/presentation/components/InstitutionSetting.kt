@@ -34,7 +34,7 @@ fun PreferenceStorage.Value<String>.asInstitutionChoice(
 ) = asDialog { value, set ->
     val dialog = rememberDialogController()
     val selected by value.collect()
-
+    
     Column(Modifier.padding(8.dp)) {
         Row(
             modifier = Modifier
@@ -50,9 +50,9 @@ fun PreferenceStorage.Value<String>.asInstitutionChoice(
                 color = Color(0xFFFFA000),
                 modifier = Modifier.size(20.dp)
             )
-
+            
             Gap(12)
-
+            
             Text(
                 text = "Приложение будет перезагружено",
                 style = typography.bodySmall,
@@ -60,7 +60,7 @@ fun PreferenceStorage.Value<String>.asInstitutionChoice(
                 lineHeight = 16.sp
             )
         }
-
+        
         insts.forEach {
             Row(
                 Modifier

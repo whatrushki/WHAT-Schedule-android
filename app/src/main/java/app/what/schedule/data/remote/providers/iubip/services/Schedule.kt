@@ -35,7 +35,7 @@ class IUBIPScheduleService(
     private val client: HttpClient
 ) : ScheduleService {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-
+    
     override suspend fun getGroupSchedule(
         group: String,
         showReplacements: Boolean,
@@ -45,7 +45,7 @@ class IUBIPScheduleService(
         Auditor.debug(scheduleTag, "Запрос расписания группы: $group")
         crashlytics.setCustomKey("schedule_group", group)
         crashlytics.setCustomKey("institution", "iubip")
-
+        
         val response = client
             .submitForm(
                 url = "${baseUrl}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
@@ -54,7 +54,7 @@ class IUBIPScheduleService(
                     append("group", group)
                 }
             )
-
+        
         val schedules = Json.parseToJsonElement(response.bodyAsText())
             .jsonObject[group]!!
             .jsonArray[1]
@@ -66,20 +66,20 @@ class IUBIPScheduleService(
             .takeIf(List<DaySchedule>::isNotEmpty)
             ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
             ?: ScheduleResponse.Empty
-
+        
         Auditor.debug(
             scheduleTag,
             "Получено дней в расписании: ${if (schedules is ScheduleResponse.Available) schedules.schedules.size else 0}"
         )
         return schedules
     }
-
+    
     private fun parseWeek(week: JsonElement): List<DaySchedule> {
         val days = mutableListOf<DaySchedule>()
-
+        
         week.jsonObject.entries.forEach { (_, dayScheduleRaw) ->
             var date: LocalDate? = null
-
+            
             val lessons =
                 dayScheduleRaw.jsonObject.entries.map { (lessonNumRaw, otUnitsRaw) ->
                     val number = lessonNumRaw.trim().toInt()
@@ -87,7 +87,7 @@ class IUBIPScheduleService(
                     val otUnits = otUnitsRaw.jsonArray.map {
                         val auditory = it.jsonObject["AUD"]!!.jsonPrimitive.toString()
                             .replace("\"", "").trim()
-
+                        
                         OneTimeUnit(
                             group = Group(
                                 it.jsonObject["GROUP"]!!.jsonPrimitive.toString()
@@ -101,18 +101,18 @@ class IUBIPScheduleService(
                             building = if ("Дис" in auditory) "*" else "1"
                         )
                     }
-
+                    
                     fun getFromFirstOtUnit(key: String) =
                         otUnitsRaw.jsonArray[0].jsonObject[key]!!.jsonPrimitive.toString()
                             .replace("\"", "").trim()
-
+                    
                     if (date == null) date = getFromFirstOtUnit("DATE").let {
                         val raw = it.split("-").map(String::toInt)
                         LocalDate.of(raw[2], raw[1], raw[0]).also {
                             if (it < LocalDate.now()) return@forEach
                         }
                     }
-
+                    
                     Lesson(
                         date = date,
                         number = number,
@@ -128,7 +128,7 @@ class IUBIPScheduleService(
                         otUnits = otUnits
                     )
                 }
-
+            
             days.add(
                 DaySchedule(
                     date = date!!,
@@ -137,20 +137,20 @@ class IUBIPScheduleService(
                 )
             )
         }
-
+        
         return days
     }
-
+    
     override suspend fun getTeacherSchedule(
         teacher: String,
         showReplacements: Boolean,
         additional: AdditionalData
     ): ScheduleResponse = ScheduleResponse.Empty
-
+    
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "iubip")
         Auditor.debug(netTag, "Загрузка списка групп")
-
+        
         val groups = client
             .submitForm(
                 url = "${baseUrl}/local/templates/univer/include/schedule/ajax/read-file-groups.php",
@@ -162,10 +162,10 @@ class IUBIPScheduleService(
             .flatMap {
                 it.keys.map { Group(it) }
             }
-
+        
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
-
+    
     override suspend fun getTeachers(): List<Teacher> = emptyList()
 }

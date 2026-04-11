@@ -28,22 +28,22 @@ import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        
         val uiTag = buildTag(LogScope.UI, LogCat.INIT)
         Auditor.info(uiTag, "MainActivity создана")
-
+        
         enableEdgeToEdge()
         setContent {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.setNavigationBarContrastEnforced(false)
             }
-
+            
             val navigator = rememberHostNavigator()
             val settings = koinInject<AppValues>()
-
+            
             LaunchedEffect(Unit) {
                 navigator.c.addOnDestinationChangedListener { _, destination, _ ->
                     val navTag = buildTag(LogScope.CORE, LogCat.NAV)
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     crashlytics.setCustomKey("current_screen", destination.route ?: "unknown")
                 }
             }
-
+            
             ProvideGLobalAppValues(settings) {
                 AppTheme {
                     ProvideGlobalDialog {

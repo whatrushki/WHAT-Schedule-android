@@ -16,22 +16,20 @@ class NewsRepository(
 ) {
     private val api
         get() = institutionManager.getSavedInstitution().orThrow { "No provider selected" }
-
-    private fun getFilialId() = api.metadata.id
-
+    
     suspend fun getNews(page: Int): List<NewListItem> {
         val newsTag = buildTag(LogScope.NEWS, LogCat.NET)
         Auditor.debug(newsTag, "Запрос новостей, страница: $page")
-
+        
         val news = api.newsService.getNews(page)
         Auditor.debug(newsTag, "Получено новостей: ${news.size}")
         return news
     }
-
+    
     suspend fun getNewDetail(id: String): NewItem {
         val newsTag = buildTag(LogScope.NEWS, LogCat.NET)
         Auditor.debug(newsTag, "Запрос деталей новости: $id")
-
+        
         val newsDetail = api.newsService.getNewDetail(id)
         Auditor.debug(newsTag, "Детали новости загружены: ${newsDetail.title}")
         return newsDetail

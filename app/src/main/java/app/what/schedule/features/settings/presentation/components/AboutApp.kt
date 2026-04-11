@@ -1,7 +1,6 @@
 package app.what.schedule.features.settings.presentation.components
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -73,10 +72,10 @@ fun AboutAppContent(
     val devSettingsUnlocked by appValues.devSettingsUnlocked.collect()
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
-
+    
     var versionClickCount by useState(0)
     var showFireworks by useState(false)
-
+    
     LaunchedEffect(versionClickCount) {
         if (versionClickCount == 10) {
             showFireworks = true
@@ -85,12 +84,12 @@ fun AboutAppContent(
                 "🎉 Developer Mode Unlocked!",
                 Toast.LENGTH_LONG
             ).show()
-
+            
             Analytics.logEasterEggFound("version taps in 'about app'")
             appValues.devSettingsUnlocked.set(true)
         }
     }
-
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -100,17 +99,15 @@ fun AboutAppContent(
     ) {
         val layer1 = colorScheme.primaryContainer to colorScheme.tertiaryContainer
         val layer2 = colorScheme.secondaryContainer to colorScheme.surfaceContainer
-
-        AdvancedLiquidBackground(
-            layers = listOf(layer1, layer2)
-        )
-
+        
+        AdvancedLiquidBackground(layers = listOf(layer1, layer2))
+        
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(colorScheme.surface.copy(alpha = 0.65f))
         )
-
+        
         Column(
             modifier = Modifier.padding(12.dp, 24.dp, 12.dp, 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -121,8 +118,7 @@ fun AboutAppContent(
                 name = BuildConfig.APP_OWNER_GITHUB_NICKNAME,
                 role = BuildConfig.APP_OWNER_ROLE
             )
-
-
+            
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -138,18 +134,18 @@ fun AboutAppContent(
                     onClick = { uriHandler.openUri(BuildConfig.APP_OWNER_TELEGRAM_URL) }
                 )
             }
-
+            
             RepoStatsCard(
                 owner = BuildConfig.APP_GITHUB_URL.split("/").dropLast(1).last(),
                 repo = BuildConfig.APP_GITHUB_URL.split("/").last(),
                 repoUrl = BuildConfig.APP_GITHUB_URL,
                 uriHandler = uriHandler
             )
-
+            
             JoinTeamCard(
                 onClick = { uriHandler.openUri(BuildConfig.APP_OWNER_TELEGRAM_URL) }
             )
-
+            
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "WHAT Schedule v${BuildConfig.VERSION_NAME}",
@@ -157,20 +153,19 @@ fun AboutAppContent(
                     color = colorScheme.secondary,
                     modifier = Modifier
                         .clip(CircleShape)
-                        .bclick(devSettingsUnlocked == false) { versionClickCount++ }
+                        .bclick(devSettingsUnlocked == false) {
+                            versionClickCount++
+                            if (versionClickCount in 3..9 step 3) Toast.makeText(
+                                context,
+                                "${10 - versionClickCount}...",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                         .padding(8.dp)
                 )
-
-                AnimatedVisibility(versionClickCount in 3..9) {
-                    Text(
-                        text = "${10 - versionClickCount}...",
-                        style = typography.labelSmall,
-                        color = colorScheme.primary.copy(alpha = 0.5f)
-                    )
-                }
             }
         }
-
+        
         if (showFireworks) {
             SimpleFireworks(modifier = Modifier.fillMaxSize())
         }
@@ -196,9 +191,9 @@ private fun DevProfile(avatarUrl: String, name: String, role: String) {
                 modifier = Modifier.fillMaxSize()
             )
         }
-
+        
         Gap(12)
-
+        
         Text(
             text = name,
             style = typography.titleLarge,
@@ -255,7 +250,7 @@ private fun RepoStatsCard(
     uriHandler: androidx.compose.ui.platform.UriHandler
 ) {
     val stars = rememberGithubStars(owner, repo)
-
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -279,8 +274,8 @@ private fun RepoStatsCard(
                 fontWeight = FontWeight.Bold
             )
         }
-
-
+        
+        
         AnimatedEnter(stars != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icons.Default.Star.Show(
@@ -337,19 +332,19 @@ private fun SimpleFireworks(modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing)),
         label = "Time"
     )
-
+    
     Canvas(modifier = modifier) {
         val centerX = size.width / 2
         val centerY = size.height / 2
-
+        
         particles.forEachIndexed { index, particle ->
             val progress = (time + index * 0.02f) % 1f
             val radius = progress * size.width * 0.6f
             val alpha = 1f - progress // Исчезает к концу
-
+            
             val x = centerX + cos(particle.angle) * radius
             val y = centerY + sin(particle.angle) * radius
-
+            
             drawCircle(
                 color = particle.color.copy(alpha = alpha.coerceIn(0f, 1f)),
                 radius = particle.size * (1f - progress * 0.5f),

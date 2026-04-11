@@ -95,7 +95,7 @@ fun NewsDetailView(
     val description = state.newDetailInfo?.description?.takeIf { !it.isEmpty() }
         ?: state.newListInfo.description?.let { buildAnnotatedString { append(it) } }
     var descriptionIsExpandable by useState(false)
-
+    
     Gap(120)
     Box {
         AsyncImageWithFallback(
@@ -106,7 +106,7 @@ fun NewsDetailView(
                 .height(220.dp)
                 .clip(shapes.extraLarge)
         )
-
+        
         Box(
             modifier = Modifier
                 .padding(top = 200.dp)
@@ -135,10 +135,10 @@ fun NewsDetailView(
                                 modifier = Modifier.widthIn(max = 180.dp)
                             )
                         }
-
+                        
                         Gap(8)
                     }
-
+                    
                     state.newDetailInfo?.timestamp?.let {
                         Text(
                             it.format(
@@ -153,7 +153,7 @@ fun NewsDetailView(
                         )
                     }
                 }
-
+                
                 Text(
                     state.newDetailInfo?.title ?: state.newListInfo.title,
                     color = colorScheme.onSurface,
@@ -161,9 +161,9 @@ fun NewsDetailView(
                         || state.newListInfo.description != null) 24.sp else 22.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-
+                
                 Gap(4)
-
+                
                 if (description != null && state.newDetailInfo?.content?.isNotEmpty() == true) {
                     var descriptionIsExpanded by useState(false)
                     val style = TextStyle(
@@ -171,7 +171,7 @@ fun NewsDetailView(
                         fontSize = 16.sp,
                         lineHeight = 18.sp,
                     )
-
+                    
                     Text(
                         description,
                         style = style,
@@ -185,7 +185,7 @@ fun NewsDetailView(
                         }
                     )
                 }
-
+                
                 Row(
                     Modifier
                         .height(IntrinsicSize.Min)
@@ -210,9 +210,9 @@ fun NewsDetailView(
                             fontWeight = FontWeight.Medium
                         )
                     }
-
+                    
                     Gap(8)
-
+                    
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -231,28 +231,28 @@ fun NewsDetailView(
             }
         }
     }
-
+    
     when (state.newState) {
         is RemoteState.Error -> Fallback(
             "Произошла непредвиденная ошибка",
             Modifier.fillMaxSize(),
             "Попробовать снова" to { listener(NewsDetailEvent.OnRefresh) }
         )
-
+        
         RemoteState.Loading -> NewDetailContentShimmer(shimmer, Modifier.padding(12.dp))
         RemoteState.Success -> {
             Gap(12)
-
+            
             NewContentPainter(
                 if (state.newDetailInfo?.content?.isNotEmpty() == true) listOf(state.newDetailInfo.content)
                 else if (description != null) listOf(NewContent.Item.Text(description))
                 else emptyList()
             )
         }
-
+        
         else -> Unit
     }
-
+    
     Gap(50)
 }
 
@@ -266,14 +266,14 @@ fun NewContentPainter(content: List<NewContent>) {
                 is NewContent.Container.Column -> Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) { NewContentPainter(it.content) }
-
+                
                 is NewContent.Container.Row -> FlowRow(
                     maxItemsInEachRow = 2,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) { NewContentPainter(it.content) }
             }
-
+            
             is NewContent.Item -> AnimatedEnter(delay = 100L * i) {
                 when (it) {
                     is NewContent.Item.ImageCarousel -> Column(
@@ -282,7 +282,7 @@ fun NewContentPainter(content: List<NewContent>) {
                     ) {
                         var selectedImageIndex by useState(0)
                         val lazyListState = rememberLazyListState()
-
+                        
                         Box(
                             Modifier.padding(horizontal = 12.dp)
                         ) {
@@ -294,10 +294,10 @@ fun NewContentPainter(content: List<NewContent>) {
                                     .aspectRatio(4 / 3f, true)
                                     .clip(shapes.large)
                             )
-
+                            
                             val nextButtonEnabled = selectedImageIndex + 1 < it.data.size
                             val prevButtonEnabled = selectedImageIndex - 1 >= 0
-
+                            
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
@@ -321,7 +321,7 @@ fun NewContentPainter(content: List<NewContent>) {
                                     modifier = Modifier.padding(12.dp)
                                 )
                             }
-
+                            
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
@@ -346,9 +346,9 @@ fun NewContentPainter(content: List<NewContent>) {
                                 )
                             }
                         }
-
+                        
                         Gap(12)
-
+                        
                         LazyRow(
                             state = lazyListState,
                             contentPadding = PaddingValues(12.dp, 0.dp),
@@ -370,7 +370,7 @@ fun NewContentPainter(content: List<NewContent>) {
                             }
                         }
                     }
-
+                    
                     is NewContent.Item.Table -> TODO()
                     is NewContent.Item.Subtitle -> Text(
                         it.data,
@@ -379,7 +379,7 @@ fun NewContentPainter(content: List<NewContent>) {
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-
+                    
                     is NewContent.Item.Text -> Text(
                         it.data,
                         color = colorScheme.onSurfaceVariant,
@@ -387,7 +387,7 @@ fun NewContentPainter(content: List<NewContent>) {
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-
+                    
                     is NewContent.Item.SimpleText -> Text(
                         it.data,
                         color = colorScheme.onSurfaceVariant,
@@ -395,7 +395,7 @@ fun NewContentPainter(content: List<NewContent>) {
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-
+                    
                     is NewContent.Item.Image -> AsyncImageWithFallback(
                         url = it.data,
                         enableDetailView = true,
@@ -405,7 +405,7 @@ fun NewContentPainter(content: List<NewContent>) {
                             .padding(horizontal = 12.dp)
                             .clip(shapes.large)
                     )
-
+                    
                     is NewContent.Item.SortedList -> Column(
                         modifier = Modifier.padding(horizontal = 32.dp)
                     ) {
@@ -430,16 +430,16 @@ fun NewContentPainter(content: List<NewContent>) {
                             Gap(4)
                         }
                     }
-
+                    
                     is NewContent.Item.UnsortedList -> Column(
                         modifier = Modifier.padding(horizontal = 32.dp)
                     ) {
                         Gap(4)
-
+                        
                         it.data.forEach {
                             Row {
                                 WHATIcons.Features.Show(colorScheme.tertiary, 20)
-
+                                
                                 Gap(4)
                                 Text(
                                     it,
@@ -448,11 +448,11 @@ fun NewContentPainter(content: List<NewContent>) {
                                     color = colorScheme.secondary
                                 )
                             }
-
+                            
                             Gap(4)
                         }
                     }
-
+                    
                     is NewContent.Item.Info -> Box(
                         Modifier
                             .height(IntrinsicSize.Min)
@@ -467,7 +467,7 @@ fun NewContentPainter(content: List<NewContent>) {
                                 .fillMaxHeight()
                                 .background(colorScheme.tertiary)
                         )
-
+                        
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -486,7 +486,7 @@ fun NewContentPainter(content: List<NewContent>) {
                             )
                         }
                     }
-
+                    
                     is NewContent.Item.Quote -> Box(
                         Modifier
                             .padding(horizontal = 12.dp)
@@ -507,15 +507,15 @@ fun NewContentPainter(content: List<NewContent>) {
                                         .height(120.dp)
                                         .aspectRatio(3 / 4f, true)
                                 )
-
+                                
                                 WHATIcons.Quote.Show(
                                     colorScheme.tertiary, 48,
                                     Modifier.wiggle(15f)
                                 )
                             }
-
+                            
                             Gap(18)
-
+                            
                             Text(
                                 it.data,
                                 color = colorScheme.onSurface,
@@ -523,9 +523,9 @@ fun NewContentPainter(content: List<NewContent>) {
                                 lineHeight = 18.sp,
                                 fontWeight = FontWeight.Medium
                             )
-
+                            
                             Gap(20)
-
+                            
                             Column {
                                 Text(
                                     it.author.name,
@@ -533,7 +533,7 @@ fun NewContentPainter(content: List<NewContent>) {
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
-
+                                
                                 Text(
                                     it.author.role,
                                     color = colorScheme.secondary,
@@ -543,7 +543,7 @@ fun NewContentPainter(content: List<NewContent>) {
                             }
                         }
                     }
-
+                    
                     is NewContent.Item.Video.VK -> Unit
                 }
             }

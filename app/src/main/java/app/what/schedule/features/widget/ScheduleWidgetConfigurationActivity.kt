@@ -57,28 +57,28 @@ import org.koin.compose.koinInject
 
 class ScheduleWidgetConfigurationActivity : ComponentActivity() {
     private var appWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        
         // Получаем ID виджета
         appWidgetId = intent?.extras?.getInt(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID
         ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
-
+        
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             finish()
             return
         }
-
+        
         enableEdgeToEdge()
         setContent {
             // НЕ ПЕРЕМЕЩАТЬ!!
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.setNavigationBarContrastEnforced(false)
             }
-
+            
             val settings = koinInject<AppValues>()
             val scheduleRepository = koinInject<ScheduleRepository>()
             val scope = rememberCoroutineScope()
@@ -92,7 +92,7 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
                     }
                 )
             }
-
+            
             ProvideGLobalAppValues(settings) {
                 AppTheme {
                     LaunchedEffect(Unit) {
@@ -108,7 +108,7 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
                             searchItems = awaitAll(ut, ug).flatten()
                         }
                     }
-
+                    
                     WidgetConfigurationScreen(
                         appWidgetId = appWidgetId,
                         searchData = searchData
@@ -117,8 +117,8 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
             }
         }
     }
-
-
+    
+    
     @Composable
     private fun WidgetConfigurationScreen(
         appWidgetId: Int,
@@ -135,7 +135,7 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
                 .systemBarsPadding()
                 .padding(bottom = 16.dp)
         ) {
-
+            
             ExtendedFloatingActionButton(
                 onClick = {
                     saveWidgetConfiguration(appWidgetId, searchData.value.selectedSearch!!)
@@ -143,9 +143,9 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
             ) {
                 Text("Выбрать")
             }
-
+            
         }
-
+        
         Column {
             Box(
                 Modifier
@@ -167,9 +167,9 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
                     )
                 }
             }
-
+            
             Gap(24)
-
+            
             // Список для выбора
             ScheduleSearchPane(
                 searchData,
@@ -178,17 +178,17 @@ class ScheduleWidgetConfigurationActivity : ComponentActivity() {
             )
         }
     }
-
+    
     private fun saveWidgetConfiguration(appWidgetId: Int, search: ScheduleSearch) =
         lifecycleScope.launch {
             val glanceId = GlanceAppWidgetManager(applicationContext).getGlanceIdBy(appWidgetId)
-
+            
             updateAppWidgetState(applicationContext, glanceId) { prefs ->
                 prefs[stringPreferencesKey("search")] = Json.encodeToString(search)
             }
-
+            
             ScheduleWidget().update(this@ScheduleWidgetConfigurationActivity, glanceId)
-
+            
             setResult(RESULT_OK)
             finish()
         }

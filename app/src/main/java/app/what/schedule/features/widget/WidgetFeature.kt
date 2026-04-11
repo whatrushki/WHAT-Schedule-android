@@ -85,12 +85,12 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
     private val settings: AppValues by inject()
     private val scheduleRepository: ScheduleRepository by inject()
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
-
+    
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val themeType = settings.themeType.get()
         val themeStyle = settings.themeStyle.get()
         val themeColor = settings.themeColor.get()
-
+        
         val prefs = getAppWidgetState(context, stateDefinition, id) as Preferences
         val search = prefs[stringPreferencesKey(SEARCH_KEY)]
         val schedule = if (search == null) ScheduleResponse.Empty
@@ -101,21 +101,21 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
                 requiresData = true
             )
         }
-
+        
         provideContent {
             val isDarkTheme = when (themeType) {
                 ThemeType.Dark -> true
                 ThemeType.System -> LocalContext.current.isSystemInDarkTheme()
                 else -> false
             }
-
+            
             val theme = ColorProviders(
                 when (themeStyle) {
                     ThemeStyle.CustomColor -> DynamicScheme(Color(themeColor!!), isDarkTheme)
                     else -> DynamicScheme(Color(0xFF94FF28), isDarkTheme)
                 }.toColorScheme()
             )
-
+            
             GlanceTheme(theme) {
                 val currentDayIndex = currentState(intPreferencesKey(DAY_INDEX_KEY)) ?: 0
                 when (schedule) {
@@ -123,10 +123,10 @@ class ScheduleWidget : GlanceAppWidget(), KoinComponent {
                         schedule.schedules,
                         currentDayIndex
                     )
-
+                    
                     else -> Unit
                 }
-
+                
             }
         }
     }
@@ -140,7 +140,7 @@ fun WidgetContent(
 ) {
     val safeIndex = currentDayIndex.coerceIn(0, schedule.size - 1)
     val currentDay = schedule[safeIndex]
-
+    
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -168,20 +168,20 @@ fun WidgetContent(
                     fontWeight = FontWeight.Medium
                 )
             )
-
+            
             Row {
                 val maxIndexParameter = actionParametersOf(
                     MAX_PAGE_INDEX_KEY to schedule.size.minus(1)
                 )
-
+                
                 IconButton(
                     "<",
                     actionRunCallback<PrevDayActionCallback>(maxIndexParameter),
                     safeIndex > 0
                 )
-
+                
                 Spacer(modifier = GlanceModifier.width(8.dp))
-
+                
                 IconButton(
                     ">",
                     actionRunCallback<NextDayActionCallback>(maxIndexParameter),
@@ -189,9 +189,9 @@ fun WidgetContent(
                 )
             }
         }
-
+        
         Spacer(modifier = GlanceModifier.height(12.dp))
-
+        
         if (currentDay.lessons.isEmpty()) {
             Image(ImageProvider(R.drawable.il_totoro_friends), contentDescription = "No lessons")
             Text("Здесь пусто...")
@@ -219,23 +219,23 @@ fun LessonCard(
             GlanceTheme.colors.secondaryContainer.let {
                 if (lesson.state != LessonState.REMOVED) it
                 else ColorProvider(it.getColor(LocalContext.current).copy(alpha = .8f))
-
+                
             }
         )
         .cornerRadius(12.dp)
         .padding(16.dp)
 ) {
-
+    
     val primaryColor =
         if (lesson.state == LessonState.REMOVED) GlanceTheme.colors.secondaryContainer
         else if (lesson.type.isNonStandard) GlanceTheme.colors.tertiary
         else GlanceTheme.colors.primary
-
+    
     val onPrimaryColor =
         if (lesson.state == LessonState.REMOVED) GlanceTheme.colors.onSecondaryContainer
         else if (lesson.type.isNonStandard) GlanceTheme.colors.onTertiary
         else GlanceTheme.colors.onPrimary
-
+    
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = GlanceModifier.fillMaxWidth()
@@ -256,9 +256,9 @@ fun LessonCard(
                 )
             )
         }
-
+        
         Spacer(modifier = GlanceModifier.defaultWeight())
-
+        
         Text(
             text = formatTime(lesson.startTime),
             style = TextStyle(
@@ -267,9 +267,9 @@ fun LessonCard(
                 fontWeight = FontWeight.Bold
             )
         )
-
+        
         Spacer(modifier = GlanceModifier.width(8.dp))
-
+        
         Text(
             text = "- ${formatTime(lesson.endTime)}",
             style = TextStyle(
@@ -278,9 +278,9 @@ fun LessonCard(
             )
         )
     }
-
+    
     Spacer(modifier = GlanceModifier.height(8.dp))
-
+    
     // Информация
     Column {
         Text(
@@ -292,9 +292,9 @@ fun LessonCard(
             ),
             maxLines = 2
         )
-
+        
         Spacer(modifier = GlanceModifier.height(4.dp))
-
+        
         Row(
             GlanceModifier.fillMaxWidth()
         ) {
@@ -361,13 +361,13 @@ class PrevDayActionCallback : ActionCallback {
     ) {
         val widgetTag = buildTag(LogScope.WIDGET, LogCat.UI)
         Auditor.debug(widgetTag, "Переключение на предыдущий день в виджете")
-
+        
         updateAppWidgetState(context, glanceId) { prefs ->
             val currentIndex = prefs[intPreferencesKey(DAY_INDEX_KEY)] ?: 0
             prefs[intPreferencesKey(DAY_INDEX_KEY)] = currentIndex.minus(1)
                 .coerceAtLeast(0)
         }
-
+        
         ScheduleWidget().update(context, glanceId)
     }
 }
@@ -380,13 +380,13 @@ class NextDayActionCallback : ActionCallback {
     ) {
         val widgetTag = buildTag(LogScope.WIDGET, LogCat.UI)
         Auditor.debug(widgetTag, "Переключение на следующий день в виджете")
-
+        
         updateAppWidgetState(context, glanceId) { prefs ->
             val currentIndex = prefs[intPreferencesKey(DAY_INDEX_KEY)] ?: 0
             prefs[intPreferencesKey(DAY_INDEX_KEY)] = currentIndex.plus(1)
                 .coerceAtMost(parameters[MAX_PAGE_INDEX_KEY]!!)
         }
-
+        
         ScheduleWidget().update(context, glanceId)
     }
 }

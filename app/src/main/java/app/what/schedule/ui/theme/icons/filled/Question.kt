@@ -52,7 +52,7 @@ val WHATIcons.Question: ImageVector
                 curveToRelative(-0.03f, -6.34f, -4.2f, -10.38f, -10.69f, -10.37f)
             }
         }.build()
-
+        
         return _Question!!
     }
 

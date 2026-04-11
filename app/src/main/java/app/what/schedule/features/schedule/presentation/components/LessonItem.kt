@@ -86,7 +86,7 @@ fun LessonUI(
         listener,
         modifier
     )
-
+    
     else -> CommonView(
         data,
         viewType,
@@ -113,26 +113,26 @@ private fun EventView(
     expandable: Boolean = true
 ) {
     val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
-
+    
     val (expanded, setExpanded) = useState(currentTime != null && currentTime in data.startTime..data.endTime)
-
+    
     val expandedTitleBoxBackground by animateColorAsState(
         if (expanded) commonViewAccentColor.copy(alpha = .2f)
         else colorScheme.surfaceContainer
     )
-
+    
     val backgroundColor by animateColorAsState(
         if (data.state.isRemoved) colorScheme.surfaceVariant
         else if (expanded) colorScheme.surfaceContainer
         else commonViewAccentColor
     )
-
+    
     val titleColor by animateColorAsState(
         if (expanded) commonViewAccentColor
         else if (data.state.isRemoved) commonViewAccentColor
         else colorScheme.onTertiary
     )
-
+    
     Box(
         modifier = modifier
             .animateContentSize()
@@ -155,7 +155,7 @@ private fun EventView(
                 commonViewAccentColor
             )
         }
-
+        
         Tag(
             accentColor = commonViewAccentColor,
             state = data.state,
@@ -171,7 +171,7 @@ private fun EventView(
                     else 0.dp
                 )
         )
-
+        
         Column(
             Modifier
                 .fillMaxWidth()
@@ -198,7 +198,7 @@ private fun EventView(
                         )
                     )
                 }
-
+                
                 Text(
                     text = data.subject,
                     color = titleColor,
@@ -209,9 +209,9 @@ private fun EventView(
                     )
                 )
             }
-
+            
             if (expanded) Gap(8)
-
+            
             AnimatedVisibility(expanded) {
                 OtUnitsView(
                     viewType = viewType,
@@ -239,7 +239,7 @@ private fun CommonView(
     val commonViewAccentColor = getCommonViewAccentColor(data.state, data.type)
     val (expanded, setExpanded) = useState(false)
     val (expandable, setExpandable) = useState(data.otUnits.size > 3)
-
+    
     Box(
         modifier
             .padding(horizontal = 12.dp)
@@ -263,14 +263,14 @@ private fun CommonView(
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 12.dp, end = 8.dp)
         )
-
+        
         TimeLine(currentTime, data.startTime, data.endTime, commonViewAccentColor)
-
+        
         Row(
             Modifier.padding(8.dp, 12.dp)
         ) {
             Gap(4)
-
+            
             CommonViewLeftSegment(
                 data.startTime,
                 data.endTime,
@@ -278,9 +278,9 @@ private fun CommonView(
                 commonViewAccentColor,
                 data.number
             )
-
+            
             Gap(12)
-
+            
             Column {
                 CommonViewSubject(
                     data.subject,
@@ -290,9 +290,9 @@ private fun CommonView(
                     expanded,
                     setExpandable
                 )
-
+                
                 Gap(8)
-
+                
                 OtUnitsView(
                     viewType,
                     data.otUnits,
@@ -317,7 +317,7 @@ private fun BoxScope.TimeLine(
     val passingPercent by useState(0f).apply {
         if (currentTime != null) value = currentTime.percentOf(startTime, endTime)
     }
-
+    
     if (currentTime != null) Box(
         modifier = Modifier
             .animateContentSize()
@@ -326,7 +326,7 @@ private fun BoxScope.TimeLine(
             .width(4.dp)
             .background(accentColor)
     )
-
+    
 }
 
 @Composable
@@ -397,13 +397,13 @@ private fun OtUnitsView(
                     )
                 }
             )
-
+            
             AdditionalInfo(
                 color = color,
                 icon = WHATIcons.Room,
                 texts = listOf(it.auditory)
             )
-
+            
             AdditionalInfo(
                 color = color,
                 icon = WHATIcons.Building,
@@ -429,7 +429,7 @@ private fun CommonViewSubject(
 ) {
     val isLongTitle = subject.split(" ").size > 3
     val (subjectFontSize, setSubjectFontSize) = useState(if (isLongTitle) 12 else 16)
-
+    
     Text(
         modifier = Modifier.padding(16.dp, 8.dp),
         text = subject,
@@ -470,7 +470,7 @@ private fun CommonViewLeftSegment(
 ) {
     Column {
         Gap(4)
-
+        
         Text(
             text = formatTime(startTime),
             fontSize = 24.sp,
@@ -479,7 +479,7 @@ private fun CommonViewLeftSegment(
                 fontWeight = FontWeight.ExtraBold
             )
         )
-
+        
         Text(
             text = formatTime(endTime),
             fontSize = 20.sp,
@@ -490,7 +490,7 @@ private fun CommonViewLeftSegment(
             )
         )
     }
-
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -524,9 +524,9 @@ private fun AdditionalInfo(
         modifier = Modifier.size(18.dp),
         tint = color
     )
-
+    
     Gap(8)
-
+    
     FlowRow(
         maxLines = maxLines
     ) {
@@ -540,7 +540,7 @@ private fun AdditionalInfo(
                     fontWeight = FontWeight.SemiBold
                 ),
                 modifier = Modifier.bclick(onClick != null) { onClick?.invoke(it) }
-
+            
             )
         }
     }
@@ -556,12 +556,12 @@ fun BreakInfo(minutes: Int, active: Boolean = false) = Row(
         color = if (active) colorScheme.primary
         else colorScheme.outline
     )
-
+    
     Gap(10)
-
+    
     val hours = minutes / 60
     val mins = minutes % 60
-
+    
     Text(
         buildString {
             append("Перерыв")
@@ -584,9 +584,9 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
     ) {
         val currentTime = LocalTime.of(10, 45).freeze() // During second lesson
         Gap(12)
-
+        
         // Morning lessons with realistic times
-        val lesson1 = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 1,
@@ -608,13 +608,13 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         // Break between lessons
         BreakInfo(30) // 30 min break
         Gap(12)
-
+        
         // Current lesson (in progress at 10:45)
-        val lesson2 = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 2,
@@ -642,12 +642,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         BreakInfo(15) // 15 min break
         Gap(12)
-
+        
         // Changed lesson (room changed)
-        val lesson3 = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 3,
@@ -669,13 +669,13 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         // Lunch break
         BreakInfo(60) // Lunch hour
         Gap(12)
-
+        
         // Additional lesson
-        val lesson4 = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 4,
@@ -697,9 +697,9 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         // Cancelled lesson (REMOVED state)
-        val lesson5 = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 5,
@@ -721,9 +721,9 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         // Teacher view example with multiple groups
-        val teacherView = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 1,
@@ -757,9 +757,9 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             currentTime = currentTime
         ) {}
         Gap(12)
-
+        
         // Class hour
-        val classHour = LessonUI(
+        LessonUI(
             data = Lesson(
                 date = LocalDate.now(),
                 number = 2,

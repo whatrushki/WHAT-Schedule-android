@@ -42,20 +42,20 @@ import org.koin.compose.koinInject
 
 
 object SettingUpdateComponent : UIComponent {
-
+    
     @Composable
     override fun content(modifier: Modifier) {
         val manager = koinInject<AppUpdateManager>()
         val updateInfo = manager.updateInfo
         val downloadState = manager.downloadState
-
+        
         AnimatedVisibility(
             visible = updateInfo != null,
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
             val info = updateInfo ?: return@AnimatedVisibility
-
+            
             Box(
                 modifier = modifier
                     .fillMaxWidth()
@@ -67,11 +67,11 @@ object SettingUpdateComponent : UIComponent {
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     UpdateHeader(info, downloadState)
-
+                    
                     if (downloadState is DownloadState.Downloading || downloadState is DownloadState.Preparing) {
                         val progress =
                             (downloadState as? DownloadState.Downloading)?.progress?.toFloat() ?: 0f
-
+                        
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LinearProgressIndicator(
                                 progress = { progress },
@@ -92,7 +92,7 @@ object SettingUpdateComponent : UIComponent {
             }
         }
     }
-
+    
     @Composable
     private fun UpdateHeader(info: UpdateInfo, state: DownloadState) {
         val (title, icon, subtitle) = when (state) {
@@ -101,32 +101,32 @@ object SettingUpdateComponent : UIComponent {
                 WHATIcons.ReleaseAlert,
                 "Нажмите, чтобы скачать"
             )
-
+            
             is DownloadState.Preparing -> Triple(
                 "Подготовка...",
                 Icons.Rounded.Build,
                 "Секунду..."
             )
-
+            
             is DownloadState.Downloading -> Triple(
                 "Скачивание...",
                 WHATIcons.Download,
                 "Файл загружается в Downloads"
             )
-
+            
             is DownloadState.Completed -> Triple(
                 "Обновление скачано!",
                 WHATIcons.ApkInstall,
                 "Нажмите, чтобы установить"
             )
-
+            
             is DownloadState.Error -> Triple(
                 "Ошибка загрузки",
                 WHATIcons.DownloadError,
                 "Нажмите, чтобы попробовать снова"
             )
         }
-
+        
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 icon, null, Modifier

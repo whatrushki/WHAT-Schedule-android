@@ -15,7 +15,7 @@ class MainController(
         val accountService = institutionManager.getSavedInstitution()?.accountFeature
         updateState { copy(hasProfilePage = accountService != null, ui = accountService) }
     }
-
+    
     override fun obtainEvent(viewEvent: MainEvent) = when (viewEvent) {
         else -> {}
     }

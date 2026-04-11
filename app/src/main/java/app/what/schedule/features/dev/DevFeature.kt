@@ -34,7 +34,7 @@ enum class DevToolsTab(
     LOGS("Логи", WHATIcons.Logs),
     NETWORK("Сеть", WHATIcons.Network),
     FEATURES("Фичи", WHATIcons.Features);
-
+    
     companion object {
         fun all() = listOf(LOGS, NETWORK, FEATURES)
     }
@@ -52,13 +52,13 @@ fun DevFeature(
         .freeze()
     val pagerState = rememberPagerState { devToolsTabs.size }
     val scope = rememberCoroutineScope()
-
+    
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
     }
-
+    
     Gap(8)
-
+    
     SingleChoiceSegmentedButtonRow(
         space = (-4).dp,
         modifier = Modifier
@@ -67,7 +67,7 @@ fun DevFeature(
     ) {
         devToolsTabs.forEachIndexed { index, it ->
             val selected = selectedTabIndex == index
-
+            
             SegmentTab(
                 selected = selected,
                 index = index,
@@ -77,7 +77,7 @@ fun DevFeature(
             ) { scope.launch { pagerState.animateScrollToPage(index) } }
         }
     }
-
+    
     HorizontalPager(pagerState) {
         when (devToolsTabs[it]) {
             DevToolsTab.LOGS -> LogsPane()

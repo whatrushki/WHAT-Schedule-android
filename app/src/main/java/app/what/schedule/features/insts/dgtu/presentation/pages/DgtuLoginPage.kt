@@ -70,30 +70,30 @@ internal fun DGTULoginScreen(
                 modifier = Modifier.size(54.dp)
             )
         }
-
+        
         Gap(40)
-
+        
         Text(
             text = "Вход в кабинет студента",
             style = typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = colorScheme.onSurface
         )
-
+        
         Gap(8)
-
+        
         Text(
             text = "Введи данные студента, чтобы увидеть своё расписание",
             style = typography.bodyLarge,
             color = colorScheme.secondary,
             textAlign = TextAlign.Center
         )
-
+        
         Gap(16)
-
+        
         val (login, setLogin) = useState("")
         val (password, setPass) = useState("")
-
+        
         StyledTextField(
             login, setLogin,
             modifier = Modifier.fillMaxWidth(),
@@ -108,9 +108,9 @@ internal fun DGTULoginScreen(
                 WHATIcons.Features.Show(colorScheme.secondary, 22)
             }
         )
-
+        
         Gap(12)
-
+        
         StyledTextField(
             password, setPass,
             modifier = Modifier.fillMaxWidth(),
@@ -122,9 +122,9 @@ internal fun DGTULoginScreen(
                 WHATIcons.Features.Show(colorScheme.secondary, 22)
             }
         )
-
+        
         Gap(16)
-
+        
         Button(
             modifier = Modifier.fillMaxWidth(),
             shape = shapes.medium,

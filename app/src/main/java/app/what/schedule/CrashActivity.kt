@@ -35,20 +35,20 @@ import java.io.File
 class CrashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        
         Auditor.critic("app.crash", intent.getStringExtra("CRASH_REPORT") ?: "")
-
+        
         enableEdgeToEdge()
         setContent {
             // НЕ ПЕРЕМЕЩАТЬ!!
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.setNavigationBarContrastEnforced(false)
             }
-
+            
             AppTheme(koinInject<AppValues>()) {
                 ProvideGlobalDialog {
                     val dialog = rememberDialogController()
-
+                    
                     Box {
                         FloatingActionButton(
                             modifier = Modifier
@@ -62,7 +62,7 @@ class CrashActivity : ComponentActivity() {
                         ) {
                             WHATIcons.FrameBug.Show(color = colorScheme.onSecondaryContainer)
                         }
-
+                        
                         CrashScreen(
                             crashReport = intent.getStringExtra("CRASH_REPORT") ?: "",
                             onRestart = { restartApp() },
@@ -73,7 +73,7 @@ class CrashActivity : ComponentActivity() {
             }
         }
     }
-
+    
     private fun restartApp() {
         val intent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -82,21 +82,21 @@ class CrashActivity : ComponentActivity() {
         finish()
         Process.killProcess(Process.myPid())
     }
-
+    
     private fun shareCrashReport() {
         val crashReport = intent.getStringExtra("CRASH_REPORT") ?: return
-
+        
         try {
             val file = File(cacheDir, "crash_report.txt")
             file.writeText(crashReport)
-
+            
             val uris = listOf(
                 getFileUri(file),
             ).let {
                 if (Auditor.logFile.exists()) it + getFileUri(Auditor.logFile)
                 else it
             }
-
+            
             ShareUtils.shareUris(
                 this@CrashActivity,
                 ArrayList(uris)
@@ -105,7 +105,7 @@ class CrashActivity : ComponentActivity() {
             Toast.makeText(this, "Error sharing report", Toast.LENGTH_SHORT).show()
         }
     }
-
+    
     private fun getFileUri(file: File) =
         FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
 }

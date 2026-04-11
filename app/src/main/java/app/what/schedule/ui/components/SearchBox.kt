@@ -24,12 +24,12 @@ fun SearchBox(
     modifier: Modifier = Modifier
 ) {
     val (value, setValue) = useState(query)
-
+    
     LaunchedEffect(value) {
         delay(500)
         setQuery(value)
     }
-
+    
     TextField(
         value,
         setValue,

@@ -21,22 +21,22 @@ class NewsDetailController(
     NewsDetailState(item)
 ), KoinComponent {
     private val apiRepository: NewsRepository by inject()
-
+    
     override fun obtainEvent(viewEvent: NewsDetailEvent) = when (viewEvent) {
         NewsDetailEvent.Init -> {}
         NewsDetailEvent.OnRefresh -> requestInfo()
     }
-
+    
     init {
         requestInfo()
     }
-
+    
     val debugMode: Boolean
         get() = settings.debugMode.get() == true
-
+    
     private fun requestInfo() {
         updateState { copy(newState = RemoteState.Loading) }
-
+        
         viewModelScope.launchSafe(
             debug = debugMode,
             onFailure = {
@@ -44,7 +44,7 @@ class NewsDetailController(
             }
         ) {
             val data = apiRepository.getNewDetail(viewState.newListInfo.id)
-
+            
             updateState {
                 copy(
                     newState = RemoteState.Success,

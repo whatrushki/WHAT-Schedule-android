@@ -145,24 +145,24 @@ data class NetworkRequest(
 ) {
     val isSuccessful: Boolean get() = statusCode in 200..299
     val isWebSocket: Boolean get() = requestHeaders["Upgrade"]?.equals("websocket", true) == true
-
+    
     val host: String get() = runCatching { Url(url).host }.getOrDefault(url)
     val path: String get() = runCatching { Url(url).encodedPath }.getOrDefault("/")
-
+    
     val queryParams: List<Pair<String, String>>
         get() = runCatching {
             Url(url).parameters.entries().flatMap { (key, values) -> values.map { key to it } }
         }.getOrDefault(emptyList())
-
+    
     val requestCookies: Map<String, String> get() = parseCookies(requestHeaders["Cookie"])
     val responseCookies: Map<String, String> get() = parseSetCookies(responseHeaders["Set-Cookie"])
-
+    
     val duration: Long get() = if (endTime != null && responseTime != null) endTime!! - requestTime else 0
     val latency: Long get() = if (responseTime != null) responseTime!! - requestTime else 0
-
+    
     val contentType: String?
         get() = responseHeaders[HttpHeaders.ContentType] ?: responseHeaders["content-type"]
-
+    
     val statusCategory: StatusCategory
         get() = when (statusCode) {
             in 200..299 -> StatusCategory.Success
@@ -171,7 +171,7 @@ data class NetworkRequest(
             null -> StatusCategory.Pending
             else -> StatusCategory.Unknown
         }
-
+    
     private fun parseCookies(header: String?): Map<String, String> {
         if (header.isNullOrEmpty()) return emptyMap()
         return header.split(";").associate {
@@ -179,7 +179,7 @@ data class NetworkRequest(
             (parts.getOrNull(0)?.trim() ?: "") to (parts.getOrNull(1)?.trim() ?: "")
         }
     }
-
+    
     private fun parseSetCookies(header: String?): Map<String, String> = parseCookies(header)
 }
 
@@ -190,35 +190,35 @@ enum class StatusCategory {
 object NetworkMonitor {
     private val _requests = mutableStateListOf<NetworkRequest>()
     val requests: List<NetworkRequest> get() = _requests
-
+    
     var isMonitoringPaused by mutableStateOf(false)
         private set
-
+    
     fun setMonitoringPause(value: Boolean) {
         isMonitoringPaused = value
     }
-
+    
     fun trackRequest(request: NetworkRequest) {
         if (isMonitoringPaused) return
         _requests.add(request)
         if (_requests.size > 1000) _requests.removeAt(_requests.lastIndex)
     }
-
+    
     suspend fun updateRequest(id: UUID, update: suspend (NetworkRequest) -> NetworkRequest) {
         val index = _requests.indexOfFirst { it.id == id }
         if (index != -1) {
             _requests[index] = update(_requests[index])
         }
     }
-
+    
     fun toggleMonitoring(paused: Boolean) {
         isMonitoringPaused = paused
     }
-
+    
     fun clearRequests() {
         _requests.clear()
     }
-
+    
     fun exportRequests(): String {
         return Json.encodeToString(requests)
     }
@@ -227,13 +227,13 @@ object NetworkMonitor {
 private val json = Json { prettyPrint = true }
 val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
     val callIdKey = AttributeKey<UUID>("CallId")
-
+    
     on(SendingRequest) { request, content ->
         val callId = UUID.randomUUID()
         request.attributes.put(callIdKey, callId)
-
+        
         val requestBodyString = content.decodeContent()
-
+        
         val netRequest = NetworkRequest(
             id = callId,
             url = request.url.toString(),
@@ -246,7 +246,7 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
         )
         NetworkMonitor.trackRequest(netRequest)
     }
-
+    
     client.sendPipeline.intercept(HttpSendPipeline.Engine) {
         val callId = context.attributes.getOrNull(callIdKey) ?: return@intercept
         try {
@@ -261,11 +261,11 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
             throw e
         }
     }
-
+    
     onResponse { response ->
         val callId = response.call.attributes.getOrNull(callIdKey) ?: return@onResponse
         val responseTime = System.currentTimeMillis()
-
+        
         NetworkMonitor.updateRequest(callId) {
             it.copy(
                 statusCode = response.status.value,
@@ -274,24 +274,24 @@ val NetworkMonitorPlugin = createClientPlugin("NetworkMonitor") {
                     .associate { entry -> entry.key to entry.value.joinToString(", ") }
             )
         }
-
+        
         try {
-
+            
             NetworkMonitor.updateRequest(callId) {
                 val isImage = it.responseHeaders["Content-Type"]?.contains("image")
                     ?: it.responseHeaders["content-type"]?.contains("image")
                     ?: false
-
+                
                 val (text, size) = if (!isImage) {
                     val body = response.bodyAsText()
                     try {
                         json.encodeToString(json.decodeFromString<JsonElement>(body))
-
+                        
                     } catch (_: Exception) {
                         body
                     }.let { it to it.length.toLong() }
                 } else "image" to (it.responseHeaders["Content-Length"]?.toLong() ?: 0L)
-
+                
                 it.copy(
                     endTime = System.currentTimeMillis(),
                     responseBody = if (isImage) "image" else text,
@@ -312,7 +312,7 @@ suspend fun OutgoingContent.decodeContent(): String {
         is OutgoingContent.ByteArrayContent -> bytes().decodeToString()
         is OutgoingContent.ReadChannelContent -> readFrom().readRemaining()
             .readString(Charsets.UTF_8)
-
+        
         is OutgoingContent.WriteChannelContent -> {
             val channel = ByteChannel(true)
             GlobalScope.launch(currentCoroutineContext() + CoroutineName("decodeContent")) {
@@ -321,7 +321,7 @@ suspend fun OutgoingContent.decodeContent(): String {
             }
             channel.readRemaining().readString(Charsets.UTF_8)
         }
-
+        
         is OutgoingContent.NoContent -> ""
         else -> ""
     }
@@ -332,35 +332,35 @@ class NetworkFilter : Filter<NetworkRequest> {
     private val statusFilters = mutableListOf<Int>()
     private val textFilters =
         mutableListOf<String>()
-
+    
     private var isSuccessFilter: Boolean? = null
-
+    
     override fun clearFilters() {
         methodFilters.clear()
         statusFilters.clear()
         textFilters.clear()
         isSuccessFilter = null
     }
-
+    
     override fun parseQuery(query: String) {
         clearFilters()
-
+        
         // Разбиваем по пробелам, игнорируя пустые части
         val tokens = query.trim().split("\\s+".toRegex())
-
+        
         tokens.forEach { token ->
             when {
                 token.startsWith("method:", ignoreCase = true) -> {
                     val value = token.substringAfter(":")
                     if (value.isNotBlank()) methodFilters.add(value.uppercase())
                 }
-
+                
                 token.startsWith("status:", ignoreCase = true) -> {
                     token.substringAfter(":").toIntOrNull()?.let {
                         statusFilters.add(it)
                     }
                 }
-
+                
                 token.startsWith("is:", ignoreCase = true) -> {
                     val value = token.substringAfter(":").lowercase()
                     when (value) {
@@ -368,13 +368,13 @@ class NetworkFilter : Filter<NetworkRequest> {
                         "error" -> isSuccessFilter = false
                     }
                 }
-
+                
                 // Обработка url: отдельно, если пользователь явно написал url:google
                 token.startsWith("url:", ignoreCase = true) -> {
                     val value = token.substringAfter(":")
                     if (value.isNotBlank()) textFilters.add(value)
                 }
-
+                
                 // Все остальное считаем простым поиском по URL/Host
                 else -> {
                     if (token.isNotBlank()) textFilters.add(token)
@@ -382,22 +382,22 @@ class NetworkFilter : Filter<NetworkRequest> {
             }
         }
     }
-
+    
     override fun matches(value: NetworkRequest): Boolean {
         // 1. Фильтр по методу (строгое совпадение)
         if (methodFilters.isNotEmpty()) {
             if (value.method.uppercase() !in methodFilters) return false
         }
-
+        
         // 2. Фильтр по статусу (строгое совпадение)
         if (statusFilters.isNotEmpty()) {
             if (value.statusCode !in statusFilters) return false
         }
-
+        
         // 3. Фильтр is:success / is:error
         if (isSuccessFilter != null) {
             val isSuccessCode = value.statusCode in 200..299
-
+            
             if (isSuccessFilter == true) {
                 // Если ищем успех, то должен быть 2xx
                 if (!isSuccessCode) return false
@@ -406,11 +406,11 @@ class NetworkFilter : Filter<NetworkRequest> {
                 // Это либо код >= 400, либо нет кода (ошибка сети), либо поле error не пустое
                 val hasErrorCode = (value.statusCode ?: 0) >= 400
                 val hasNetworkError = value.error != null
-
+                
                 if (!hasErrorCode && !hasNetworkError) return false
             }
         }
-
+        
         // 4. Текстовый поиск (URL или Хост содержит ХОТЯ БЫ ОДИН из фильтров)
         if (textFilters.isNotEmpty()) {
             val matchesAny = textFilters.any { filter ->
@@ -418,7 +418,7 @@ class NetworkFilter : Filter<NetworkRequest> {
             }
             if (!matchesAny) return false
         }
-
+        
         return true
     }
 }
@@ -426,7 +426,7 @@ class NetworkFilter : Filter<NetworkRequest> {
 @Composable
 fun NetworkRequestItem(request: NetworkRequest, onClick: () -> Unit) {
     val isPending = request.statusCode == null && request.error == null
-
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -437,9 +437,9 @@ fun NetworkRequestItem(request: NetworkRequest, onClick: () -> Unit) {
     ) {
         // 1. Метод (Badge)
         MethodBadge(request.method)
-
+        
         Gap(8)
-
+        
         // 2. Основная инфа (URL) - Weight 1f, чтобы занимать все доступное место
         Column(
             modifier = Modifier.weight(1f)
@@ -461,9 +461,9 @@ fun NetworkRequestItem(request: NetworkRequest, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
         }
-
+        
         Gap(8)
-
+        
         // 3. Правая часть (Статус и время) - Фиксируется по контенту с align End
         Column(
             horizontalAlignment = Alignment.End,
@@ -493,9 +493,9 @@ fun NetworkRequestItem(request: NetworkRequest, onClick: () -> Unit) {
                         color = getStatusTextColor(request.statusCategory)
                     )
                 }
-
+                
                 Gap(4)
-
+                
                 // Время
                 Text(
                     text = formatTime(request.requestTime),
@@ -518,7 +518,7 @@ fun MethodBadge(method: String) {
         "PATCH" -> Color(0xFFE0F2F1) to Color(0xFF00695C)   // Soft Teal
         else -> Color(0xFFF5F5F5) to Color(0xFF616161)      // Grey
     }
-
+    
     Box(
         modifier = Modifier
             .width(48.dp)
@@ -553,7 +553,7 @@ fun NetworkRequestDialog(
     modifier = Modifier.fillMaxSize(),
     color = colorScheme.surface
 ) {
-
+    
     val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize()) {
         CenterAlignedTopAppBar(
@@ -593,13 +593,13 @@ fun NetworkRequestDialog(
                 }
             }
         )
-
+        
         HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.3f))
-
+        
         // --- Tabs ---
         var selectedTab by remember { mutableIntStateOf(0) }
         val tabs = listOf("Overview", "Request", "Response")
-
+        
         SingleChoiceSegmentedButtonRow(
             space = (-4).dp,
             modifier = Modifier
@@ -617,7 +617,7 @@ fun NetworkRequestDialog(
                 )
             }
         }
-
+        
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> OverviewTabContent(request)
@@ -632,7 +632,7 @@ fun NetworkRequestDialog(
 @Composable
 fun OverviewTabContent(request: NetworkRequest) {
     val context = LocalContext.current
-
+    
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -660,7 +660,7 @@ fun OverviewTabContent(request: NetworkRequest) {
                 }
             }
         }
-
+        
         item {
             SectionHeader("General Info")
             // URL блок: Label сверху, Value снизу
@@ -686,7 +686,7 @@ fun OverviewTabContent(request: NetworkRequest) {
                 modifier = Modifier.padding(vertical = 8.dp),
                 color = Color.LightGray.copy(0.3f)
             )
-
+            
             InfoRow("Method", request.method)
             InfoRow(
                 "Status",
@@ -696,7 +696,7 @@ fun OverviewTabContent(request: NetworkRequest) {
             )
             InfoRow("Timestamp", formatFullDate(request.requestTime))
         }
-
+        
         item {
             SectionHeader("Performance")
             // Вертикальный список атрибутов
@@ -705,14 +705,14 @@ fun OverviewTabContent(request: NetworkRequest) {
             InfoRow("Request Size", formatBytes(request.requestSize))
             InfoRow("Response Size", formatBytes(request.responseSize))
         }
-
+        
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { openInBrowser(context, request.url) },
                     modifier = Modifier.weight(1f)
                 ) { Text("Open Browser") }
-
+                
                 OutlinedButton(
                     onClick = { copyToClipboard(context, request.url) },
                     modifier = Modifier.weight(1f)
@@ -743,7 +743,7 @@ fun RequestTabContent(request: NetworkRequest) {
                 }
             }
         }
-
+        
         item {
             CleanExpandableSection(
                 title = "Headers",
@@ -757,7 +757,7 @@ fun RequestTabContent(request: NetworkRequest) {
                 KeyValueList(request.requestHeaders.toList())
             }
         }
-
+        
         if (request.requestCookies.isNotEmpty()) {
             item {
                 CleanExpandableSection(
@@ -773,7 +773,7 @@ fun RequestTabContent(request: NetworkRequest) {
                 }
             }
         }
-
+        
         item {
             CleanExpandableSection(
                 title = "Body",
@@ -805,7 +805,7 @@ fun ResponseTabContent(request: NetworkRequest) {
                 KeyValueList(request.responseHeaders.toList())
             }
         }
-
+        
         if (request.requestCookies.isNotEmpty()) {
             item {
                 CleanExpandableSection(
@@ -821,7 +821,7 @@ fun ResponseTabContent(request: NetworkRequest) {
                 }
             }
         }
-
+        
         item {
             CleanExpandableSection(
                 title = "Body",
@@ -851,7 +851,7 @@ fun CleanExpandableSection(
 ) {
     var expanded by remember { mutableStateOf(initExpanded) }
     val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rot")
-
+    
     Column {
         Row(
             modifier = Modifier
@@ -879,7 +879,7 @@ fun CleanExpandableSection(
                     )
                 }
             }
-
+            
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (expanded && onCopy != null) {
                     IconButton(onClick = onCopy, modifier = Modifier.size(24.dp)) {
@@ -892,7 +892,7 @@ fun CleanExpandableSection(
                     }
                     Gap(12)
                 }
-
+                
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
@@ -901,7 +901,7 @@ fun CleanExpandableSection(
                 )
             }
         }
-
+        
         AnimatedVisibility(visible = expanded) {
             Column {
                 content()
@@ -922,10 +922,10 @@ fun BodyContent(body: String?, contentType: String?) {
         )
         return
     }
-
+    
     val isJson = contentType?.contains("json") == true
     val displayText = remember(body) { if (isJson) formatJson(body) else body }
-
+    
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -961,7 +961,7 @@ fun KeyValueList(items: List<Pair<String, String>>, decodeValues: Boolean = fals
                     value
                 }
             } else value
-
+            
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1041,7 +1041,7 @@ fun formatJson(json: String): String {
     return try {
         val jsonElement = Json.parseToJsonElement(json)
         val json = Json { prettyPrint = true }
-        json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), jsonElement)
+        json.encodeToString(JsonElement.serializer(), jsonElement)
     } catch (e: Exception) {
         json
     }
@@ -1073,32 +1073,32 @@ fun openInBrowser(context: Context, url: String) {
 
 fun shareCurl(context: Context, request: NetworkRequest) {
     val builder = StringBuilder("curl -X ${request.method} '${request.url}'")
-
+    
     request.requestHeaders.forEach { (key, value) ->
         builder.append(" -H '$key: $value'")
     }
-
+    
     if (!request.requestBody.isNullOrEmpty()) {
         builder.append(" -d '${request.requestBody.replace("'", "'\\''")}'")
     }
-
+    
     val sendIntent = Intent().apply {
         action = Intent.ACTION_SEND
         putExtra(Intent.EXTRA_TEXT, builder.toString())
         type = "text/plain"
     }
-
+    
     context.startActivity(Intent.createChooser(sendIntent, "Share cURL"))
 }
 
 fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "0 B"
-
+    
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     val digitGroups = (log10(bytes.toDouble()) / log10(1024.0)).toInt()
-
+    
     if (digitGroups >= units.size) return "${bytes / 1024 / 1024} MB"
-
+    
     return String.format(
         Locale.US,
         "%.1f %s",
@@ -1112,7 +1112,7 @@ fun getStatusText(statusCode: Int): String {
         // 1xx Information
         100 -> "Continue"
         101 -> "Switching Protocols"
-
+        
         // 2xx Success
         200 -> "OK"
         201 -> "Created"
@@ -1120,7 +1120,7 @@ fun getStatusText(statusCode: Int): String {
         204 -> "No Content"
         205 -> "Reset Content"
         206 -> "Partial Content"
-
+        
         // 3xx Redirection
         301 -> "Moved Permanently"
         302 -> "Found"
@@ -1128,7 +1128,7 @@ fun getStatusText(statusCode: Int): String {
         304 -> "Not Modified"
         307 -> "Temporary Redirect"
         308 -> "Permanent Redirect"
-
+        
         // 4xx Client Error
         400 -> "Bad Request"
         401 -> "Unauthorized"
@@ -1142,14 +1142,14 @@ fun getStatusText(statusCode: Int): String {
         415 -> "Unsupported Media Type"
         422 -> "Unprocessable Entity"
         429 -> "Too Many Requests"
-
+        
         // 5xx Server Error
         500 -> "Internal Server Error"
         501 -> "Not Implemented"
         502 -> "Bad Gateway"
         503 -> "Service Unavailable"
         504 -> "Gateway Timeout"
-
+        
         else -> when (statusCode) {
             in 200..299 -> "Success"
             in 300..399 -> "Redirect"

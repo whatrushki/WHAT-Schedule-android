@@ -22,7 +22,7 @@ class NewsFeature(
     override val data: NewsProvider
 ) : Feature<NewsController, NewsEvent>(), NavComponent<NewsProvider>, KoinComponent {
     override val controller: NewsController by inject()
-
+    
     @Composable
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()
@@ -30,13 +30,13 @@ class NewsFeature(
         val viewState by controller.collectStates()
         val viewAction by controller.collectActions()
         val navigator = rememberNavigator()
-
+        
         LaunchedEffect(Unit) {
             listener(NewsEvent.Init)
         }
-
+        
         NewsView(viewState, listener)
-
+        
         when (viewAction) {
             null -> Unit
             is NewsAction.NavigateToNewsDetail -> {

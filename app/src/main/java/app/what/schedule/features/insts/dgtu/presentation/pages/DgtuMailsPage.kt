@@ -47,12 +47,12 @@ fun DgtuMailsPage(
     onRefresh = { listener(DgtuEvent.MailsOpened) },
 ) {
     val lazyListState = rememberLazyListState()
-
+    
     LaunchedEffect(lazyListState.canScrollForward) {
         if (!lazyListState.canScrollForward && state.value.mailsFetchState != RemoteState.Loading)
             listener(DgtuEvent.OnMailsListEndingScrolled)
     }
-
+    
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = lazyListState
@@ -65,11 +65,11 @@ fun DgtuMailsPage(
                     "Попробовать снова" to { listener(DgtuEvent.MailsOpened) }
                 )
             }
-
+            
             RemoteState.Success, RemoteState.Loading -> items(state.value.mails, key = { it.id }) {
                 MailListItem(it, Modifier.animateItem())
             }
-
+            
             else -> Unit
         }
     }
@@ -78,7 +78,7 @@ fun DgtuMailsPage(
 @Composable
 fun MailListItem(data: Mail, modifier: Modifier) = Box(
     modifier.bclick {
-
+    
     }
 ) {
     Row(
@@ -92,9 +92,9 @@ fun MailListItem(data: Mail, modifier: Modifier) = Box(
                 .size(54.dp)
                 .clip(CircleShape)
         )
-
+        
         Gap(12)
-
+        
         Column {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -106,7 +106,7 @@ fun MailListItem(data: Mail, modifier: Modifier) = Box(
                     color = colorScheme.onSurface,
                     fontSize = 16.sp,
                 )
-
+                
                 Text(
                     formatDateTime(data.sendDateTime),
                     fontWeight = FontWeight.Medium,
@@ -114,7 +114,7 @@ fun MailListItem(data: Mail, modifier: Modifier) = Box(
                     color = colorScheme.onSurfaceVariant
                 )
             }
-
+            
             Text(
                 data.title,
                 fontWeight = FontWeight.Medium,
@@ -124,7 +124,7 @@ fun MailListItem(data: Mail, modifier: Modifier) = Box(
                 overflow = TextOverflow.Ellipsis,
                 color = colorScheme.secondary
             )
-
+            
             Text(
                 data.description,
                 fontWeight = FontWeight.Medium,
@@ -145,17 +145,17 @@ fun formatName(value: String) = value.split(" ").let {
 fun formatDateTime(value: LocalDateTime): String {
     val today = LocalDate.now()
     val date = value.toLocalDate()
-
+    
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
     val shortMonthFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-
+    
     return when {
         date == today -> value.format(timeFormatter)
         date == today.minusDays(1) -> "вчера"
         date == today.minusDays(2) -> "позавчера"
         date.year == today.year -> value.format(shortMonthFormatter)
             .replaceFirstChar { it.uppercaseChar() }
-
+        
         else -> value.format(shortMonthFormatter)
             .replaceFirstChar { it.uppercaseChar() }
     }

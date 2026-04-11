@@ -67,7 +67,7 @@ val WHATIcons.News: ImageVector
                 close()
             }
         }.build()
-
+        
         return _News!!
     }
 

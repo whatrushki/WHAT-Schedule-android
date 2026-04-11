@@ -33,7 +33,7 @@ class RINH(
         override val metadata by lazy { RINHMetadata }
         override fun create() = RINH(get(), get())
     }
-
+    
     override val metadata = Factory.metadata
     override val scheduleService: ScheduleService =
         RINHScheduleService(SCHEDULE_BASE_URL, client, scope)

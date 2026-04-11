@@ -39,24 +39,24 @@ class DGTUScheduleService(
 ) : ScheduleService {
     private val crashlytics = FirebaseCrashlytics.getInstance()
     private val listYears by scope.asyncLazy { listYears() }
-
+    
     private suspend fun listYears() = client
         .get("$baseUrl/Rasp/ListYears")
         .body<ApiResponse<DGTUApi.Schedule.ListYears>>()
         .data.years
-
+    
     override suspend fun getGroupSchedule(
         group: String,
         showReplacements: Boolean,
         additional: AdditionalData
     ): ScheduleResponse = getSchedule(false, group, showReplacements, additional)
-
+    
     override suspend fun getTeacherSchedule(
         teacher: String,
         showReplacements: Boolean,
         additional: AdditionalData
     ): ScheduleResponse = getSchedule(true, teacher, showReplacements, additional)
-
+    
     private suspend fun getSchedule(
         isTeacher: Boolean, value: String, showReplacements: Boolean, additional: AdditionalData
     ): ScheduleResponse = coroutineScope {
@@ -67,7 +67,7 @@ class DGTUScheduleService(
         )
         crashlytics.setCustomKey(if (isTeacher) "schedule_teacher" else "schedule_group", value)
         crashlytics.setCustomKey("institution", "dgtu")
-
+        
         val responses = mutableListOf<Deferred<ScheduleResponse>>()
         listOf(LocalDate.now(), LocalDate.now().plusWeeks(1)).forEach {
             val job = async {
@@ -77,44 +77,44 @@ class DGTUScheduleService(
                     }"
                 ).body<ApiResponse<DGTUApi.Schedule.Get>>().data.rasp.toDaySchedules()
             }
-
+            
             responses.add(job)
         }
-
+        
         val result = responses.awaitAll().sum()
-
+        
         Auditor.debug(
             scheduleTag,
             "Получено дней в расписании: ${if (result is ScheduleResponse.Available) result.schedules.size else 0}"
         )
-
+        
         return@coroutineScope result
     }
-
+    
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
         Auditor.debug(netTag, "Загрузка списка групп")
-
+        
         val year = listYears.await().last()
         Auditor.debug(netTag, "Используемый год: $year")
-
+        
         val groups = client
             .get("$baseUrl/raspGrouplist?year=$year")
             .body<ApiResponse<List<DGTUApi.Models.DGTUGroup>>>()
             .data.map { Group(it.name, it.id.toString(), it.kurs) }
             .sortedBy { it.name }
-
+        
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
-
+    
     override suspend fun getTeachers(): List<Teacher> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "dgtu")
         Auditor.debug(netTag, "Загрузка списка преподавателей")
-
+        
         val year = listYears.await().last()
         Auditor.debug(netTag, "Используемый год: $year")
-
+        
         val teachers = client
             .get("$baseUrl/raspTeacherlist?year=$year")
             .body<ApiResponse<List<DGTUApi.Models.DGTUTeacher>>>()
@@ -126,12 +126,12 @@ class DGTUScheduleService(
                 }, it.id.toString())
             }
             .sortedBy { it.name }
-
+        
         Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
         return teachers
     }
-
-
+    
+    
     private fun List<DGTUApi.Models.DGTULesson>.toDaySchedules() =
         map { it.toLesson(it.date.toLocalDate()) }.groupBy { it.date }.map { (day, lessons) ->
             DaySchedule(
@@ -143,7 +143,7 @@ class DGTUScheduleService(
         }.takeIf(List<DaySchedule>::isNotEmpty)
             ?.let { ScheduleResponse.Available.FromSource(it, LocalDateTime.now()) }
             ?: ScheduleResponse.Empty
-
+    
     private fun DGTUApi.Models.DGTULesson.toLesson(date: LocalDate): Lesson {
         val rawData = this.auditory.split("-")
         val (building, auditory) = try {
@@ -151,7 +151,7 @@ class DGTUScheduleService(
         } catch (_: Exception) {
             "-" to rawData.joinToString("")
         }
-
+        
         return Lesson(
             date = date,
             number = this.number,

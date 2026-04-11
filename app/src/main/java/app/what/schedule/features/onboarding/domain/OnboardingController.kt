@@ -17,22 +17,22 @@ class OnboardingController(
     init {
         updateState { copy(institutions = institutionManager.getInstitutions()) }
     }
-
+    
     override fun obtainEvent(viewEvent: OnboardingEvent) = when (viewEvent) {
         OnboardingEvent.Init -> {}
-
+        
         is OnboardingEvent.SelectInstitution -> updateState {
             copy(selectedInstitutionId = viewEvent.id)
         }
-
+        
         OnboardingEvent.FinishOnboarding -> finishAndGoToMain()
     }
-
+    
     private fun finishAndGoToMain() {
         val selectedInstId = viewState.selectedInstitutionId ?: return
-
+        
         institutionManager.save(selectedInstId)
-
+        
         settings.isFirstLaunch.set(false)
         setAction(OnboardingAction.NavigateToMain)
     }

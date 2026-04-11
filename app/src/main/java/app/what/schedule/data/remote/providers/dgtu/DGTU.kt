@@ -31,11 +31,11 @@ class DGTU(
     companion object Factory : Institution.Factory, KoinComponent {
         private const val SCHEDULE_BASE_URL = "https://edu.donstu.ru/api"
         private const val NEWS_BASE_URL = "https://news.donstu.ru"
-
+        
         override val metadata by lazy { DGTUProviderMetadata }
         override fun create() = DGTU(get(), get())
     }
-
+    
     override val metadata = Factory.metadata
     override val scheduleService: ScheduleService =
         DGTUScheduleService(SCHEDULE_BASE_URL, client, scope)

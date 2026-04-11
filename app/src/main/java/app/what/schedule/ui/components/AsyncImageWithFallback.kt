@@ -64,7 +64,7 @@ fun AsyncImageWithFallback(
     enableDetailView: Boolean = false
 ) {
     var showFullScreen by useState(false)
-
+    
     SubcomposeAsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(url)
@@ -79,7 +79,7 @@ fun AsyncImageWithFallback(
         modifier = modifier
     ) {
         val state by painter.state.collectAsState()
-
+        
         when (state) {
             is AsyncImagePainter.State.Success -> {
                 SubcomposeAsyncImageContent(
@@ -88,11 +88,11 @@ fun AsyncImageWithFallback(
                     }
                 )
             }
-
+            
             is AsyncImagePainter.State.Loading -> {
                 LinearProgressIndicator(modifier = Modifier.fillMaxSize())
             }
-
+            
             else -> {
                 (state as? AsyncImagePainter.State.Error)?.let {
                     Auditor.err(
@@ -101,13 +101,13 @@ fun AsyncImageWithFallback(
                         it.result.throwable
                     )
                 }
-
+                
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Build, null, tint = colorScheme.primary)
                 }
             }
         }
-
+        
         if (showFullScreen) {
             FullScreenImageDialog(
                 url = url,
@@ -129,7 +129,7 @@ private fun FullScreenImageDialog(
     )
 ) {
     val context = LocalContext.current
-
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -159,8 +159,8 @@ private fun FullScreenImageDialog(
                 )
             }
         }
-
-
+        
+        
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -193,15 +193,15 @@ private fun FullScreenImageDialog(
                         .size(40.dp)
                         .padding(6.dp)
                 )
-
+                
                 Text(
                     text = "Загрузить",
                     color = Color.White
                 )
-
+                
                 Gap(8)
             }
-
+            
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -234,7 +234,7 @@ fun ZoomableBox(
     var offsetX by useState(0f)
     var offsetY by useState(0f)
     var size by useState(IntSize.Zero)
-
+    
     Box(
         modifier = modifier
             .onSizeChanged { size = it }
@@ -242,16 +242,16 @@ fun ZoomableBox(
                 detectTransformGestures { _, pan, zoom, _ ->
                     val oldScale = scale
                     scale = (scale * zoom).coerceIn(minScale, maxScale)
-
+                    
                     // Центрирование зума
                     val scaleRatio = scale / oldScale
                     offsetX = offsetX * scaleRatio + pan.x
 //                    offsetY = offsetY * scaleRatio + pan.y
-
+                    
                     // Безопасное ограничение
                     val extraX = ((size.width * (scale - 1f)).coerceAtLeast(0f)) / 2f
-                    val extraY = ((size.height * (scale - 1f)).coerceAtLeast(0f)) / 2f
-
+                    ((size.height * (scale - 1f)).coerceAtLeast(0f)) / 2f
+                    
                     offsetX = offsetX.coerceIn(-extraX, extraX)
 //                    offsetY = offsetY.coerceIn(-extraY, extraY)
                 }

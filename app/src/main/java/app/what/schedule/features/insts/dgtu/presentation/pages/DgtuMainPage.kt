@@ -98,11 +98,11 @@ internal fun DGTUMainScreen(
 ) {
     val dialog = rememberDialogController()
     val sheet = rememberSheetController()
-
+    
     LaunchedEffect(Unit) {
         listener(DgtuEvent.MainOpened)
     }
-
+    
     when (state.value.studentInfoFetchState) {
         RemoteState.Loading -> {}
         RemoteState.Success -> with(state.value.studentInfo!!) {
@@ -118,7 +118,7 @@ internal fun DGTUMainScreen(
                         .statusBarsPadding()
                 ) {
                     Gap(12)
-
+                    
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier
@@ -136,9 +136,9 @@ internal fun DGTUMainScreen(
                                     .clip(CircleShape)
                                     .border(3.dp, colorScheme.primary, CircleShape)
                             )
-
+                            
                             Gap(18)
-
+                            
                             Column {
                                 Text(
                                     "$name $surname",
@@ -166,7 +166,7 @@ internal fun DGTUMainScreen(
                                 )
                             }
                         }
-
+                        
                         IconButton(
                             onClick = {
                                 dialog.open(true) { NotificationsPane(state.value.notifications) }
@@ -178,9 +178,9 @@ internal fun DGTUMainScreen(
                             )
                         }
                     }
-
+                    
                     Gap(16)
-
+                    
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
@@ -194,14 +194,14 @@ internal fun DGTUMainScreen(
                                 accentColor = colorScheme.tertiary,
                                 modifier = Modifier.weight(1f)
                             )
-
+                            
                             StatBox(
                                 this?.avg4?.toInt()?.takeIf { it != 0 }?.toString() ?: "-",
                                 "Хор.",
                                 isPercent = true,
                                 modifier = Modifier.weight(1f),
                             )
-
+                            
                             StatBox(
                                 this?.avg5?.toInt()?.takeIf { it != 0 }?.toString() ?: "-",
                                 "Отл.",
@@ -210,9 +210,9 @@ internal fun DGTUMainScreen(
                             )
                         }
                     }
-
+                    
                     Gap(16)
-
+                    
                     Row(
                         Modifier
                             .height(IntrinsicSize.Min)
@@ -239,9 +239,9 @@ internal fun DGTUMainScreen(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-
+                        
                         Gap(8)
-
+                        
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -257,13 +257,13 @@ internal fun DGTUMainScreen(
                             Icons.Default.Share.Show(colorScheme.onPrimary)
                         }
                     }
-
+                    
                     Gap(18)
                 }
             }
-
+            
             Gap(16)
-
+            
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -277,7 +277,7 @@ internal fun DGTUMainScreen(
                     description = "Оценки и сессии",
                     modifier = Modifier.weight(1f)
                 ) { }
-
+                
                 InfoBlock(
                     accentColor = colorScheme.primary,
                     icon = WHATIcons.Run,
@@ -287,7 +287,7 @@ internal fun DGTUMainScreen(
                 ) {
                     dialog.open(full = true) { DgtuMailsPage(state, listener) }
                 }
-
+                
                 InfoBlock(
                     accentColor = colorScheme.primary,
                     icon = WHATIcons.Run,
@@ -296,7 +296,7 @@ internal fun DGTUMainScreen(
                     modifier = Modifier.weight(1f)
                 ) { }
             }
-
+            
             Column {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,12 +311,12 @@ internal fun DGTUMainScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium
                     )
-
+                    
                     TextButton(onClick = {
                         listener(DgtuEvent.OnShowAllNewsClicked)
                     }) { Text("Все") }
                 }
-
+                
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState())
@@ -330,7 +330,7 @@ internal fun DGTUMainScreen(
                     Gap(4)
                 }
             }
-
+            
             Column {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -345,7 +345,7 @@ internal fun DGTUMainScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium
                     )
-
+                    
                     TextButton(onClick = {
                         dialog.open(true) {
                             EventsListPane(state) {
@@ -355,7 +355,7 @@ internal fun DGTUMainScreen(
                         }
                     }) { Text("Все") }
                 }
-
+                
                 state.value.events.take(3).forEachIndexed { i, it ->
                     EventListItemView(it, i) {
                         listener(DgtuEvent.OnEventClicked(it.id.toString()))
@@ -363,11 +363,11 @@ internal fun DGTUMainScreen(
                     }
                 }
             }
-
+            
             Gap(60)
             SystemBarsGap()
         }
-
+        
         else -> Unit
     }
 }
@@ -383,7 +383,7 @@ fun StudentDetail(
         .systemBarsPadding()
 ) {
     val student = state.studentInfo!!
-
+    
     KeyValueList(
         items = listOf(
             "ФИО" to student.fullName,
@@ -421,7 +421,7 @@ private fun KeyValueList(
                     style = typography.bodyMedium,
                     color = colorScheme.onSurfaceVariant
                 )
-
+                
                 Text(
                     text = value,
                     style = typography.bodyLarge,
@@ -431,7 +431,7 @@ private fun KeyValueList(
                     modifier = Modifier.weight(1f, fill = false)
                 )
             }
-
+            
             if (items.last().first != key) {
                 HorizontalDivider(
                     color = colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -491,7 +491,7 @@ fun NotificationItem(data: Notification) = Box(
     val icon = remember { getCategoryIcon(data.category) }
     val accentColor = remember { getCategoryColor(data.category, primary) }
     val (expanded, setExpanded) = useState(false)
-
+    
     Row(
         Modifier.padding(horizontal = 16.dp)
     ) {
@@ -505,7 +505,7 @@ fun NotificationItem(data: Notification) = Box(
             ) {
                 icon.Show(Color.White, 16, Modifier.padding(4.dp))
             }
-
+            
             Box(
                 Modifier
                     .fillMaxHeight()
@@ -514,9 +514,9 @@ fun NotificationItem(data: Notification) = Box(
                     .background(colorScheme.secondary)
             )
         }
-
+        
         Gap(16)
-
+        
         Column {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -531,16 +531,16 @@ fun NotificationItem(data: Notification) = Box(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-
+                
                 Text(
                     data.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm")),
                     color = colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                 )
             }
-
+            
             Gap(12)
-
+            
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -560,17 +560,17 @@ fun NotificationItem(data: Notification) = Box(
                         overflow = TextOverflow.Ellipsis,
                         maxLines = if (expanded) Int.MAX_VALUE else 3
                     )
-
+                    
                     if (data.link != null) {
                         Gap(8)
-
+                        
                         TextButton(onClick = { uriHandler.openUri(data.link.second) }) {
                             Text(data.link.first)
                         }
                     }
                 }
             }
-
+            
             Gap(32.dp)
         }
     }
@@ -581,7 +581,7 @@ fun AccessQrPane(state: State<DgtuState>) = Box(
     Modifier.background(Color.White)
 ) {
     val painter = rememberQrCodePainter(state.value.accessQr.toString())
-
+    
     Image(
         painter = painter,
         contentDescription = "Access QR Code",
@@ -616,7 +616,7 @@ fun StatBox(
             fontWeight = FontWeight.Bold,
             color = accentColor
         )
-
+        
         Text(
             text,
             fontSize = 14.sp,
@@ -642,7 +642,7 @@ fun EventsListPane(
 fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
     Box(Modifier.bclick(block = onClick)) {
         val accentColor = EventColors.getOrElse(index % EventColors.size) { EventColors.first() }
-
+        
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -675,7 +675,7 @@ fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
                             fontSize = 14.sp,
                             lineHeight = 16.sp
                         )
-
+                        
                         Text(
                             data.date.dayOfMonth.toString().padStart(2, '0'),
                             color = accentColor,
@@ -685,9 +685,9 @@ fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
                         )
                     }
                 }
-
+                
                 Gap(16)
-
+                
                 Column {
                     Text(
                         data.title,
@@ -697,7 +697,7 @@ fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
+                    
                     Text(
                         "%02d:%02d".format(data.date.hour, data.date.minute) + " • " + data.place,
                         fontSize = 14.sp,
@@ -706,10 +706,10 @@ fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
                         color = colorScheme.onSurfaceVariant
                     )
                 }
-
+                
                 Gap(12)
             }
-
+            
             WHATIcons.Run.Show(colorScheme.onSurfaceVariant, 14)
         }
     }
@@ -729,7 +729,7 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
             .zIndex(2f)
             .padding(top = 8.dp, start = 8.dp)
     )
-
+    
     Column {
         AsyncImageWithFallback(
             data.bannerUrl,
@@ -737,7 +737,7 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
                 .fillMaxWidth()
                 .height(140.dp)
         )
-
+        
         Column(
             Modifier.padding(12.dp)
         ) {
@@ -751,7 +751,7 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
                 fontSize = 14.sp,
                 color = colorScheme.onSurfaceVariant
             )
-
+            
             Text(
                 data.title,
                 fontSize = 14.sp,
@@ -767,9 +767,9 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
 private fun formatEventDate(start: LocalDateTime, end: LocalDateTime?): String {
     val dayMonth = start.format(DateTimeFormatter.ofPattern("d MMMM", Locale("ru")))
         .replaceFirstChar { it.uppercase() }
-
+    
     val timeStart = start.format(DateTimeFormatter.ofPattern("HH:mm"))
-
+    
     return if (end != null && end.toLocalDate() == start.toLocalDate()) {
         "$dayMonth, $timeStart – ${end.format(DateTimeFormatter.ofPattern("HH:mm"))}"
     } else {
@@ -793,41 +793,41 @@ fun EventDetailContent(
     if (event == null) Unit else {
         Column {
             Gap(24)
-
+            
             FilterChip(
                 true, {},
                 label = { Text(event.categoryName) }
             )
-
+            
             Gap(20)
-
+            
             Text(
                 text = event.name,
                 style = typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = colorScheme.onSurface
             )
-
+            
             Gap(20)
-
+            
             InfoItem(
                 formatEventDate(event.dateStart, event.dateEnd),
                 "Время проведения",
             ) {
                 Icons.Outlined.DateRange.Show(colorScheme.primary)
             }
-
+            
             Gap(12)
-
+            
             InfoItem(
                 event.place,
                 "Место проведения"
             ) {
                 Icons.Outlined.LocationOn.Show(colorScheme.primary)
             }
-
+            
             Gap(12)
-
+            
             if (event.initiator != null) {
                 InfoItem(
                     event.initiator.name,
@@ -835,29 +835,29 @@ fun EventDetailContent(
                 ) {
                     Icons.Outlined.Person.Show(colorScheme.primary)
                 }
-
+                
                 Gap(20)
             }
-
-
+            
+            
             Column {
                 Text(
                     text = "Описание мероприятия",
                     fontWeight = FontWeight.Medium,
                     color = colorScheme.onSurface
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 Text(
                     text = event.description,
                     color = colorScheme.onSurfaceVariant,
                     lineHeight = 24.sp
                 )
             }
-
+            
             Gap(20)
-
+            
             if (event.target != null || event.levelName != null) Column {
                 Text(
                     text = "Дополнительно",
@@ -865,18 +865,18 @@ fun EventDetailContent(
                     fontWeight = FontWeight.Medium,
                     color = colorScheme.onSurface
                 )
-
+                
                 Gap(8.dp)
-
+                
                 if (event.levelName != null) AdditionalInfoItem("Уровень: ${event.levelName}")
                 if (event.target != null) AdditionalInfoItem("Цель: ${event.target}")
-
+                
                 Gap(20)
             }
         }
-
+        
         Gap(12)
-
+        
         Button(
             onClick = onOpenClicked,
             modifier = Modifier
@@ -892,7 +892,7 @@ fun EventDetailContent(
             Spacer(modifier = Modifier.width(12.dp))
             Text("Открыть")
         }
-
+        
         Gap(12)
     }
 }
@@ -921,9 +921,9 @@ fun InfoItem(
     ) {
         leadingContent()
     }
-
+    
     Gap(16)
-
+    
     Column {
         Text(
             text = title,
@@ -931,7 +931,7 @@ fun InfoItem(
             fontWeight = FontWeight.Medium,
             color = colorScheme.onSurface
         )
-
+        
         Text(
             description,
             style = typography.bodyMedium,

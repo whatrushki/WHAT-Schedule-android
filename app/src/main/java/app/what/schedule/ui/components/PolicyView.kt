@@ -41,7 +41,7 @@ fun PolicyView() = Column {
     val shimmer = rememberShimmer()
     val uriHandler = LocalUriHandler.current
     val colors = colorScheme
-
+    
     LaunchedEffect(Unit) {
         try {
             val response = client.get(BuildConfig.PRIVACY_POLICY_URL)
@@ -54,7 +54,7 @@ fun PolicyView() = Column {
             isError = true
         }
     }
-
+    
     if (content != null) SelectionContainer(
         Modifier
             .fillMaxSize()
@@ -71,7 +71,7 @@ fun PolicyView() = Column {
                 .clip(CircleShape)
                 .background(shimmer)
         )
-
+        
         Gap(8)
     } else Fallback(
         "Не удалось загрузить политику конфиденциальности",

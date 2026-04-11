@@ -26,11 +26,12 @@ import kotlin.math.sin
 
 @Composable
 fun AdvancedLiquidBackground(
-    layers: List<Pair<Color, Color>>
+    layers: List<Pair<Color, Color>>,
+    modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier) {
         layers.forEachIndexed { index, (startColor, endColor) ->
             val animatedColor by infiniteTransition.animateColor(
                 initialValue = startColor,

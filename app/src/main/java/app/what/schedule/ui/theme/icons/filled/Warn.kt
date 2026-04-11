@@ -62,7 +62,7 @@ val WHATIcons.Warn: ImageVector
                 curveToRelative(-5.1f, -11.2f, -17f, -16.9f, -28.9f, -14.1f)
             }
         }.build()
-
+        
         return _Warn!!
     }
 

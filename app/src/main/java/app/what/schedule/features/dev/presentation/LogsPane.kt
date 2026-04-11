@@ -44,11 +44,11 @@ class LogFilter : Filter<LogEntry> {
     private val levelFilters = mutableListOf<LogLevel>()
     private val tagFilters = mutableListOf<String>()
     private val textFilters = mutableListOf<String>()
-
+    
     private var hasErrorsOnly = false
-
+    
     private var timeFilter: String? = null
-
+    
     override fun clearFilters() {
         levelFilters.clear()
         tagFilters.clear()
@@ -56,18 +56,18 @@ class LogFilter : Filter<LogEntry> {
         hasErrorsOnly = false
         timeFilter = null
     }
-
+    
     override fun parseQuery(query: String) {
         clearFilters()
         if (query.isBlank()) return
-
+        
         // Разбиваем строку запроса по пробелам
         val tokens = query.trim().split("\\s+".toRegex())
-
+        
         tokens.forEach { token ->
             // Убираем кавычки, если пользователь их ввел по привычке ("text" -> text)
             val cleanToken = token.removeSurrounding("\"").removeSurrounding("'")
-
+            
             when {
                 // Фильтр по уровню: level:info или level:error
                 cleanToken.startsWith("level:", ignoreCase = true) -> {
@@ -77,13 +77,13 @@ class LogFilter : Filter<LogEntry> {
                         levelFilters.add(it)
                     }
                 }
-
+                
                 // Фильтр по тегу: tag:Network
                 cleanToken.startsWith("tag:", ignoreCase = true) -> {
                     val tagValue = cleanToken.substringAfter(":")
                     if (tagValue.isNotBlank()) tagFilters.add(tagValue)
                 }
-
+                
                 // Спец. фильтры: is:error (наличие throwable)
                 cleanToken.startsWith("is:", ignoreCase = true) -> {
                     val value = cleanToken.substringAfter(":").lowercase()
@@ -91,12 +91,12 @@ class LogFilter : Filter<LogEntry> {
                         hasErrorsOnly = true
                     }
                 }
-
+                
                 // Фильтр по времени: time:today
                 cleanToken.startsWith("time:", ignoreCase = true) -> {
                     timeFilter = cleanToken.substringAfter(":").lowercase()
                 }
-
+                
                 else -> {
                     if (cleanToken.isNotBlank()) {
                         textFilters.add(cleanToken)
@@ -105,13 +105,13 @@ class LogFilter : Filter<LogEntry> {
             }
         }
     }
-
+    
     override fun matches(value: LogEntry): Boolean {
         // 1. Уровень лога (точное совпадение хотя бы с одним выбранным)
         if (levelFilters.isNotEmpty()) {
             if (value.level !in levelFilters) return false
         }
-
+        
         // 2. Тег (частичное совпадение)
         if (tagFilters.isNotEmpty()) {
             val matchesTag = tagFilters.any { filterTag ->
@@ -119,17 +119,17 @@ class LogFilter : Filter<LogEntry> {
             }
             if (!matchesTag) return false
         }
-
+        
         // 3. Наличие ошибки (Throwable)
         if (hasErrorsOnly && value.throwable == null) {
             return false
         }
-
+        
         // 4. Фильтр по времени
         if (timeFilter != null) {
             val now = System.currentTimeMillis()
             val logTime = value.timestamp
-
+            
             val matchesTime = when (timeFilter) {
                 "today" -> {
                     val startOfDay = Calendar.getInstance().apply {
@@ -140,14 +140,14 @@ class LogFilter : Filter<LogEntry> {
                     }.timeInMillis
                     logTime >= startOfDay
                 }
-
+                
                 "hour" -> (now - logTime) <= 3600000
                 "5min" -> (now - logTime) <= 300000
                 else -> true
             }
             if (!matchesTime) return false
         }
-
+        
         if (textFilters.isNotEmpty()) {
             val matchesText = textFilters.any { filterText ->
                 value.message.contains(filterText, ignoreCase = true) ||
@@ -155,7 +155,7 @@ class LogFilter : Filter<LogEntry> {
             }
             if (!matchesText) return false
         }
-
+        
         return true
     }
 }
@@ -165,7 +165,7 @@ fun LogsPane(
     modifier: Modifier = Modifier,
 ) {
     val logs by Auditor.collectLogs()
-
+    
     FilteredList(
         title = "Логи приложения",
         values = logs,
@@ -194,7 +194,7 @@ fun LogsPane(
 fun LogItem(logEntry: LogEntry) {
     val (expanded, setExpanded) = useState(false)
     val isDarkTheme = isSystemInDarkTheme()
-
+    
     val (backgroundColor, textColor, borderColor) = remember(logEntry.level, isDarkTheme) {
         when (logEntry.level) {
             LogLevel.DEBUG -> if (isDarkTheme) Triple(
@@ -206,7 +206,7 @@ fun LogItem(logEntry: LogEntry) {
                 Color(0xFF2E7D32),                     // Темно-зеленый
                 Color(0xFFA5D6A7).copy(alpha = 0.5f)   // Пастельно-зеленый
             )
-
+            
             LogLevel.INFO -> if (isDarkTheme) Triple(
                 Color(0xFF1A237E).copy(alpha = 0.4f),  // Темный синий
                 Color(0xFF90CAF9),                     // Светло-синий
@@ -216,7 +216,7 @@ fun LogItem(logEntry: LogEntry) {
                 Color(0xFF1976D2),                     // Темно-синий
                 Color(0xFF90CAF9).copy(alpha = 0.5f)   // Пастельно-голубой
             )
-
+            
             LogLevel.WARNING -> if (isDarkTheme) Triple(
                 Color(0xFF4E342E).copy(alpha = 0.4f),  // Темный оранжевый
                 Color(0xFFFFB74D),                     // Светло-оранжевый
@@ -226,7 +226,7 @@ fun LogItem(logEntry: LogEntry) {
                 Color(0xFFF57C00),                     // Темно-оранжевый
                 Color(0xFFFFCC80).copy(alpha = 0.5f)   // Пастельно-оранжевый
             )
-
+            
             LogLevel.ERROR -> if (isDarkTheme) Triple(
                 Color(0xFF4A1F1F).copy(alpha = 0.4f),  // Темный красный
                 Color(0xFFEF9A9A),                     // Светло-красный
@@ -236,7 +236,7 @@ fun LogItem(logEntry: LogEntry) {
                 Color(0xFFD32F2F),                     // Темно-красный
                 Color(0xFFFFCDD2).copy(alpha = 0.5f)   // Пастельно-розовый
             )
-
+            
             LogLevel.CRITICAL -> if (isDarkTheme) Triple(
                 Color(0xFF4A235A).copy(alpha = 0.4f),  // Темный фиолетовый
                 Color(0xFFCE93D8),                     // Светло-фиолетовый
@@ -248,8 +248,8 @@ fun LogItem(logEntry: LogEntry) {
             )
         }
     }
-
-
+    
+    
     Column(
         modifier = Modifier
             .animateContentSize()
@@ -270,9 +270,9 @@ fun LogItem(logEntry: LogEntry) {
                 color = textColor,
                 fontSize = 14.sp
             )
-
+            
             Gap(8)
-
+            
             // Время
             Text(
                 text = "[${
@@ -283,9 +283,9 @@ fun LogItem(logEntry: LogEntry) {
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
             )
-
+            
             Gap(8)
-
+            
             // Тег
             Text(
                 text = logEntry.tag,
@@ -296,7 +296,7 @@ fun LogItem(logEntry: LogEntry) {
                 overflow = TextOverflow.Ellipsis
             )
         }
-
+        
         // Сообщение
         Text(
             text = logEntry.message + when (logEntry.level) {
@@ -308,7 +308,7 @@ fun LogItem(logEntry: LogEntry) {
             maxLines = if (expanded) Int.MAX_VALUE else 2,
             overflow = TextOverflow.Ellipsis
         )
-
+        
         if (logEntry.throwable != null) {
             Icon(
                 imageVector = WHATIcons.Warn,

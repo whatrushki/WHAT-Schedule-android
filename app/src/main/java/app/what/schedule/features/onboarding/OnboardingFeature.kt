@@ -24,7 +24,7 @@ class OnboardingFeature(
     NavComponent<OnboardingProvider>,
     KoinComponent {
     override val controller: OnboardingController by inject()
-
+    
     @Composable
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()
@@ -32,13 +32,13 @@ class OnboardingFeature(
         val viewState by controller.collectStates()
         val viewAction by controller.collectActions()
         val navigator = rememberNavigator()
-
+        
         LaunchedEffect(Unit) {
             listener(OnboardingEvent.Init)
         }
-
+        
         OnboardingView(viewState, listener)
-
+        
         when (viewAction) {
             OnboardingAction.NavigateToMain -> {
                 navigator.c.navigate(MainProvider) {
@@ -46,10 +46,10 @@ class OnboardingFeature(
                         inclusive = true
                     }
                 }
-
+                
                 controller.clearAction()
             }
-
+            
             null -> Unit
         }
     }

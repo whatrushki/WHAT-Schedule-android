@@ -55,33 +55,33 @@ class RKSIScheduleService(
     ) -> String
 ) : ScheduleService {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-
+    
     private val scheduleTabletGoogleDriveId by scope.asyncLazy { getScheduleTabletGoogleDriveId() }
-
+    
     override suspend fun getTeachers(): List<Teacher> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка преподавателей")
-
+        
         val response = client.get("$baseUrl/mobileschedule/teachers").bodyAsText()
         val teachers = Ksoup.parse(response).select("a[href*=\"teachers\"]")
             .map { Teacher(it.text(), it.attr("href").split("/").last()) }
-
+        
         Auditor.debug(netTag, "Загружено преподавателей: ${teachers.size}")
         return teachers
     }
-
+    
     override suspend fun getGroups(): List<Group> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Загрузка списка групп")
-
+        
         val response = client.get("$baseUrl/mobileschedule/groups").bodyAsText()
         val groups = Ksoup.parse(response).select("a[href*=\"groups\"]")
             .map { Group(it.text(), it.attr("href").split("/").last()) }
-
+        
         Auditor.debug(netTag, "Загружено групп: ${groups.size}")
         return groups
     }
-
+    
     override suspend fun getTeacherSchedule(
         teacher: String,
         showReplacements: Boolean,
@@ -93,7 +93,7 @@ class RKSIScheduleService(
         additional["lastModified"] as LocalDateTime?,
         showReplacements
     )
-
+    
     override suspend fun getGroupSchedule(
         group: String,
         showReplacements: Boolean,
@@ -105,7 +105,7 @@ class RKSIScheduleService(
         additional["lastModified"] as LocalDateTime?,
         showReplacements
     )
-
+    
     private suspend fun getAndParseSchedule(
         value: String,
         parseMode: ParseMode,
@@ -114,7 +114,7 @@ class RKSIScheduleService(
         showReplacements: Boolean
     ): ScheduleResponse {
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
-
+        
         Auditor.debug(
             scheduleTag,
             "Запрос расписания для ${if (parseMode == ParseMode.GROUP) "группы" else "преподавателя"}: $value"
@@ -122,33 +122,31 @@ class RKSIScheduleService(
         crashlytics.setCustomKey("schedule_request_type", parseMode.name)
         crashlytics.setCustomKey("schedule_request_value", value)
         crashlytics.setCustomKey("institution", "rksi")
-
+        
         val files1 = googleDriveApi.getFolderContent(scheduleTabletGoogleDriveId.await())
         val files2 = googleDriveApi.getFolderContent(files1.folders().first().id)
         val files = (files1 + files2).files()
-
+        
         Auditor.debug(
             scheduleTag,
             "Требуются данные: $requiresData, последнее изменение: $lastModified"
         )
-
+        
         if (!requiresData && files.any { lastModified != null && it.lastModified > lastModified }
                 .not()) {
             Auditor.debug(scheduleTag, "Расписание актуально, возврат UpToDate")
             return ScheduleResponse.UpToDate
         }
-
+        
         val response = client.get(
-            "$baseUrl/mobileschedule/" +
-                    (if (parseMode == ParseMode.GROUP) "groups/" else "teachers/") +
-                    value
+            "$baseUrl/mobileschedule/" + (if (parseMode == ParseMode.GROUP) "groups/" else "teachers/") + value
         ).bodyAsText()
-
+        
         var dataRaw: List<String>
         val daySchedulesRaw = Ksoup.parse(response).getElementsByClass("schedule_item")
-
+        
         Auditor.debug(scheduleTag, "Найдено дней в расписании: ${daySchedulesRaw.size}")
-
+        
         val replacements = CoroutineScope(IO).async {
             getAllReplacements(
                 files1, files2, lastModified, when (parseMode) {
@@ -157,39 +155,39 @@ class RKSIScheduleService(
                 }
             )
         }
-
+        
         val daySchedules = daySchedulesRaw.mapIndexed { index, it ->
             dataRaw =
                 it.getElementsByClass("schedule_title")[0].text().split(", ").first().split(" ")
             val date = LocalDate.now()
                 .withDayOfMonth(dataRaw.first().toInt())
                 .withMonth(parseMonth(dataRaw.last()))
-
+            
             var lessons: List<Lesson>
             lessons = it.getElementsByTag("p").mapNotNull { lessonRaw ->
                 if (lessonRaw.html().contains("href")) return@mapNotNull null
                 val content = lessonRaw.html().split("<br>")
-
+                
                 dataRaw = content.first().split("—")
                 val startTime = parseTime(dataRaw.first().trim())
                 val endTime = parseTime(dataRaw.last().trim())
                 val subject = content[1].substring(3, content[1].length - 4)
-
+                
                 dataRaw = content.last().split(", ")
                 val teacherOrGroup = dataRaw.first().substring(1)
-
+                
                 dataRaw = dataRaw.last().split(" ").last().split("/")
-
+                
                 val auditory = if (dataRaw.size == 1) dataRaw.first()
                 else dataRaw.dropLast(1).joinToString("/")
                 val building = dataRaw.last()
-
+                
                 val lessonType = when {
                     "Доп." in subject -> LessonType.ADDITIONAL
                     "Классный" in subject -> LessonType.CLASS_HOUR
                     else -> LessonType.COMMON
                 }
-
+                
                 val otUnits = listOf(
                     if (lessonType != LessonType.CLASS_HOUR) OneTimeUnit(
                         group = Group(if (parseMode == ParseMode.GROUP) value else teacherOrGroup),
@@ -198,7 +196,7 @@ class RKSIScheduleService(
                         auditory = auditory
                     ) else OneTimeUnit.empty()
                 )
-
+                
                 Lesson(
                     date = date,
                     number = 0,
@@ -211,22 +209,22 @@ class RKSIScheduleService(
             }.toMutableList().apply {
                 val groupedLessons = groupBy { it.startTime }
                 clear()
-
+                
                 groupedLessons.forEach { (_, l) ->
                     var unionLesson = l.first()
                     l.forEachIndexed { index, it -> if (index != 0) unionLesson += it }
                     add(unionLesson)
                 }
             }
-
+            
             var schedule = RKSILessonsSchedule.COMMON
-
+            
             val getNumberOrChangeSchedule = { time: LocalTime, change: List<LessonTime> ->
                 schedule.firstOrNull { it.startTime == time }?.number ?: let {
                     schedule = change; null
                 }
             }
-
+            
             lessons = lessons.map { lesson ->
                 val number = getNumberOrChangeSchedule(
                     lesson.startTime,
@@ -238,18 +236,18 @@ class RKSIScheduleService(
                     lesson.startTime,
                     RKSILessonsSchedule.COMMON
                 ) ?: 0
-
+                
                 lesson.copy(number = number)
             }
-
+            
             Auditor.debug(scheduleTag, "Обработано уроков для $date: ${lessons.size}")
-
+            
             if (showReplacements && index < 2) {
                 lessons = lessons
                     .withReplacements(replacements.await().filter { it.date == date }, schedule)
                     .sortedBy { it.startTime }
             }
-
+            
             DaySchedule(
                 date = date,
                 lessons = lessons,
@@ -261,26 +259,26 @@ class RKSIScheduleService(
                 }
             )
         }
-
+        
         val maxModified = files.maxOf { it.lastModified }
         Auditor.debug(scheduleTag, "Расписание успешно получено, последнее изменение: $maxModified")
         return ScheduleResponse.Available.FromSource(daySchedules, maxModified)
     }
-
+    
     private suspend fun getScheduleTabletGoogleDriveId(): String {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "rksi")
         Auditor.debug(netTag, "Получение ID папки с расписанием из Google Drive")
-
+        
         val response = client.get("https://www.rksi.ru/schedule").bodyAsText()
         val document = Ksoup.parse(response)
         val tabletUrl = document.getElementsMatchingText("Планшетка").last()!!.attr("href")
         val driveId = tabletUrl.split("/").last()
-
+        
         Auditor.debug(netTag, "ID папки Google Drive: $driveId")
         crashlytics.setCustomKey("gdrive_folder_id", driveId)
         return driveId
     }
-
+    
     private suspend fun getAllReplacements(
         itemsOfFirstBuilding: List<GoogleDriveParser.Item>,
         itemsOfSecondBuilding: List<GoogleDriveParser.Item>,
@@ -293,19 +291,19 @@ class RKSIScheduleService(
                 is ScheduleSearch.Teacher -> teacher == search.name
             }
         }
-
+        
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
         Auditor.debug(scheduleTag, "Начало получения замен из Google Drive")
-
+        
         val currentDate = LocalDate.now()
-
+        
         fun List<GoogleDriveParser.Item.File>.filterByModifiedDateAndPutData(shortYear: Boolean = false) =
             filter {
-                val raw = it.name.split(".").dropLast(1).map(String::toInt)
+                val raw = it.name.split(".").slice(0..1).map(String::toInt)
                 val date = LocalDate.of(LocalDate.now().year, raw[1], raw[0])
                 (date >= currentDate).also { _ -> it.additionalData["date"] = date }
             }
-
+        
         val building1TabletsParsingProcess =
             itemsOfFirstBuilding.files().filterByModifiedDateAndPutData()
                 .map {
@@ -314,7 +312,7 @@ class RKSIScheduleService(
                         lastModified, "1", 2, it, predicate
                     )
                 }
-
+        
         val building2TabletsParsingProcess =
             itemsOfSecondBuilding.files().filterByModifiedDateAndPutData(true)
                 .map {
@@ -323,17 +321,18 @@ class RKSIScheduleService(
                         lastModified, "2", 1, it, predicate
                     )
                 }
-
+        
         val tablet1Replacements = building1TabletsParsingProcess.awaitAll()
         val tablet2Replacements = building2TabletsParsingProcess.awaitAll()
         val totalReplacements =
             tablet1Replacements.filterNotNull().flatten() + tablet2Replacements.filterNotNull()
                 .flatten()
-
+        
+        Auditor.debug(scheduleTag, totalReplacements.toString())
         Auditor.debug(scheduleTag, "Всего найдено замен: ${totalReplacements.size}")
         return totalReplacements
     }
-
+    
     private fun createTabletParsingAsyncTask(
         date: LocalDate,
         lastModified: LocalDateTime?,
@@ -343,6 +342,7 @@ class RKSIScheduleService(
         predicate: (String, String) -> Boolean
     ) = CoroutineScope(IO).async {
         val scheduleTag = buildTag(LogScope.SCHEDULE, LogCat.NET, "rksi")
+        
         val tablet =
             getTablet(
                 date,
@@ -350,16 +350,16 @@ class RKSIScheduleService(
                 lastModified != null && file.lastModified > lastModified,
                 file
             ) ?: return@async null
-
+        
         if (!tablet.exists() || !tablet.canRead()) {
             Auditor.warn(scheduleTag, "Файл планшетки недоступен: ${tablet.path}")
             return@async null
         }
-
+        
         val workbook1 = tablet.inputStream().use { inputStream ->
             WorkbookFactory.create(inputStream)
         }
-
+        
         val lessons = parseLessonsFromWorkbook(workbook1, columns, date, predicate)
         Auditor.debug(
             scheduleTag,
@@ -367,7 +367,7 @@ class RKSIScheduleService(
         )
         return@async lessons
     }
-
+    
     private suspend fun getTablet(
         date: LocalDate,
         building: String,
@@ -380,22 +380,22 @@ class RKSIScheduleService(
                 "date" to date.toString()
             ), "xlsx"
         )
-
+        
         fun getCachedFile() = fileManager
             .getFile(FileManager.DirectoryType.CACHE, tabletName)
             .takeIf { it.exists() }
-
+        
         suspend fun downloadAndGetCachedFile(): File? {
             val downloaded = findAndDownloadTabletFromGD(file, tabletName)
             return if (downloaded) getCachedFile() else null
         }
-
+        
         return when {
             fromDrive -> downloadAndGetCachedFile()
             else -> getCachedFile() ?: downloadAndGetCachedFile()
         }
     }
-
+    
     private suspend fun findAndDownloadTabletFromGD(
         file: GoogleDriveParser.Item.File,
         fileName: String
@@ -404,14 +404,14 @@ class RKSIScheduleService(
         try {
             Auditor.debug(fileTag, "Загрузка планшетки из Google Drive: $fileName")
             crashlytics.setCustomKey("tablet_file_name", fileName)
-
+            
             val downloadedTablet = client.get(file.getDownloadLink()).readRawBytes()
             fileManager.writeBytes(
                 FileManager.DirectoryType.CACHE,
                 fileName,
                 downloadedTablet
             )
-
+            
             Auditor.debug(fileTag, "Планшетка успешно загружена: $fileName")
             return true
         } catch (e: Exception) {
@@ -421,7 +421,7 @@ class RKSIScheduleService(
             return false
         }
     }
-
+    
     private fun parseLessonsFromWorkbook(
         workbook: Workbook,
         columns: Int,
@@ -429,45 +429,45 @@ class RKSIScheduleService(
         predicate: (teacher: String, group: String) -> Boolean
     ): List<Lesson> {
         val lessons = mutableListOf<Lesson>()
-
+        
         workbook.forEach { sheet ->
             var emptyRows = 0
             var rowIndex = -1
-
+            
             val otUnits = mutableListOf<OneTimeUnit>()
-
+            
             val lessonNumber =
                 if ("Пара" !in sheet.sheetName) 0
                 else sheet.sheetName.split(" ").last().toInt()
-
+            
             for (row in sheet) {
                 rowIndex++
                 if (rowIndex == 0) continue
                 if (emptyRows > 5) break
-
+                
                 if (row.lastCellNum < 0) emptyRows++
                 else (0 until columns).mapIndexedNotNull { colIndex, i ->
                     val firstCellIndex = i * 3
-
+                    
                     val auditory = row.getCell(firstCellIndex)
                         ?.toString()
                         ?.ifEmpty { return@mapIndexedNotNull null }
                         ?: return@mapIndexedNotNull null
-
+                    
                     val teacher = row.getCell(firstCellIndex + 2)
                         ?.toString()
                         ?.ifEmpty { return@mapIndexedNotNull null }
                         ?.trim()
                         ?: return@mapIndexedNotNull null
-
+                    
                     val groups = row.getCell(firstCellIndex + 1)
                         ?.toString()
                         ?.split(if (columns == 1) "+" else ",")
                         ?.filter { predicate(teacher, it) }
                         ?.ifEmpty { return@mapIndexedNotNull null }
                         ?: return@mapIndexedNotNull null
-
-
+                    
+                    
                     groups.map {
                         OneTimeUnit(
                             auditory = try {
@@ -485,7 +485,7 @@ class RKSIScheduleService(
                         )
                     }
                 }.let { otUnits.addAll(it.flatten()) }
-
+                
                 if (otUnits.isNotEmpty()) lessons.add(
                     Lesson(
                         date = date,
@@ -502,9 +502,9 @@ class RKSIScheduleService(
                 )
             }
         }
-
+        
         workbook.close()
-
+        
         return lessons
     }
 }
@@ -514,19 +514,19 @@ private fun List<Lesson>.withReplacements(
     schedule: List<LessonTime>
 ): List<Lesson> {
     val unionSchedule = mutableMapOf<Int, Pair<Lesson?, Lesson?>>()
-
+    
     replacements.forEach {
         unionSchedule[it.number] = it to null
     }
-
+    
     this.forEach {
         unionSchedule[it.number] = unionSchedule[it.number]?.first to it
     }
-
+    
     return unionSchedule.map {
         val replacement = it.value.first
         val lesson = it.value.second
-
+        
         return@map if (replacements.isNotEmpty()) {
             if (replacement == null && lesson != null)
                 lesson.copy(state = LessonState.REMOVED)
@@ -548,7 +548,7 @@ private fun List<Lesson>.withReplacements(
                 )
             } else if (!lesson!!.equalsWithReplacement(replacement!!)) {
                 val lessonTeachers = lesson.otUnits.map { it.teacher }
-
+                
                 replacement.copy(
                     number = lesson.number,
                     startTime = lesson.startTime,

@@ -26,7 +26,7 @@ fun ScheduleShimmer() = Column(
     Modifier.padding(horizontal = 12.dp)
 ) {
     val shimmer = rememberShimmer()
-
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -34,9 +34,9 @@ fun ScheduleShimmer() = Column(
             .clip(CircleShape)
             .background(shimmer)
     )
-
+    
     Gap(8)
-
+    
     repeat(3) {
         LessonItemShimmer(shimmer)
         Gap(8)
@@ -56,21 +56,21 @@ fun LessonItemShimmer(shimmer: Brush) {
             Modifier.padding(8.dp, 12.dp)
         ) {
             Gap(4)
-
+            
             Column(
                 Modifier.width(64.dp)
             ) {
                 Gap(4)
-
+                
                 Box(
                     Modifier
                         .clip(CircleShape)
                         .background(shimmer)
                         .size(60.dp, 24.dp)
                 )
-
+                
                 Gap(8)
-
+                
                 Box(
                     Modifier
                         .clip(CircleShape)
@@ -78,9 +78,9 @@ fun LessonItemShimmer(shimmer: Brush) {
                         .size(40.dp, 20.dp)
                 )
             }
-
+            
             Gap(12)
-
+            
             Column {
                 Box(
                     Modifier
@@ -89,9 +89,9 @@ fun LessonItemShimmer(shimmer: Brush) {
                         .height(34.dp)
                         .fillMaxWidth()
                 )
-
+                
                 Gap(8)
-
+                
                 repeat(3) {
                     Box(
                         Modifier
@@ -99,7 +99,7 @@ fun LessonItemShimmer(shimmer: Brush) {
                             .background(shimmer)
                             .size(80.dp, 16.dp)
                     )
-
+                    
                     Gap(8)
                 }
             }

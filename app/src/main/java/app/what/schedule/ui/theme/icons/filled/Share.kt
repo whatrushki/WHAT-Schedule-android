@@ -95,7 +95,7 @@ val WHATIcons.Share: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Share!!
     }
 

@@ -40,7 +40,7 @@ class RKSI(
         override fun create() = RKSI(get(), get(), get(), get())
         override val metadata: MetaInfo by lazy { RKSIMetadata }
     }
-
+    
     override val metadata: MetaInfo = Factory.metadata
     override val scheduleService: ScheduleService =
         RKSIScheduleService(
@@ -65,7 +65,7 @@ object RKSILessonsSchedule {
         LessonTime(6, LocalTime.of(16, 40), LocalTime.of(18, 10)),
         LessonTime(7, LocalTime.of(18, 20), LocalTime.of(19, 50))
     )
-
+    
     val SHORTENED = listOf(
         LessonTime(1, LocalTime.of(8, 0), LocalTime.of(8, 50)),
         LessonTime(2, LocalTime.of(9, 0), LocalTime.of(9, 50)),
@@ -75,7 +75,7 @@ object RKSILessonsSchedule {
         LessonTime(6, LocalTime.of(13, 0), LocalTime.of(13, 50)),
         LessonTime(7, LocalTime.of(14, 0), LocalTime.of(14, 50))
     )
-
+    
     val WITH_CLASS_HOUR = listOf(
         LessonTime(1, LocalTime.of(8, 0), LocalTime.of(9, 30)),
         LessonTime(2, LocalTime.of(9, 40), LocalTime.of(11, 10)),

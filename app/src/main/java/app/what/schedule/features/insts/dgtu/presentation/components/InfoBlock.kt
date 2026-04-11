@@ -43,16 +43,16 @@ fun InfoBlock(
         ) {
             icon.Show(color = accentColor, 34, Modifier.padding(8.dp))
         }
-
+        
         Gap(8)
-
+        
         Text(
             title,
             color = colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
             fontSize = 16.sp
         )
-
+        
         Text(
             description,
             color = colorScheme.onSurfaceVariant,

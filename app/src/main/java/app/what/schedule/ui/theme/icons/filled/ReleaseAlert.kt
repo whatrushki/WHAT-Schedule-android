@@ -84,7 +84,7 @@ val WHATIcons.ReleaseAlert: ImageVector
                 close()
             }
         }.build()
-
+        
         return _ReleaseAlert!!
     }
 

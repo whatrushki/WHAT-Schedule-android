@@ -37,7 +37,7 @@ val WHATIcons.Person: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Person!!
     }
 

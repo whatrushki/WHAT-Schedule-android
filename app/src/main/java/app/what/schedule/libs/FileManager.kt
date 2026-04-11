@@ -13,11 +13,11 @@ import java.io.OutputStream
 
 class FileManager(private val context: Context) {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-
+    
     enum class DirectoryType {
         PRIVATE, PUBLIC, CACHE
     }
-
+    
     fun getFile(type: DirectoryType, fileName: String): File {
         return when (type) {
             DirectoryType.PRIVATE -> File(context.filesDir, fileName)
@@ -30,11 +30,25 @@ class FileManager(private val context: Context) {
             }
         }
     }
-
+    
     fun exists(type: DirectoryType, fileName: String): Boolean = getFile(type, fileName).exists()
-
+    
     fun delete(type: DirectoryType, fileName: String): Boolean = getFile(type, fileName).delete()
-
+    
+    fun getDownloadedFiles(
+        directoryType: DirectoryType,
+        path: String
+    ): List<File> {
+        buildTag(LogScope.FILE, LogCat.ERROR)
+        
+        val downloadsDir = getFile(directoryType, path)
+        
+        return downloadsDir.listFiles()
+            ?.filter { it.isFile }
+            ?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+    }
+    
     fun writeStream(type: DirectoryType, fileName: String): OutputStream? {
         val fileTag = buildTag(LogScope.FILE, LogCat.ERROR)
         return try {
@@ -52,7 +66,7 @@ class FileManager(private val context: Context) {
             null
         }
     }
-
+    
     fun readBytes(type: DirectoryType, fileName: String): Result<ByteArray> = runCatching {
         val fileTag = buildTag(LogScope.FILE, LogCat.DB)
         Auditor.debug(fileTag, "Чтение файла: $fileName, тип: $type")
@@ -63,7 +77,7 @@ class FileManager(private val context: Context) {
         crashlytics.setCustomKey("file_read_error", fileName)
         crashlytics.recordException(e)
     }
-
+    
     fun writeBytes(type: DirectoryType, fileName: String, data: ByteArray): Result<Unit> =
         runCatching {
             val fileTag = buildTag(LogScope.FILE, LogCat.DB)
@@ -77,7 +91,7 @@ class FileManager(private val context: Context) {
             crashlytics.setCustomKey("file_write_error", fileName)
             crashlytics.recordException(e)
         }
-
+    
     /**
      * Специальный метод для Android 10+ для регистрации файла в системе (MediaStore),
      * чтобы он появился в приложении "Загрузки" сразу.

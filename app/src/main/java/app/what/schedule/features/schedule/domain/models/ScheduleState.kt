@@ -7,7 +7,7 @@ import app.what.schedule.ui.components.ScheduleSearchData
 
 data class ScheduleState(
     val schedules: List<DaySchedule> = emptyList(),
-    val scheduleState: RemoteState = RemoteState.Idle,
+    val scheduleState: RemoteState = RemoteState.Empty,
     override val scheduleSearches: List<ScheduleSearch> = emptyList(),
     val scheduleSearchesState: RemoteState = RemoteState.Idle,
     override val selectedSearch: ScheduleSearch? = null

@@ -26,7 +26,7 @@ import org.koin.core.component.inject
 
 class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
     override val controller: DgtuController by inject()
-
+    
     @Composable
     override fun content(modifier: Modifier) {
         val action = controller.collectActions()
@@ -34,7 +34,7 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
         val nav = rememberHostNavigator()
         val midNav = rememberNavigator(1)
         val globalNav = rememberNavigator(2)
-
+        
         NavigationHost(
             Modifier,
             start = if (state.value.token != null) DGTUMainProvider
@@ -44,16 +44,16 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
             composable<DGTUAuthProvider> {
                 DGTULoginScreen(listener)
             }
-
+            
             composable<DGTUMainProvider> {
                 DGTUMainScreen(state, listener)
             }
         }
-
+        
         LaunchedEffect(action.value) {
             val ac = action.value
             ac ?: return@LaunchedEffect
-
+            
             when (ac) {
                 is DgtuAction.OpenSchedule -> midNav.c.navigate(
                     ScheduleProvider(
@@ -62,12 +62,12 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
                         true
                     )
                 )
-
+                
                 is DgtuAction.OpenNews -> midNav.c.navigate(NewsProvider)
                 is DgtuAction.OpenNewDetail -> globalNav.c.navigate(
                     NewsDetailProvider(ac.id, ac.url, ac.bannerUrl, ac.title, ac.description)
                 )
-
+                
                 else -> nav.c.navigate(
                     when (action) {
                         DgtuAction.OpenAuth -> DGTUAuthProvider
@@ -79,9 +79,9 @@ class DgtuFeature : Feature<DgtuController, DgtuEvent>(), KoinComponent {
                     }
                 )
             }
-
+            
             controller.clearAction()
         }
     }
-
+    
 }

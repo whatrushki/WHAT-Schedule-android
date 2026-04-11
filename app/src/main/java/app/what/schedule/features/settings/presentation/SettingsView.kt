@@ -87,25 +87,25 @@ fun SettingsView(
     val appUtils: AppUtils = koinInject()
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState { 2 }
-
+    
     var subScreen by useState<SubScreenState?>(null)
-
+    
     val navigateToSubScreen: (String, String, List<UIComponent>) -> Unit = { title, desc, list ->
         subScreen = SubScreenState(title, desc, list)
         scope.launch { pagerState.animateScrollToPage(1) }
     }
-
+    
     BackHandler(pagerState.currentPage != 0) {
         scope.launch { pagerState.animateScrollToPage(0) }
     }
-
+    
     CompositionLocalProvider(LocalSettingsNavigator provides navigateToSubScreen) {
         val rootComponents = getSettingsList(appValues, appUtils)
-
+        
         Column(Modifier.fillMaxSize()) {
             val headerTitle = if (pagerState.currentPage == 0) "Настройки"
             else subScreen?.title ?: ""
-
+            
             val headerDesc = if (pagerState.currentPage == 0) listOf(
                 "( ˶°ㅁ°) !!",
                 "(๑ᵔ⤙ᵔ๑)",
@@ -115,7 +115,7 @@ fun SettingsView(
                 "(๑>◡<๑)",
                 "(˶˃⤙˂˶)"
             ).random() else subScreen?.description ?: ""
-
+            
             SettingsHeader(
                 title = headerTitle,
                 description = headerDesc,
@@ -123,7 +123,7 @@ fun SettingsView(
                 onBack = { scope.launch { pagerState.animateScrollToPage(0) } }
             )
             // --------------
-
+            
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = false,
@@ -134,7 +134,7 @@ fun SettingsView(
                     if (page == 0) {
                         // Главная страница
                         item { SettingUpdateComponent.content(Modifier) }
-
+                        
                         items(rootComponents.size) { index ->
                             rootComponents[index].content(Modifier)
                         }
@@ -165,7 +165,7 @@ private fun SettingsHeader(
     if (showBack) IconButton(modifier = Modifier.padding(start = 8.dp), onClick = onBack) {
         WHATIcons.Clear.Show(colorScheme.primary)
     }
-
+    
     Column(
         Modifier.align(Alignment.BottomStart)
     ) {
@@ -181,7 +181,7 @@ private fun SettingsHeader(
                     .padding(top = 16.dp, start = 18.dp, end = 16.dp)
             )
         }
-
+        
         AnimatedEnter(delay = 200) {
             Text(
                 text = description,
@@ -202,7 +202,7 @@ private fun SettingsHeader(
 fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
     val fb = Firebase.analytics
     val dialog = rememberDialogController()
-
+    
     return listOf(
         category(
             "Основные", "базовые параметры", WHATIcons.Crown,
@@ -221,7 +221,7 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
                 }
             )
         ),
-
+        
         category(
             "Внешний вид", "тема, цвета, анимации", WHATIcons.ImageRoller,
             content = listOf(
@@ -239,7 +239,7 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
                 }
             )
         ),
-
+        
         category(
             "Для разработчиков", "отладка", WHATIcons.Code,
             content = listOf(
@@ -249,7 +249,7 @@ fun getSettingsList(app: AppValues, utils: AppUtils): List<UIComponent> {
                 app.debugMode.asSwitch()
             )
         ).dependsOn(app.devSettingsUnlocked) { it == true },
-
+        
         actionCategory(
             "О приложении", "версия, авторы", Icons.Rounded.Info
         ) {
@@ -271,7 +271,7 @@ fun category(
     @Composable
     override fun content(modifier: Modifier) {
         val navigate = LocalSettingsNavigator.current
-
+        
         CategoryItem(
             icon = icon,
             title = title,
@@ -311,9 +311,9 @@ fun CategoryItem(
             .padding(28.dp, 12.dp)
     ) {
         icon.Show(colorScheme.primary, 28)
-
+        
         Gap(18)
-
+        
         Column {
             Text(title, style = typography.titleLarge, color = colorScheme.onBackground)
             Text(

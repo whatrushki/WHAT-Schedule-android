@@ -29,13 +29,13 @@ class IUBIP(
 ) : Institution {
     companion object Factory : Institution.Factory, KoinComponent {
         private const val BASE_URL = "https://www.iubip.ru"
-
+        
         override val metadata by lazy { IUBIPMetadata }
         override fun create() = IUBIP(get())
     }
-
+    
     override val metadata = Factory.metadata
-
+    
     override val scheduleService: ScheduleService =
         IUBIPScheduleService(BASE_URL, client)
     override val newsService: NewsService =

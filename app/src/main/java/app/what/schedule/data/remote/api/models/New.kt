@@ -49,17 +49,17 @@ sealed interface NewContent {
         // TODO: доделать если понадобится в будущем
         else -> false
     }
-
+    
     infix fun then(other: NewContent?): NewContent = if (other == null) this else
         Container.Column(listOf(this, other))
-
+    
     fun toTreeString(): String = buildString {
         appendContent(this@NewContent, 0)
     }
-
+    
     private fun StringBuilder.appendContent(content: NewContent, indentLevel: Int) {
         val indent = "  ".repeat(indentLevel)
-
+        
         when (content) {
             is Container -> {
                 appendLine("$indent${content::class.simpleName}:")
@@ -67,7 +67,7 @@ sealed interface NewContent {
                     appendContent(child, indentLevel + 1)
                 }
             }
-
+            
             is Item -> {
                 when (content) {
                     is Item.SortedList -> appendLine("$indent• SortedList: ${content.data}")
@@ -85,14 +85,14 @@ sealed interface NewContent {
             }
         }
     }
-
-
+    
+    
     sealed class Container(val content: List<NewContent>) : NewContent {
         class Column(content: List<NewContent>) : Container(content)
         class Row(content: List<NewContent>) : Container(content)
         class Card(content: List<NewContent>) : Container(content)
     }
-
+    
     sealed interface Item : NewContent {
         class Quote(val author: AuthorInfo, val data: String) : Item
         class Info(val data: String) : Item

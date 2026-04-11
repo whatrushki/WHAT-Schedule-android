@@ -45,7 +45,7 @@ val WHATIcons.Telegram: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Telegram!!
     }
 

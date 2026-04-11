@@ -25,7 +25,7 @@ data class Lesson(
     infix operator fun plus(other: Lesson) = copy(otUnits = otUnits + other.otUnits)
     infix operator fun plus(other: List<Lesson>) =
         copy(otUnits = otUnits + other.flatMap(Lesson::otUnits))
-
+    
     fun equalsWithReplacement(other: Lesson): Boolean {
         return otUnits.toSet() == other.otUnits.toSet()
     }
@@ -39,7 +39,7 @@ enum class LessonsScheduleType {
 
 enum class LessonState {
     COMMON, ADDED, REMOVED, CHANGED;
-
+    
     val isCommon get() = this == COMMON
     val isAdded get() = this == ADDED
     val isRemoved get() = this == REMOVED
@@ -48,7 +48,7 @@ enum class LessonState {
 
 enum class LessonType {
     COMMON, ADDITIONAL, CLASS_HOUR, LECTURE, PRACTISE, LABORATORY, CREDIT, OBLIGATION;
-
+    
     val isStandard get() = this != ADDITIONAL && this != CLASS_HOUR && this != LABORATORY && this != CREDIT
     val isNonStandard get() = !isStandard
 }
@@ -97,9 +97,9 @@ interface LessonsSchedule {
     val COMMON: List<LessonTime>
     val SHORTENED: List<LessonTime>
     val WITH_CLASS_HOUR: List<LessonTime>
-
+    
     fun List<LessonTime>.numberOf(time: LocalTime) = firstOrNull { it.startTime == time }?.number
-
+    
     fun List<LessonTime>.getByNumber(number: Int) = firstOrNull { it.number == number }
 }
 
@@ -108,35 +108,35 @@ sealed class ScheduleSearch {
     abstract val name: String
     abstract val id: String
     abstract val favorite: Boolean
-
+    
     @Serializable
     @SerialName("group")
     class Group(
         override val name: String, override val id: String = name,
         override val favorite: Boolean = false
     ) : ScheduleSearch()
-
+    
     @Serializable
     @SerialName("teacher")
     class Teacher(
         override val name: String, override val id: String = name,
         override val favorite: Boolean = false
     ) : ScheduleSearch()
-
+    
     operator fun component1() = name
     operator fun component2() = id
     operator fun component3() = favorite
-
+    
     override fun equals(other: Any?): Boolean =
         other is ScheduleSearch && this::class == other::class && id == other.id
-
+    
     override fun hashCode(): Int {
         var result = favorite.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + id.hashCode()
         return result
     }
-
+    
     fun copy(
         name: String = this.name,
         id: String = this.id,
@@ -145,7 +145,7 @@ sealed class ScheduleSearch {
         is Group -> Group(name, id, favorite)
         is Teacher -> Teacher(name, id, favorite)
     }
-
+    
 }
 
 fun Group.toScheduleSearch() = ScheduleSearch.Group(name, id, favorite)

@@ -40,7 +40,7 @@ val WHATIcons.Pause: ImageVector
                 arcToRelative(3f, 3f, 0f, isMoreThanHalf = false, isPositiveArc = false, -3f, -3f)
             }
         }.build()
-
+        
         return _Pause!!
     }
 

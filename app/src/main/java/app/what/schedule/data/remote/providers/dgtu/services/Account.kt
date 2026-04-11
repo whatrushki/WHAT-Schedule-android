@@ -21,9 +21,9 @@ class DGTUAccountService(
     companion object {
         private const val ACCOUNT_BASE_URL = "https://lk.donstu.ru/api"
     }
-
+    
     fun generateImageLink(url: String) = "https://" + ACCOUNT_BASE_URL.toUri().host + url
-
+    
     suspend fun auth(
         login: String,
         password: String,
@@ -32,12 +32,12 @@ class DGTUAccountService(
         contentType(ContentType.Application.Json)
         setBody(DGTUApi.Auth.Login(login, password, fingerprint))
     }.body<ApiResponse<ApiResponse<DGTUApi.Auth.LoginResponse>>>()
-
+    
     suspend fun getUnreadMessagesId(token: String) =
         client.get("$ACCOUNT_BASE_URL/Mail/CheckMail") {
             bearerAuth(token)
         }.body<ApiResponse<DGTUApi.Mails.GetUnreadIdsResponse>>()
-
+    
     suspend fun getMails(
         token: String,
         data: DGTUApi.Mails.GetAllRequest
@@ -45,7 +45,7 @@ class DGTUAccountService(
         bearerAuth(token)
         setData(data)
     }.body<ApiResponse<DGTUApi.Mails.GetAllResponse>>()
-
+    
     suspend fun getDetailMail(
         token: String,
         threadId: Int,
@@ -56,14 +56,14 @@ class DGTUAccountService(
         parameter("messageID", messageId)
         parameter("type", "0")
     }.body<ApiResponse<DGTUApi.Mails.GetAllResponse>>()
-
+    
     suspend fun getZachBook(
         token: String
     ) = client.get("$ACCOUNT_BASE_URL/EducationalActivity/ZachBook?studentID=undefined") {
         bearerAuth(token)
         parameter("studentID", "undefined")
     }.body<ApiResponse<DGTUApi.ZachBook.GetResponse>>()
-
+    
     suspend fun getStudentInfo(
         token: String,
         studentId: Int
@@ -71,33 +71,33 @@ class DGTUAccountService(
         bearerAuth(token)
         parameter("studentID", studentId)
     }.body<ApiResponse<DGTUApi.Profile.GetStudentInfoResponse>>()
-
+    
     suspend fun generatePassNumber(
         token: String
     ) = client.get("$ACCOUNT_BASE_URL/UserInfo/PassGeneration") {
         bearerAuth(token)
     }.body<ApiResponse<Int>>()
-
+    
     suspend fun getEvents(
         token: String
     ) = client.get("$ACCOUNT_BASE_URL/EventsCalendar") {
         bearerAuth(token)
     }.body<ApiResponse<DGTUApi.Events.GetAllResponse>>()
-
-
+    
+    
     suspend fun getDetailEvent(
         token: String, eventId: String
     ) = client.get("$ACCOUNT_BASE_URL/EventsCalendar/Event") {
         bearerAuth(token)
         parameter("eventID", eventId)
     }.body<ApiResponse<DGTUApi.Events.GetDetailEventInfo>>()
-
+    
     suspend fun getFeed(
         token: String
     ) = client.get("$ACCOUNT_BASE_URL/Feed") {
         bearerAuth(token)
     }.body<ApiResponse<DGTUApi.Feeds.GetAllResponse>>()
-
+    
     suspend fun getMarksCount(
         token: String,
         studentId: Int
@@ -105,7 +105,7 @@ class DGTUAccountService(
         bearerAuth(token)
         parameter("studentID", studentId.absoluteValue)
     }.body<ApiResponse<DGTUApi.Stats.GetMarksCountResponse>>()
-
+    
     suspend fun getAvgMark(
         token: String,
         studentId: Int

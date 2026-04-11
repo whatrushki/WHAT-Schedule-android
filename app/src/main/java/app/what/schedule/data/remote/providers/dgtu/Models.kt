@@ -32,7 +32,7 @@ object DGTUApi {
             val captchaCode: String = "",
             val redirect: Boolean = false
         )
-
+        
         @Serializable
         data class LoginResponse(
             val userName: String,
@@ -43,20 +43,20 @@ object DGTUApi {
             val id: Int
         )
     }
-
+    
     object Stats {
         @Serializable
         data class GetAvgMarkResponse(
             val avgMark: Float
         )
-
+        
         @Serializable
         data class GetMarksCountResponse(
             val count: Int,
             val markCountStatistic: List<Models.MarkCountItem>
         )
     }
-
+    
     object Events {
         @Serializable
         data class GetAllResponse(
@@ -67,7 +67,7 @@ object DGTUApi {
             val typesEvents: List<Models.TypesEvent>,
             val allowAdd: Boolean,
         )
-
+        
         @Serializable
         data class GetDetailEventInfo(
             val eventInfo: EventInfo,
@@ -79,7 +79,7 @@ object DGTUApi {
 //            val request: Any?,
             val isAuthor: Boolean,
         )
-
+        
         @Serializable
         data class EventInfo(
             val entryEnd: Boolean,
@@ -145,7 +145,7 @@ object DGTUApi {
             val typeName: String,
             val categoryName: String,
         )
-
+        
         @Serializable
         data class Initiator(
             val name: String,
@@ -160,7 +160,7 @@ object DGTUApi {
 //            val date: Any?,
 //            val confirmed: Any?,
         )
-
+        
         @Serializable
         data class AccessItem(
             @SerialName("accessID")
@@ -186,7 +186,7 @@ object DGTUApi {
 //            val siteEvent: Any?,
         )
     }
-
+    
     object ZachBook {
         @Serializable
         data class GetResponse(
@@ -211,7 +211,7 @@ object DGTUApi {
             val showDebts: Boolean
         )
     }
-
+    
     object Profile {
         @Serializable
         data class GetStudentInfoResponse(
@@ -292,27 +292,27 @@ object DGTUApi {
             val birthday = birthdayRaw.split(" ").let {
                 LocalDate.of(it[2].toInt(), parseMonth(it[1]), it[0].toInt())
             }
-
+            
             @Transient
             val lastEnterDate = lastEnterDateRaw.split(" ").let {
                 LocalDate.of(it[2].toInt(), parseMonth(it[1]), it[0].toInt())
             }
         }
-
+        
         @Serializable
         data class GetStatisticsResponse(
             val markCountStatistic: List<Models.MarkCountItem>,
             val count: Int
         )
     }
-
+    
     object Mails {
         @Serializable
         data class GetUnreadIdsResponse(
             val messagesIDs: List<Int>,
             val count: Int
         )
-
+        
         @Serializable
         data class GetAllRequest(
             val page: Int,
@@ -328,7 +328,7 @@ object DGTUApi {
             val messageTypeIDs: List<Int>? = null,
             val folderID: Int? = null
         )
-
+        
         @Serializable
         data class GetAllResponse(
             val page: Int,
@@ -338,13 +338,13 @@ object DGTUApi {
             @SerialName("messages") val messageThreads: List<Models.MessageThread>
         )
     }
-
+    
     object Feeds {
         @Serializable
         data class GetAllRequest(
             val userID: Int
         )
-
+        
         @Serializable
         data class GetAllResponse(
 //            val benchmark: Any?
@@ -354,20 +354,20 @@ object DGTUApi {
             val time: Float
         )
     }
-
+    
     object Schedule {
         @Serializable
         data class ListYears(
             val years: List<String>
         )
-
+        
         @Serializable
         data class Get(
             val isCyclicalSchedule: Boolean,
             val rasp: List<Models.DGTULesson>
         )
     }
-
+    
     object Models {
         @Serializable
         data class Event(
@@ -409,14 +409,14 @@ object DGTUApi {
             val skipByReason: Boolean?,
 //            val noCancelRecord: Any?,
         )
-
+        
         @Serializable
         data class Level(
             @SerialName("levelID")
             val levelId: Long,
             val name: String,
         )
-
+        
         @Serializable
         data class Category(
             val name: String,
@@ -424,7 +424,7 @@ object DGTUApi {
             val categoryId: Long,
             val color: String?,
         )
-
+        
         @Serializable
         data class Type(
             val name: String?,
@@ -433,7 +433,7 @@ object DGTUApi {
             @SerialName("categoryID")
             val categoryId: Long?,
         )
-
+        
         @Serializable
         data class TypesEvent(
             @SerialName("typeID")
@@ -442,20 +442,20 @@ object DGTUApi {
             val available: Boolean,
 //            val isCuratorial: Any?,
         )
-
+        
         @Serializable
         data class ZachBook(
             val studentID: Int,
             val zachBook: String
         )
-
+        
         @Serializable
         data class StudentInfo(
             val name: String,
             val group: String,
             val specialty: String
         )
-
+        
         @Serializable
         data class ZachGroupedItem(
             val key: String,
@@ -467,7 +467,7 @@ object DGTUApi {
             val marks: List<ZachItem>,
             val order: Int
         )
-
+        
         @Serializable
         data class ZachItem(
             val key: Int,
@@ -487,34 +487,34 @@ object DGTUApi {
             val zet: Float,
             val closed: Boolean
         )
-
+        
         @Serializable
         data class AvgCourse(
             val course: Int,
             val avg: Float
         )
-
+        
         @Serializable
         data class MarkCount(
             val mark: String,
             val count: Int,
             val percent: Float
         )
-
+        
         @Serializable
         data class ProfileGroup(
             val item1: String,
             val item2: Int,
             val formID: Int
         )
-
+        
         @Serializable
         data class ProfilePlan(
             val item1: String,
             val item2: Int,
             val item3: Boolean
         )
-
+        
         @Serializable
         data class ProfileKafedra(
             val kafID: Int,
@@ -522,7 +522,7 @@ object DGTUApi {
             val aud: String,
             val phone: String
         )
-
+        
         @Serializable
         data class ProfileFacul(
             val faculID: Int,
@@ -530,7 +530,7 @@ object DGTUApi {
             val aud: String,
             val phone: String
         )
-
+        
         @Serializable
         data class MarkCountItem(
             val mark: Int,
@@ -538,7 +538,7 @@ object DGTUApi {
             val count: Int,
             val avg: Float
         )
-
+        
         @Serializable
         data class MessageThread(
             val id: Int,
@@ -571,7 +571,7 @@ object DGTUApi {
 //            val type: Any?,
             val files: List<File>
         )
-
+        
         @Serializable
         data class Message(
             val messageID: Int,
@@ -593,7 +593,7 @@ object DGTUApi {
 //                val type: Any?,
 //                val user: Any?
         )
-
+        
         @Serializable
         data class File(
             val attachmentID: Int,
@@ -607,7 +607,7 @@ object DGTUApi {
             val isDelete: Int?,
             val deletedUserID: Int?
         )
-
+        
         @Serializable
         data class FeedItem(
             val notificationID: Int,
@@ -629,20 +629,20 @@ object DGTUApi {
 //            val views: Any?,
             val color: String
         )
-
+        
         @Serializable
         data class DGTUTeacher(
             val name: String,
             val id: Int
         )
-
+        
         @Serializable
         data class DGTUGroup(
             val name: String,
             val id: Int,
             val kurs: Int?
         )
-
+        
         @Serializable
         data class DGTULesson(
             @SerialName("код") val code: Int,

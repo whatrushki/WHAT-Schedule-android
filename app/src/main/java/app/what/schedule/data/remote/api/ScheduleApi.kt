@@ -40,6 +40,12 @@ enum class SourceType { API, PARSER, EXCEL, PDF }
 sealed interface ScheduleResponse {
     object Empty : ScheduleResponse
     object UpToDate : ScheduleResponse
+    class Error(
+        val cachedSchedules: List<DaySchedule>?,
+        val lastModified: LocalDateTime?,
+        val exception: Exception
+    ) : ScheduleResponse
+    
     sealed class Available(
         val schedules: List<DaySchedule>,
         val lastModified: LocalDateTime
@@ -48,7 +54,7 @@ sealed interface ScheduleResponse {
             schedules: List<DaySchedule>,
             lastModified: LocalDateTime
         ) : Available(schedules, lastModified)
-
+        
         class FromCache(
             schedules: List<DaySchedule>,
             lastModified: LocalDateTime
@@ -58,38 +64,42 @@ sealed interface ScheduleResponse {
 
 fun List<ScheduleResponse>.sum(): ScheduleResponse {
     if (isEmpty()) return ScheduleResponse.Empty
-
+    
     val allSchedules = mutableListOf<DaySchedule>()
     var latestModified: LocalDateTime? = null
-
+    
     for (response in this) {
         when (response) {
             ScheduleResponse.Empty -> {
-
+            
             }
-
+            
             ScheduleResponse.UpToDate -> {
-
+            
             }
-
+            
             is ScheduleResponse.Available -> {
                 allSchedules.addAll(response.schedules)
                 if (latestModified == null || response.lastModified > latestModified) {
                     latestModified = response.lastModified
                 }
             }
+            
+            is ScheduleResponse.Error -> {
+            
+            }
         }
     }
-
+    
     if (allSchedules.isEmpty()) {
         return ScheduleResponse.Empty
     }
-
+    
     val hasFromSource = this.any { it is ScheduleResponse.Available.FromSource }
     val hasFromCache = this.any { it is ScheduleResponse.Available.FromCache }
-
+    
     val lastModified = latestModified ?: LocalDateTime.now()
-
+    
     return when {
         hasFromSource -> ScheduleResponse.Available.FromSource(allSchedules, lastModified)
         hasFromCache -> ScheduleResponse.Available.FromCache(allSchedules, lastModified)
@@ -105,14 +115,14 @@ interface Institution {
         val metadata: MetaInfo
         fun create(): Institution
     }
-
+    
     val metadata: MetaInfo
-
+    
     val scheduleService: ScheduleService
     val newsService: NewsService
-
+    
     val accountFeature: Feature<*, *>?
-
+    
     fun generateFileName(
         additional: AdditionalData,
         fileExtension: String
@@ -127,13 +137,13 @@ interface ScheduleService {
         showReplacements: Boolean = false,
         additional: AdditionalData = emptyMap()
     ): ScheduleResponse
-
+    
     suspend fun getTeacherSchedule(
         teacher: String,
         showReplacements: Boolean = false,
         additional: AdditionalData = emptyMap()
     ): ScheduleResponse
-
+    
     suspend fun getGroups(): List<Group>
     suspend fun getTeachers(): List<Teacher>
 }
@@ -166,22 +176,22 @@ class InstitutionManager(
     init {
         actualize()
     }
-
+    
     fun getInstitutions(): List<Institution.Factory> = insts
-
+    
     fun save(institutionId: String) {
         settings.institution.set(institutionId)
         actualize()
     }
-
+    
     private fun actualize() {
         val savedData = settings.institution.get()
         savedInstitution = insts.firstOrNull { it.metadata.id == savedData }?.create()
     }
-
+    
     private var savedInstitution: Institution? = null
     fun getSavedInstitution(): Institution? = savedInstitution
-
+    
     fun reset() {
         savedInstitution = null
         settings.institution.set(null)

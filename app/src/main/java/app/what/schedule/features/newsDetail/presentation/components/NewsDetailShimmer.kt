@@ -27,7 +27,7 @@ import app.what.foundation.ui.animations.rememberShimmer
 
 fun NewDetailTitleShimmerPreview() = Column(Modifier.width(500.dp)) {
     val shimmer = rememberShimmer()
-
+    
     NewDetailTitleShimmer(shimmer)
     Gap(100)
     NewDetailContentShimmer(shimmer)
@@ -39,7 +39,7 @@ fun NewDetailTitleShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Colum
     horizontalAlignment = Alignment.Start
 ) {
     Gap(8)
-
+    
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -52,7 +52,7 @@ fun NewDetailTitleShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Colum
                 .clip(CircleShape)
                 .background(shimmer)
         )
-
+        
         Box(
             Modifier
                 .width(120.dp)
@@ -61,9 +61,9 @@ fun NewDetailTitleShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Colum
                 .background(shimmer)
         )
     }
-
+    
     Gap(8)
-
+    
     Box(
         Modifier
             .fillMaxWidth(.85f)
@@ -71,9 +71,9 @@ fun NewDetailTitleShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Colum
             .clip(CircleShape)
             .background(shimmer)
     )
-
+    
     Gap(8)
-
+    
     repeat(2) {
         Box(
             Modifier
@@ -82,7 +82,7 @@ fun NewDetailTitleShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Colum
                 .clip(CircleShape)
                 .background(shimmer)
         )
-
+        
         Gap(8)
     }
 }
@@ -102,12 +102,12 @@ fun NewDetailContentShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Col
                     .clip(CircleShape)
                     .background(shimmer)
             )
-
+            
             Gap(8)
         }
-
+        
         Gap(8)
-
+        
         Box(
             Modifier
                 .fillMaxWidth()
@@ -115,7 +115,7 @@ fun NewDetailContentShimmer(shimmer: Brush, modifier: Modifier = Modifier) = Col
                 .clip(RoundedCornerShape(12.dp))
                 .background(shimmer)
         )
-
+        
         Gap(16)
     }
 }

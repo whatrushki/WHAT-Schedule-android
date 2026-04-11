@@ -30,30 +30,30 @@ class NewsController(
         NewsEvent.OnRefresh -> requestNextPage(true)
         is NewsEvent.OnNewEnterClicked -> selectNew(viewEvent.value)
     }
-
+    
     init {
         requestNextPage()
     }
-
+    
     val debugMode: Boolean
         get() = settings.debugMode.get() == true
-
+    
     private fun selectNew(item: NewListItem) {
         setAction(NewsAction.NavigateToNewsDetail(item))
     }
-
+    
     private fun requestNextPage(rollback: Boolean = false) {
         val newsTag = buildTag(LogScope.NEWS, LogCat.NET)
         val page = if (rollback) 1 else viewState.page
         Auditor.debug(newsTag, "Запрос новостей, страница: $page")
-
+        
         updateState {
             copy(
                 newsState = RemoteState.Loading,
                 page = page
             )
         }
-
+        
         viewModelScope.launchSafe(
             debug = debugMode, onFailure = {
                 Auditor.err(newsTag, "Ошибка загрузки новостей", it)
@@ -64,7 +64,7 @@ class NewsController(
         ) {
             val data = apiRepository.getNews(page)
             Auditor.debug(newsTag, "Новости загружены, количество: ${data.size}")
-
+            
             updateState {
                 copy(
                     newsState = RemoteState.Success,

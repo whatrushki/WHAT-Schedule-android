@@ -25,7 +25,7 @@ fun rememberGithubStars(
 ): String? {
     var stars by useSave<String?>(null)
     val client = koinInject<HttpClient>()
-
+    
     LaunchedEffect(Unit) {
         if (stars == null) try {
             val response = client.get("https://api.github.com/repos/$owner/$repo")
@@ -34,9 +34,9 @@ fun rememberGithubStars(
                 stars = info.stars.toString()
             }
         } catch (e: Exception) {
-
+        
         }
     }
-
+    
     return stars
 }

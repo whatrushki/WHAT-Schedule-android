@@ -10,8 +10,8 @@ import org.koin.compose.koinInject
 
 @Composable
 fun FeaturePane() = Column {
-    val settings = koinInject<AppValues>()
-
+    koinInject<AppValues>()
+    
     Fallback(
         text = "В разработке",
         modifier = Modifier.fillMaxSize()

@@ -59,9 +59,9 @@ fun SearchButton(
             tint = colorScheme.onPrimaryContainer,
             contentDescription = "search"
         )
-
+        
         Gap(8)
-
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -74,8 +74,8 @@ fun SearchButton(
                 color = colorScheme.secondary,
                 modifier = Modifier.weight(1f)
             )
-
-
+            
+            
             if (scheduleType != null) Text(
                 when (scheduleType) {
                     LessonsScheduleType.COMMON -> "обыч."
@@ -99,17 +99,17 @@ fun SearchButtonPreview() = Column {
         LessonsScheduleType.WITH_CLASS_HOUR,
         onClick = {}
     )
-
+    
     Gap(8)
-
+    
     SearchButton(
         null,
         LessonsScheduleType.COMMON,
         onClick = {}
     )
-
+    
     Gap(8)
-
+    
     SearchButton(
         ScheduleSearch.Group("ИКТ-20"),
         LessonsScheduleType.SHORTENED,

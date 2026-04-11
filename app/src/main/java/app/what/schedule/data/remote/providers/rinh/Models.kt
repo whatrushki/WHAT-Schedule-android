@@ -10,14 +10,14 @@ object RINHApi {
                 val id: Int,
                 val name: String
             )
-
+            
             @Serializable
             data class GetSchedule(
                 val kind: String,
                 val instance: String,
                 val weeks: List<Week>
             )
-
+            
             @Serializable
             data class Week(
                 val id: Int,
@@ -26,7 +26,7 @@ object RINHApi {
                 val parity: Int,
                 val days: List<Day>,
             )
-
+            
             @Serializable
             data class Day(
                 val id: Int,
@@ -34,7 +34,7 @@ object RINHApi {
                 val name: String,
                 val pairs: List<APair>
             )
-
+            
             @Serializable
             data class APair(
                 val id: Int,
@@ -42,7 +42,7 @@ object RINHApi {
                 val endTime: String,
                 val lessons: List<RINHLesson>
             )
-
+            
             @Serializable
             data class RINHLesson(
                 val id: Int,
@@ -53,20 +53,20 @@ object RINHApi {
                 val kind: Kind,
                 val audience: String
             )
-
+            
             @Serializable
             data class Kind(
                 val id: Int,
                 val name: String,
                 val shortName: String
             )
-
+            
             @Serializable
             data class SubGroup(
                 val id: Int,
                 val name: String
             )
-
+            
             @Serializable
             data class RINHTeacher(
                 val id: Int,
