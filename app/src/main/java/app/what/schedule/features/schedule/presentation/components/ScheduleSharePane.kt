@@ -50,7 +50,7 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                                        schedules: List<DaySchedule> ->
     val context = LocalContext.current
     val selectedDays = useStateList(schedules.first())
-
+    
     Column(
         Modifier.verticalScroll(rememberScrollState())
     ) {
@@ -62,7 +62,7 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
             color = colorScheme.primary,
             modifier = Modifier.padding(12.dp)
         )
-
+        
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
@@ -70,12 +70,12 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                 .horizontalScroll(rememberScrollState())
         ) {
             Gap(4)
-
+            
             schedules.forEachIndexed { index, it ->
                 val selected = it in selectedDays
                 val contentColor = if (selected) colorScheme.onPrimary
                 else colorScheme.onSecondaryContainer
-
+                
                 Box(
                     Modifier
                         .clip(shapes.medium)
@@ -84,8 +84,9 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                             else colorScheme.secondaryContainer
                         )
                         .bclick {
-                            if (it in selectedDays && selectedDays.size > 1)
-                                selectedDays.remove(it) else selectedDays.add(it)
+                            if (it in selectedDays) {
+                                if (selectedDays.size > 1) selectedDays.remove(it)
+                            } else selectedDays.add(it)
                         }
                 ) {
                     Text(
@@ -103,18 +104,18 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                     )
                 }
             }
-
+            
             Gap(4)
         }
-
+        
         Gap(12)
-
+        
         Row(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
             Gap(12)
-
+            
             listOf(
                 Triple(
                     Icons.Default.MoreVert,
@@ -128,20 +129,23 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                 ShareButton(
                     icon = it.first,
                     color = it.second,
+                    if (it.third == ShareVariant.SystemDefault) colorScheme.onSecondaryContainer else Color.White,
                     if (it.third == ShareVariant.Telegram) 46 else 34
                 ) {
                     ShareUtils.share(
                         context, it.third,
-                        createShareTextFromDaySchedules(scheduleSearch, selectedDays)
+                        createShareTextFromDaySchedules(
+                            scheduleSearch,
+                            selectedDays.sortedBy { it.date })
                     )
                 }
-
+                
                 Gap(8)
             }
-
+            
             Gap(4)
         }
-
+        
         Gap(16)
     }
 }
@@ -150,6 +154,7 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
 fun ShareButton(
     icon: ImageVector,
     color: Color,
+    background: Color = Color.White,
     iconSize: Int = 34,
     onClick: () -> Unit
 ) = Box(
@@ -160,7 +165,7 @@ fun ShareButton(
         .background(color)
         .bclick(block = onClick)
 ) {
-    icon.Show(Color.White, iconSize)
+    icon.Show(background, iconSize)
 }
 
 fun createShareTextFromDaySchedules(
@@ -174,8 +179,8 @@ fun createShareTextFromDaySchedules(
         it.date.format(DateTimeFormatter.ofPattern("MMMM", Locale.getDefault()))
     val dayOfWeek =
         it.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-
-
+    
+    
     "**$day $month ($dayOfWeek)**\n\n" +
             it.lessons.joinToString("\n") {
                 when (it.type) { //🌱🍂🪻🌼🌻☘️🌳🌴🌾🍁🍃

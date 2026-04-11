@@ -30,7 +30,7 @@ import app.what.schedule.ui.theme.icons.filled.Whatsapp
 
 val NewsSharePane = @Composable { link: String ->
     val context = LocalContext.current
-
+    
     Column(
         Modifier.verticalScroll(rememberScrollState())
     ) {
@@ -42,13 +42,13 @@ val NewsSharePane = @Composable { link: String ->
             color = colorScheme.primary,
             modifier = Modifier.padding(12.dp)
         )
-
+        
         Row(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
             Gap(12)
-
+            
             listOf(
                 Triple(
                     Icons.Default.MoreVert,
@@ -62,17 +62,18 @@ val NewsSharePane = @Composable { link: String ->
                 ShareButton(
                     icon = it.first,
                     color = it.second,
+                    if (it.third == ShareVariant.SystemDefault) colorScheme.onSecondaryContainer else Color.White,
                     if (it.third == ShareVariant.Telegram) 46 else 34
                 ) {
                     ShareUtils.share(context, it.third, link)
                 }
-
+                
                 Gap(8)
             }
-
+            
             Gap(4)
         }
-
+        
         Gap(16)
     }
 }

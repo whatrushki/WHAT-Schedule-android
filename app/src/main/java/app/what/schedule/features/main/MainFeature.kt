@@ -60,18 +60,24 @@ class MainFeature(
 ) : Feature<MainController, MainEvent>(),
     NavComponent<MainProvider>,
     KoinComponent {
-
+    
     override val controller: MainController by inject()
-
+    
     val children: List<NavItem> = mutableListOf(
-        navItem("Новости", WHATIcons.News, NewsProvider),
         navItem("Расписание", Icons.Default.DateRange, ScheduleProvider()),
         navItem("Настройки", Icons.Default.Settings, SettingsProvider)
     ).apply {
-        if (controller.getState().hasProfilePage)
-            add(2, navItem("Профиль", WHATIcons.Person, AccountProvider))
+        add(
+            0,
+            if (controller.getState().hasProfilePage) navItem(
+                "Профиль",
+                WHATIcons.Person,
+                AccountProvider
+            )
+            else navItem("Новости", WHATIcons.News, NewsProvider),
+        )
     }
-
+    
     val childrenRegistry: Registry = {
         settingsRegistry()
         newsRegistry()
@@ -79,7 +85,7 @@ class MainFeature(
         devRegistry()
         composable<AccountProvider> { controller.getState().ui?.content(Modifier) }
     }
-
+    
     @Composable
     override fun content(modifier: Modifier) {
         val navigator = rememberHostNavigator()
@@ -87,7 +93,7 @@ class MainFeature(
         val useAnimation by appValues.useAnimation.collect()
         val devFeaturesEnabled by appValues.devPanelEnabled.collect()
 //        var showBottomNavBar by useState(true)
-
+        
         LaunchedEffect(Unit) {
             navigator.c.addOnDestinationChangedListener { _, destination, _ ->
                 val navTag = buildTag(LogScope.CORE, LogCat.NAV)
@@ -97,7 +103,7 @@ class MainFeature(
                     .setCustomKey("current_screen", destination.route ?: "unknown")
             }
         }
-
+        
         Box(
             Modifier
                 .fillMaxSize()
@@ -109,7 +115,7 @@ class MainFeature(
                 start = ScheduleProvider(),
                 registry = childrenRegistry
             )
-
+            
             AnimatedEnter(
 //                showBottomNavBar,
                 modifier = Modifier.align(Alignment.BottomCenter)
