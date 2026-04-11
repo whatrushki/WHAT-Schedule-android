@@ -1045,7 +1045,7 @@ val WHATIcons.Logs: ImageVector
                 )
             }
         }.build()
-
+        
         return _Logs!!
     }
 

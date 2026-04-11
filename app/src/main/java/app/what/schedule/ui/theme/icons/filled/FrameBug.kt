@@ -132,7 +132,7 @@ val WHATIcons.FrameBug: ImageVector
                 close()
             }
         }.build()
-
+        
         return _FrameBug!!
     }
 

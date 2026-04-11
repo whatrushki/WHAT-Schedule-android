@@ -130,7 +130,7 @@ val WHATIcons.Crown: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Crown!!
     }
 

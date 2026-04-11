@@ -24,34 +24,34 @@ class GoogleDriveParser(
     private val client: HttpClient
 ) {
     private val crashlytics = FirebaseCrashlytics.getInstance()
-
+    
     companion object {
         private val googleDriveMonths =
             listOf("ян", "фе", "мар", "ап", "май", "июн", "июл", "ав", "се", "ок", "но", "де")
     }
-
+    
     sealed class Item(val id: String, val name: String, val lastModified: LocalDateTime) {
         val additionalData: MutableMap<String, Any> = mutableMapOf()
-
+        
         class Folder(id: String, name: String, lastModified: LocalDateTime) :
             Item(id, name, lastModified)
-
+        
         class File(id: String, name: String, lastModified: LocalDateTime) :
             Item(id, name, lastModified) {
             fun getDownloadLink() =
                 "https://drive.usercontent.google.com/uc?id=$id&authuser=0&export=download"
         }
-
+        
         override fun toString(): String {
             return "${this::class.simpleName}(id=$id, name=$name, lastModified=$lastModified)"
         }
     }
-
+    
     suspend fun getFolderContent(folderId: String): List<Item> {
         val netTag = buildTag(LogScope.NETWORK, LogCat.NET, "gdrive")
         Auditor.debug(netTag, "Загрузка содержимого папки Google Drive: $folderId")
         crashlytics.setCustomKey("gdrive_folder_id", folderId)
-
+        
         var items: List<Item> = emptyList()
         retry(5, 200) { attempt ->
             Auditor.debug(netTag, "Попытка $attempt загрузки содержимого папки")
@@ -77,12 +77,12 @@ class GoogleDriveParser(
                         )
                     }
                 }
-
+                
                 return@map if ('.' in name) Item.File(id, name, date)
                 else Item.Folder(id, name, date)
             }
         }
-
+        
         Auditor.debug(netTag, "Загружено элементов из Google Drive: ${items.size}")
         crashlytics.setCustomKey("gdrive_items_count", items.size)
         val filesCount = items.count { it is Item.File }

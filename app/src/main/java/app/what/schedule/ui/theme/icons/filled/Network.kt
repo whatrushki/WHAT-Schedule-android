@@ -177,7 +177,7 @@ val WHATIcons.Network: ImageVector
                 arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2f, 2f)
             }
         }.build()
-
+        
         return _Network!!
     }
 

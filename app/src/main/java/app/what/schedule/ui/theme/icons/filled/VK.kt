@@ -81,7 +81,7 @@ val WHATIcons.VK: ImageVector
                 close()
             }
         }.build()
-
+        
         return _VK!!
     }
 

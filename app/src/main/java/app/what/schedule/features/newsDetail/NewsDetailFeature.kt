@@ -31,17 +31,17 @@ class NewsDetailFeature(
             )
         )
     }
-
+    
     @Composable
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()
     ) {
         val viewState by controller.collectStates()
-
+        
         LaunchedEffect(Unit) {
             listener(NewsDetailEvent.Init)
         }
-
+        
         NewsDetailView(viewState, listener)
     }
 }

@@ -74,15 +74,15 @@ fun OnboardingView(
 ) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
-
+    
     // Анимированный фон (градиенты меняются в зависимости от страницы)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(colorScheme.surface)
     ) {
         OnboardingBackground(pagerState.currentPage)
-
+        
         Column(modifier = Modifier.fillMaxSize()) {
             // Контент Пейджера
             HorizontalPager(
@@ -97,7 +97,7 @@ fun OnboardingView(
                     (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                 val scale = 1f - (0.1f * pageOffset.absoluteValue).coerceIn(0f, 0.2f)
                 val alpha = 1f - (0.5f * pageOffset.absoluteValue).coerceIn(0f, 0.5f)
-
+                
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -115,7 +115,7 @@ fun OnboardingView(
                     }
                 }
             }
-
+            
             // Навигация (Индикаторы и Кнопки)
             OnboardingNavigation(
                 pagesCount = 3,
@@ -157,9 +157,9 @@ fun IntroPage() {
                 tint = colorScheme.primary
             )
         }
-
+        
         Gap(32)
-
+        
         Text(
             text = "WHAT Schedule",
             style = typography.displaySmall,
@@ -180,7 +180,7 @@ fun IntroPage() {
 fun LegalAndAnalyticsPage() {
     val app = rememberAppValues()
     val fb = Firebase.analytics
-
+    
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -190,7 +190,7 @@ fun LegalAndAnalyticsPage() {
             modifier = Modifier.size(64.dp),
             color = colorScheme.primary
         )
-
+        
         Gap(24)
         Text(
             "Приватность и Данные",
@@ -206,13 +206,13 @@ fun LegalAndAnalyticsPage() {
             color = colorScheme.secondary,
             modifier = Modifier.padding(horizontal = 24.dp)
         )
-
+        
         Gap(32)
-
+        
         app.isAnalyticsEnabled.asSwitch {
             fb.setAnalyticsCollectionEnabled(it)
         }.content(Modifier)
-
+        
         app.thePolicy.asSheet { _, _ ->
             PolicyView()
         }.content(Modifier)
@@ -242,9 +242,9 @@ fun InstitutionSelectionPage(
             style = typography.bodyMedium,
             color = colorScheme.secondary
         )
-
+        
         Gap(24)
-
+        
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -276,7 +276,7 @@ fun InstitutionCard(
     val containerColor by animateColorAsState(
         if (isSelected) colorScheme.primaryContainer.copy(0.3f) else colorScheme.surfaceContainer
     )
-
+    
     Column(
         modifier = Modifier
             .clip(MaterialTheme.shapes.medium)
@@ -328,7 +328,7 @@ fun OnboardingNavigation(
     onFinish: () -> Unit
 ) {
     val isLastPage = pagerState.currentPage == pagesCount - 1
-
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,9 +346,9 @@ fun OnboardingNavigation(
                     colorScheme.primary
                 else
                     colorScheme.outlineVariant
-
+                
                 val width by animateDpAsState(if (pagerState.currentPage == iteration) 24.dp else 8.dp)
-
+                
                 Box(
                     modifier = Modifier
                         .height(8.dp)
@@ -358,7 +358,7 @@ fun OnboardingNavigation(
                 )
             }
         }
-
+        
         // Кнопка действия (Справа)
         Box(Modifier.align(Alignment.CenterEnd)) {
             AnimatedContent(targetState = isLastPage, label = "ButtonAnim") { last ->
@@ -395,9 +395,9 @@ fun OnboardingBackground(page: Int) {
             else -> colorScheme.surface
         }
     )
-
+    
     val surface = colorScheme.surface
-
+    
     Canvas(modifier = Modifier.fillMaxSize()) {
         drawRect(
             brush = Brush.verticalGradient(

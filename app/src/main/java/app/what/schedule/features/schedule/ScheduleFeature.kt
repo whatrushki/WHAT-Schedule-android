@@ -20,23 +20,23 @@ class ScheduleFeature(
     NavComponent<ScheduleProvider>,
     KoinComponent {
     override val controller: ScheduleController by inject()
-
+    
     init {
         val search = data.search
         if (search != null)
             listener(ScheduleEvent.OnSearchClicked(search))
     }
-
+    
     @Composable
     override fun content(modifier: Modifier) = Column(
         modifier.fillMaxSize()
     ) {
         val viewState = controller.collectStates()
-
+        
         LaunchedEffect(Unit) {
             listener(ScheduleEvent.Init)
         }
-
+        
         ScheduleView(viewState, listener)
     }
 }

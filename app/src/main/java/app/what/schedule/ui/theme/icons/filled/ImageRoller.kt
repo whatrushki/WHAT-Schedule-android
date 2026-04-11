@@ -84,7 +84,7 @@ val WHATIcons.ImageRoller: ImageVector
                 close()
             }
         }.build()
-
+        
         return _ImageRoller!!
     }
 

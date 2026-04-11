@@ -113,7 +113,7 @@ val WHATIcons.Clear: ImageVector
                 curveToRelative(1.86f, 6.17f, 7.59f, 10.66f, 14.36f, 10.66f)
             }
         }.build()
-
+        
         return _Clear!!
     }
 

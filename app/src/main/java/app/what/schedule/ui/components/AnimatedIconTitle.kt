@@ -29,9 +29,9 @@ fun AnimatedIconTitle(
             .size(18.dp)
             .wiggle(20f)
     )
-
+    
     Gap(8)
-
+    
     Text(
         name,
         color = colorScheme.primary,

@@ -72,7 +72,7 @@ val WHATIcons.Quote: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Quote!!
     }
 

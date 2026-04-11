@@ -46,7 +46,7 @@ fun Fallback(
         action == null -> 8.dp to 8.dp
         else -> 8.dp to 16.dp
     }
-
+    
     val fallbackShape = remember {
         RoundedCornerShape(
             topStart = topPadding,
@@ -55,7 +55,7 @@ fun Fallback(
             bottomEnd = bottomPadding
         )
     }
-
+    
     Image(
         painter = painterResource(R.drawable.il_totoro_friends),
         contentDescription = "Totoro и друзья",
@@ -64,8 +64,8 @@ fun Fallback(
             .wiggle(10f),
         contentScale = ContentScale.Crop
     )
-
-
+    
+    
     Box(
         modifier = Modifier
             .height(IntrinsicSize.Min)
@@ -89,9 +89,9 @@ fun Fallback(
                 .padding(12.dp)
                 .padding(bottom = 44.dp)
         )
-
+        
         action ?: return
-
+        
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier

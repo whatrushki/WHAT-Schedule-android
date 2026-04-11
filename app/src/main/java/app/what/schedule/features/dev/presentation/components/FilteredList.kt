@@ -58,7 +58,7 @@ interface Filter<T> {
 
 fun <T> List<T>.applyFilters(filter: Filter<T>, query: String): List<T> {
     if (query.isBlank()) return this
-
+    
     return try {
         filter.parseQuery(query)
         this.filter { filter.matches(it) }
@@ -87,7 +87,7 @@ fun <T> FilteredList(
     val filteredValues = remember(values, filterText) {
         values.applyFilters(filter, filterText)
     }
-
+    
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -106,7 +106,7 @@ fun <T> FilteredList(
                 fontWeight = FontWeight.Bold,
                 color = colorScheme.onSurface
             )
-
+            
             // Индикатор активности
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -118,9 +118,9 @@ fun <T> FilteredList(
                     style = typography.labelSmall,
                     color = colorScheme.onSurfaceVariant
                 )
-
+                
                 Gap(8)
-
+                
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -137,7 +137,7 @@ fun <T> FilteredList(
                 )
             }
         }
-
+        
         // Панель управления и фильтрации
         Row(
             modifier = Modifier
@@ -174,7 +174,7 @@ fun <T> FilteredList(
                     }
                 }
             )
-
+            
             // Кнопка паузы/продолжения
             IconButton(
                 onClick = {
@@ -196,7 +196,7 @@ fun <T> FilteredList(
                     else colorScheme.onPrimaryContainer
                 )
             }
-
+            
             // Кнопка очистки
             IconButton(
                 onClick = clearValues,
@@ -206,7 +206,7 @@ fun <T> FilteredList(
             ) {
                 WHATIcons.Clear.Show(colorScheme.onSurface, 18)
             }
-
+            
             // Кнопка экспорта
             IconButton(
                 onClick = exportValues,
@@ -217,9 +217,9 @@ fun <T> FilteredList(
                 WHATIcons.Export.Show(colorScheme.onSurface, 18)
             }
         }
-
+        
         Gap(8)
-
+        
         // Справка по фильтрам (expandable)
         if (isHelpDialogExpanded) {
             FilterHelpDialog(
@@ -227,7 +227,7 @@ fun <T> FilteredList(
                 onDismiss = { isHelpDialogExpanded = false }
             )
         }
-
+        
         // Список логов
         if (filteredValues.isEmpty()) {
             Fallback(
@@ -271,26 +271,26 @@ fun FilterHelpDialog(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
-
+            
             Gap(12)
-
+            
             items.forEach {
                 FilterHelpItem(
                     it.first,
                     it.second
                 )
             }
-
+            
             Gap(8)
-
+            
             Text(
                 "Можно комбинировать: ${items.take(3).joinToString { it.first }}",
                 style = typography.bodySmall,
                 color = colorScheme.onSurfaceVariant
             )
-
+            
             Gap(8)
-
+            
             TextButton(onClick = onDismiss) {
                 Text(
                     text = "Понятно",
@@ -315,9 +315,9 @@ fun FilterHelpItem(command: String, description: String) = Row(
         color = colorScheme.primary,
         modifier = Modifier.width(120.dp)
     )
-
+    
     Gap(8)
-
+    
     Text(
         text = description,
         style = typography.bodySmall,

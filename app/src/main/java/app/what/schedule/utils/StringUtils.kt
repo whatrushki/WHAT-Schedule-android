@@ -14,7 +14,7 @@ object StringUtils {
             val lines = text.split("\n")
             lines.forEach { line ->
                 when {
-
+                    
                     line.startsWith("# ") -> {
                         withStyle(
                             SpanStyle(
@@ -26,7 +26,7 @@ object StringUtils {
                             append(line.removePrefix("# ") + "\n")
                         }
                     }
-
+                    
                     line.startsWith("## ") -> {
                         withStyle(
                             SpanStyle(
@@ -38,7 +38,7 @@ object StringUtils {
                             append(line.removePrefix("## ") + "\n")
                         }
                     }
-
+                    
                     line.startsWith("### ") -> {
                         withStyle(
                             SpanStyle(
@@ -50,7 +50,7 @@ object StringUtils {
                             append(line.removePrefix("### ") + "\n")
                         }
                     }
-
+                    
                     line.contains("**") -> {
                         val parts = line.split("**")
                         parts.forEachIndexed { index, part ->
@@ -69,7 +69,7 @@ object StringUtils {
                         }
                         append("\n")
                     }
-
+                    
                     else -> {
                         append(line + "\n")
                     }

@@ -79,7 +79,7 @@ val WHATIcons.Code: ImageVector
                 arcTo(3f, 3f, 0f, isMoreThanHalf = false, isPositiveArc = true, 21f, 53f)
             }
         }.build()
-
+        
         return _Code!!
     }
 

@@ -113,7 +113,7 @@ val WHATIcons.Features: ImageVector
                 )
             }
         }.build()
-
+        
         return _Features!!
     }
 

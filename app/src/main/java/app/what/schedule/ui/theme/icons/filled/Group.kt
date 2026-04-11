@@ -136,7 +136,7 @@ val WHATIcons.Group: ImageVector
                 )
             }
         }.build()
-
+        
         return _Group!!
     }
 

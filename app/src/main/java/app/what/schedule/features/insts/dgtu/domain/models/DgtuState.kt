@@ -89,36 +89,36 @@ data class DgtuStudentInfo(
     val surname: String,
     val group: ScheduleSearch.Group,
     val kafName: String,
-
+    
     val fullName: String,
-
+    
     val middleName: String,
-
+    
     val numRecordBook: String,
     val numberMobile: String?,
     val birthday: LocalDate,
     val nationality: String,
-
+    
     val email: String,
     val login: String,
     val admissionYear: String,
     val lastEnterDateLocalDate: LocalDate,
     val course: String,
     val faculty: String,
-
+    
     val conditionsEducation: Int,
     val trainingDirection: String,
     var photoLink: String,
     val online: Boolean,
-
+    
     val message: String?,
     val htmlBlock: String,
-
+    
     val vkID: Int?,
     val googleID: Int?,
     val yandexID: Int?,
     val telegramID: Int?,
     val maxID: Int?,
-
+    
     val chatLink: String,
 )

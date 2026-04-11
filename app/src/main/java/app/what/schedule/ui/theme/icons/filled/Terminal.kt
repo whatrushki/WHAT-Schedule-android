@@ -73,7 +73,7 @@ val WHATIcons.Terminal: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Terminal!!
     }
 

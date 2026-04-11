@@ -56,12 +56,12 @@ fun NewsView(
 ) {
     var selectedNewId by useState<String?>(null)
     val lazyListState = rememberLazyListState()
-
+    
     LaunchedEffect(lazyListState.canScrollForward) {
         if (!lazyListState.canScrollForward && state.newsState != RemoteState.Loading)
             listener(NewsEvent.OnListEndingScrolled)
     }
-
+    
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = lazyListState,
@@ -74,7 +74,7 @@ fun NewsView(
                     .height(116.dp)
             )
         }
-
+        
         item {
             Text(
                 "Новости",
@@ -85,7 +85,7 @@ fun NewsView(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
-
+        
         when (state.newsState) {
             is RemoteState.Error -> item {
                 Fallback(
@@ -94,7 +94,7 @@ fun NewsView(
                     "Попробовать снова" to { listener(NewsEvent.OnRefresh) }
                 )
             }
-
+            
             RemoteState.Success, RemoteState.Loading -> items(state.news, key = { it.id }) {
                 NewListItemView(Modifier.animateItem(), selectedNewId == it.id, it, {
                     selectedNewId = if (selectedNewId != it.id) it.id else null
@@ -103,7 +103,7 @@ fun NewsView(
                     listener(NewsEvent.OnNewEnterClicked(it))
                 }
             }
-
+            
             else -> Unit
         }
     }
@@ -135,9 +135,9 @@ fun NewListItemView(
                 .height(150.dp)
                 .clip(shapes.large)
         )
-
+        
         Gap(8)
-
+        
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -154,7 +154,7 @@ fun NewListItemView(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
-
+            
             Row {
                 item.tags.forEach {
                     FilterChip(true, {}, label = {
@@ -163,19 +163,19 @@ fun NewListItemView(
                 }
             }
         }
-
+        
         Gap(4)
-
+        
         Text(
             item.title,
             color = colorScheme.onSurface,
             fontSize = if (item.description?.isNotBlank() == true) 22.sp else 18.sp,
             fontWeight = FontWeight.SemiBold,
         )
-
+        
         if (item.description?.isNotBlank() == true) {
             Gap(4)
-
+            
             Text(
                 item.description.trim(),
                 color = colorScheme.onSurfaceVariant,
@@ -185,10 +185,10 @@ fun NewListItemView(
                 lineHeight = 18.sp
             )
         }
-
+        
         if (selected) {
             Gap(12)
-
+            
             Button(onSelect) {
                 Text("Перейти")
             }

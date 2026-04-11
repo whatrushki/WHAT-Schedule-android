@@ -60,7 +60,7 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
             !it.favorite && it.name.lowercase().contains(query.lowercase())
         }
     }
-
+    
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = Modifier
@@ -74,9 +74,9 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                     setQuery = setQuery,
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
-
+                
                 Gap(8)
-
+                
                 AnimatedIconTitle(
                     WHATIcons.Crown,
                     "Избранное",
@@ -84,7 +84,7 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                 )
             }
         }
-
+        
         if (favoriteList.isEmpty()) item(span = { GridItemSpan(2) }) {
             Text(
                 "У вас пока нет избранных. Зажмите чтобы добавить",
@@ -102,7 +102,7 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
             onClick,
             onLongClick
         )
-
+        
         item(span = { GridItemSpan(2) }) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -115,7 +115,7 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                     if (selectedTab == 0) WHATIcons.Group else WHATIcons.Person,
                     if (selectedTab == 0) "Группы" else "Преподаватели"
                 )
-
+                
                 SingleChoiceSegmentedButtonRow {
                     SegmentTab(
                         index = 0,
@@ -125,9 +125,9 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                         label = null,
                         onClick = { setSelectedTab(0) }
                     )
-
+                    
                     Gap(8)
-
+                    
                     SegmentTab(
                         index = 1,
                         count = 2,
@@ -139,8 +139,8 @@ val ScheduleSearchPane = @Composable { state: State<ScheduleSearchData>,
                 }
             }
         }
-
-
+        
+        
         searchBlocks(
             list,
             false,
@@ -203,16 +203,16 @@ private fun SearchItemChip(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-
+    
     val containerColor = if (selected) colorScheme.primary
     else if (favorite) colorScheme.secondaryContainer
     else Color.Transparent
-
+    
     val contentColor = if (selected) colorScheme.onPrimary
     else if (favorite) colorScheme.onSecondaryContainer
     else colorScheme.primary
-
-
+    
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier.padding(vertical = 3.dp)

@@ -34,12 +34,12 @@ fun StyledTextField(
 ) {
     val (text, setText) = useState(value)
     var enabled by useState(!disabled)
-
+    
     LaunchedEffect(text) {
         delay(debounce)
         if (text != value) onValueChange(text)
     }
-
+    
     OutlinedTextField(
         enabled = enabled,
         modifier = modifier

@@ -43,6 +43,7 @@ import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.Logger
@@ -65,29 +66,29 @@ import javax.net.ssl.X509TrustManager
 class ScheduleApp : Application() {
     override fun onCreate() {
         super.onCreate()
-
+        
         if (FirebaseApp.getApps(this).isEmpty()) {
             FirebaseApp.initializeApp(this)
         }
-
+        
         val crashlytics = FirebaseCrashlytics.getInstance()
         crashlytics.setCustomKey("app_version", BuildConfig.VERSION_NAME)
         crashlytics.setCustomKey("app_version_code", BuildConfig.VERSION_CODE)
-
+        
         AppLogger.initialize(applicationContext)
         CrashHandler.initialize(applicationContext, CrashActivity::class.java)
             .setSideEffect(crashlytics::recordException)
-
+        
         val initTag = buildTag(LogScope.CORE, LogCat.INIT)
         Auditor.info(initTag, "Приложение запущено")
-
+        
         startKoin {
             androidContext(this@ScheduleApp)
             modules(generalModule, controllers)
         }
-
+        
         val koin = getKoin()
-
+        
         val appValues = koin.get<AppValues>()
         if (appValues.userId.get() == null) {
             val userId = UUID.randomUUID().toString()
@@ -98,7 +99,7 @@ class ScheduleApp : Application() {
         } else {
             Auditor.debug(initTag, "Пользователь уже существует: ${appValues.userId.get()}")
         }
-
+        
         SingletonImageLoader.setSafe {
             ImageLoader.Builder(this)
                 .crossfade(true)
@@ -107,9 +108,9 @@ class ScheduleApp : Application() {
                 }
                 .build()
         }
-
+        
         val source = getInstallSource(this)
-
+        
         when (source) {
             InstallSource.APK -> Auditor.debug("d", "install source Apk")
             InstallSource.RuStore -> Auditor.debug("d", "install source RuStore")
@@ -129,24 +130,24 @@ val controllers = module {
 
 val generalModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-
+    
     singleOf(::AppValues) bind PreferenceStorage::class
     singleOf(::AppUtils)
     singleOf(::GoogleDriveParser)
     singleOf(::FileManager)
-
+    
     singleOf(::DGTUAccountService)
-
+    
     singleOf(::InstitutionManager)
     singleOf(::ScheduleRepository)
     singleOf(::NewsRepository)
-
+    
     single<AppUpdateManager> {
         val context = androidContext()
         val source = getInstallSource(context)
-
+        
         when (source) {
-
+            
             InstallSource.RuStore -> RuStoreUpdateManager(context, get())
             InstallSource.APK -> GitHubUpdateManager(
                 GitHubUpdateService(get()),
@@ -160,7 +161,7 @@ val generalModule = module {
             )
         }
     }
-
+    
     single {
         Room.databaseBuilder(
             androidContext(),
@@ -170,11 +171,28 @@ val generalModule = module {
             .fallbackToDestructiveMigration(true)
             .build()
     }
-
+    
     single {
         HttpClient(CIO) {
+            install(HttpRequestRetry) {
+                maxRetries = 4
+                
+                retryOnExceptionIf { _, cause ->
+                    cause is java.net.UnknownHostException ||
+                            cause is java.net.ConnectException ||
+                            cause is java.net.SocketTimeoutException
+                }
+                
+                retryOnServerErrors(maxRetries = 3)
+                
+                exponentialDelay(
+                    baseDelayMs = 300L,
+                    maxDelayMs = 5000L
+                )
+            }
+            
             install(NetworkMonitorPlugin)
-
+            
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
@@ -182,7 +200,7 @@ val generalModule = module {
                     }
                 }
             }
-
+            
             install(ContentNegotiation) {
                 json(Json {
                     classDiscriminator = "type"
@@ -192,12 +210,12 @@ val generalModule = module {
                     explicitNulls = false
                 })
             }
-
+            
             install(HttpTimeout) {
                 this@HttpClient.expectSuccess = false
                 requestTimeoutMillis = 60 * 1000
             }
-
+            
             engine {
                 https {
                     trustManager = object : X509TrustManager {
@@ -206,13 +224,13 @@ val generalModule = module {
                             authType: String
                         ) {
                         }
-
+                        
                         override fun checkServerTrusted(
                             chain: Array<X509Certificate>,
                             authType: String
                         ) {
                         }
-
+                        
                         override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
                     }
                 }

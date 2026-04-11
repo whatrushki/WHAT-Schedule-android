@@ -82,7 +82,7 @@ val WHATIcons.Support: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Support!!
     }
 

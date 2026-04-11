@@ -58,7 +58,7 @@ val WHATIcons.Whatsapp: ImageVector
                 close()
             }
         }.build()
-
+        
         return _Whatsapp!!
     }
 

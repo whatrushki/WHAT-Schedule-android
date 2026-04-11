@@ -17,13 +17,13 @@ class SettingsFeature(
 ) : Feature<SettingsController, SettingsEvent>(),
     NavComponent<SettingsProvider>,
     KoinComponent {
-
+    
     override val controller: SettingsController by inject()
-
+    
     @Composable
     override fun content(modifier: Modifier) {
         val state by controller.collectStates()
-
+        
         SettingsView(state, listener)
     }
 }
