@@ -38,6 +38,9 @@ materialVersion = "1.13.0"
 uiGeometry = "1.10.5"
 material3 = "1.4.0"
 workRuntimeKtx = "2.11.1"
+kotlinx-datetime = "0.6.2"
+okio = "3.10.2"
+compose-multiplatform = "1.7.3"
 
 [libraries]
 androidx-glance = { module = "androidx.glance:glance", version.ref = "glanceAppwidget" }
@@ -105,6 +108,9 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-ui-geometry = { group = "androidx.compose.ui", name = "ui-geometry", version.ref = "uiGeometry" }
 
 
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+
 [bundles]
 coil = ["coil", "coil-compose", "coil-network-ktor3", "coil-compose-core"]
 ktor = ["ktor-core", "ktor-client-logging", "ktor-client-cio", "ktor-client-content-negotiation", "ktor-serialization-json"]
@@ -115,6 +121,8 @@ room = ["room-runtime", "room-ktx"]
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
