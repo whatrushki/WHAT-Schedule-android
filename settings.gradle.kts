@@ -17,7 +17,7 @@ plugins {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()
@@ -27,7 +27,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WHAT Schedule"
+rootProject.name = "WHAT-Schedule"
 include(":app")
 include(":core:foundation")
 include(":core:navigation")
@@ -46,3 +46,8 @@ include(":libs:schedule:rksi")
 include(":libs:schedule:dgtu")
 include(":libs:schedule:iubip")
 include(":libs:schedule:rinh")
+
+include(":tools:schedule-sync")
+include(":desktopApp")
+include(":wasmApp")
+include(":iosApp")

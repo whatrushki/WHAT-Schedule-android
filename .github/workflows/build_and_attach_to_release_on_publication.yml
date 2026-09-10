@@ -1,8 +1,14 @@
-name: Build and Attach to Release on Publication
+name: Build, Release and Publish All Targets
 
 on:
   release:
-    types: [ published ] # Запускается ТОЛЬКО когда релиз переходит в состояние "published"
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. 1.1.0)'
+        required: false
+        default: '1.1.0'
 
 env:
   KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -10,26 +16,29 @@ env:
   RELEASE_SIGN_KEY_PASSWORD: ${{ secrets.RELEASE_SIGN_KEY_PASSWORD }}
 
 jobs:
-  build_and_attach:
-    name: Build APK/AAB and attach to Release
+  build_release_publish:
+    name: Build All Targets, Publish Packages & Attach Assets
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Необходимо для загрузки артефактов в релиз
+      contents: write
+      packages: write
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Рекомендуется проверять по тегу релиза
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.ref }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # Обязательный параметр для v4
+          distribution: 'temurin'
           java-version: '21'
 
       - name: Checkout keystore repo
+        continue-on-error: true
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.KEYSTORE_GIT_REPOSITORY }}
@@ -47,30 +56,114 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run tests
+      - name: Determine Version
+        id: get_version
+        run: |
+          VERSION="${{ github.event.release.tag_name || github.event.inputs.version || '1.1.0' }}"
+          # Strip leading 'v' if present
+          CLEAN_VERSION="${VERSION#v}"
+          echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Run Tests
         run: ./gradlew test
 
-      - name: Build Release APK and AAB
+      - name: Publish API Libraries to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          ./gradlew assembleRelease --stacktrace
-          ./gradlew bundleRelease
+          ./gradlew publish -Pversion=${{ steps.get_version.outputs.version }} --no-daemon
 
-      - name: Upload APK to Release
-        uses: actions/upload-release-asset@v1
+      - name: Build Android Targets (APK & AAB)
+        run: |
+          ./gradlew assembleRelease bundleRelease --stacktrace
+          mkdir -p release_assets
+          cp app/build/outputs/apk/release/*.apk release_assets/schedule_android_${{ steps.get_version.outputs.version }}.apk || true
+          cp app/build/outputs/bundle/release/*.aab release_assets/schedule_android_${{ steps.get_version.outputs.version }}.aab || true
+
+      - name: Build Desktop Target
+        run: |
+          ./gradlew :desktopApp:packageReleaseDistributionForCurrentOS || ./gradlew :desktopApp:jar || true
+          mkdir -p release_assets
+          # Collect desktop jar or installer
+          find desktopApp/build -name "*.jar" -exec cp {} release_assets/schedule_desktop_${{ steps.get_version.outputs.version }}.jar \; || true
+
+      - name: Build Web Target (Wasm)
+        run: |
+          ./gradlew :wasmApp:wasmJsBrowserDistribution || true
+          if [ -d "wasmApp/build/dist/wasmJs/productionExecutable" ]; then
+            cd wasmApp/build/dist/wasmJs/productionExecutable
+            zip -r ../../../../../release_assets/schedule_web_${{ steps.get_version.outputs.version }}.zip .
+            cd -
+          fi
+
+      - name: Upload Artifacts to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          files: release_assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }} # Критически важно!
-          asset_path: app/build/outputs/apk/release/app-release.apk
-          asset_name: what-schedule.apk
-          asset_content_type: application/vnd.android.package-archive
 
-      - name: Upload AAB to Release
-        uses: actions/upload-release-asset@v1
+      - name: Setup GitHub Pages
+        if: success()
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        if: success() && hashFiles('wasmApp/build/dist/wasmJs/productionExecutable/**') != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'wasmApp/build/dist/wasmJs/productionExecutable'
+
+      - name: Deploy to GitHub Pages
+        if: success() && hashFiles('wasmApp/build/dist/wasmJs/productionExecutable/**') != ''
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  build_ios:
+    name: Build iOS Target (Framework)
+    runs-on: macos-latest
+    needs: build_release_publish
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build iOS Framework
+        run: |
+          VERSION="${{ github.event.release.tag_name || github.event.inputs.version || '1.1.0' }}"
+          CLEAN_VERSION="${VERSION#v}"
+          ./gradlew :iosApp:linkReleaseFrameworkIosFat || ./gradlew :iosApp:assemble || true
+          mkdir -p release_assets
+          if [ -d "iosApp/build/fat-framework/release" ]; then
+            cd iosApp/build/fat-framework/release
+            zip -r ../../../release_assets/schedule_ios_${CLEAN_VERSION}.zip .
+            cd -
+          elif [ -d "iosApp/build/bin" ]; then
+            cd iosApp/build/bin
+            zip -r ../../release_assets/schedule_ios_${CLEAN_VERSION}.zip .
+            cd -
+          fi
+
+      - name: Upload iOS Artifact to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.event.inputs.version }}
+          files: release_assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: app/build/outputs/bundle/release/app-release.aab
-          asset_name: what-schedule.aab #asset_name: what-schedule-${{ github.event.release.tag_name }}.aab
-          asset_content_type: application/octet-stream
