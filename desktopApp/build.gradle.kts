@@ -26,7 +26,6 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.materialKolor)
 }
 
 compose.desktop {
@@ -40,6 +39,11 @@ compose.desktop {
             )
             packageName = "WHAT-Schedule"
             packageVersion = "1.1.0"
+            windows {
+                menu = true
+                shortcut = true
+                menuGroup = "WHAT-Schedule"
+            }
         }
     }
 }

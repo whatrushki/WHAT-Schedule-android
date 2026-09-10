@@ -33,7 +33,6 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.materialKolor)
         }
     }
 }
