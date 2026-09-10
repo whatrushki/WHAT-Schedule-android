@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 abstract class UIController<State : Any, Action, Event>(initialState: State) : ViewModel() {
     private val _viewStates = MutableStateFlow(initialState)
     private val _viewActions =
@@ -29,11 +31,11 @@ abstract class UIController<State : Any, Action, Event>(initialState: State) : V
 
     @Composable
     fun collectStates(): androidx.compose.runtime.State<State> =
-        _viewStates.asStateFlow().collectAsState()
+        _viewStates.asStateFlow().collectAsStateWithLifecycle()
 
     @Composable
     fun collectActions(): androidx.compose.runtime.State<Action?> =
-        _viewActions.asSharedFlow().collectAsState(null)
+        _viewActions.asSharedFlow().collectAsStateWithLifecycle(null)
 
     abstract fun obtainEvent(viewEvent: Event)
 

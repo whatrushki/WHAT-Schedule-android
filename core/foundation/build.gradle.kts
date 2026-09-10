@@ -36,12 +36,19 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.ktor)
     implementation(libs.materialKolor)
+    implementation(libs.bundles.coil)
+    implementation(libs.bundles.koin)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 
     implementation(platform(libs.bom))
     implementation(libs.appupdate)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -50,4 +57,5 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material3.icons)
     implementation(libs.androidx.ui.geometry)
+    implementation(libs.process.phoenix)
 }
