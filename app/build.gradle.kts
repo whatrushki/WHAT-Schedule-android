@@ -103,8 +103,17 @@ android {
 }
 
 dependencies {
+    implementation(project(":domain"))
+    implementation(project(":data"))
     implementation(project(":core:foundation"))
     implementation(project(":core:navigation"))
+    implementation(project(":features:main"))
+    implementation(project(":features:schedule"))
+    implementation(project(":features:news"))
+    implementation(project(":features:settings"))
+    implementation(project(":features:onboarding"))
+    implementation(project(":features:account"))
+    implementation(project(":features:dev"))
 
     ksp(libs.room.compiler)
 

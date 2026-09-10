@@ -14,21 +14,9 @@ import app.what.foundation.services.auto_update.UpdateConfig
 import app.what.foundation.services.auto_update.getInstallSource
 import app.what.foundation.services.crash.CrashHandler
 import app.what.schedule.data.local.database.AppDatabase
+import app.what.data.di.dataModule
+import app.what.features.main.di.mainFeatureModule
 import app.what.schedule.data.local.settings.AppValues
-import app.what.schedule.data.remote.api.InstitutionManager
-import app.what.schedule.data.remote.providers.dgtu.services.DGTUAccountService
-import app.what.schedule.domain.NewsRepository
-import app.what.schedule.domain.ScheduleRepository
-import app.what.schedule.features.dev.presentation.NetworkMonitorPlugin
-import app.what.schedule.features.insts.dgtu.domain.DgtuController
-import app.what.schedule.features.main.domain.MainController
-import app.what.schedule.features.news.domain.NewsController
-import app.what.schedule.features.newsDetail.domain.NewsDetailController
-import app.what.schedule.features.onboarding.domain.OnboardingController
-import app.what.schedule.features.schedule.domain.ScheduleController
-import app.what.schedule.features.settings.domain.SettingsController
-import app.what.schedule.libs.FileManager
-import app.what.schedule.libs.GoogleDriveParser
 import app.what.schedule.utils.AppUtils
 import app.what.schedule.utils.LogCat
 import app.what.schedule.utils.LogScope
@@ -42,26 +30,12 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.serialization.json.Json
 import org.koin.android.ext.android.getKoin
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.module.dsl.singleOf
-import org.koin.dsl.bind
 import org.koin.dsl.module
-import java.security.cert.X509Certificate
 import java.util.UUID
-import javax.net.ssl.X509TrustManager
 
 class ScheduleApp : Application() {
     override fun onCreate() {
@@ -84,7 +58,7 @@ class ScheduleApp : Application() {
         
         startKoin {
             androidContext(this@ScheduleApp)
-            modules(generalModule, controllers)
+            modules(dataModule, mainFeatureModule, appModule)
         }
         
         val koin = getKoin()
@@ -118,36 +92,14 @@ class ScheduleApp : Application() {
     }
 }
 
-val controllers = module {
-    singleOf(::SettingsController)
-    singleOf(::NewsController)
-    singleOf(::ScheduleController)
-    singleOf(::OnboardingController)
-    singleOf(::MainController)
-    singleOf(::DgtuController)
-    factory<NewsDetailController> { params -> NewsDetailController(params.get(), get()) }
-}
-
-val generalModule = module {
-    single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    
-    singleOf(::AppValues) bind PreferenceStorage::class
+val appModule = module {
     singleOf(::AppUtils)
-    singleOf(::GoogleDriveParser)
-    singleOf(::FileManager)
-    
-    singleOf(::DGTUAccountService)
-    
-    singleOf(::InstitutionManager)
-    singleOf(::ScheduleRepository)
-    singleOf(::NewsRepository)
     
     single<AppUpdateManager> {
         val context = androidContext()
         val source = getInstallSource(context)
         
         when (source) {
-            
             InstallSource.RuStore -> RuStoreUpdateManager(context, get())
             InstallSource.APK -> GitHubUpdateManager(
                 GitHubUpdateService(get()),
@@ -161,80 +113,4 @@ val generalModule = module {
             )
         }
     }
-    
-    single {
-        Room.databaseBuilder(
-            androidContext(),
-            AppDatabase::class.java,
-            "schedule.db"
-        )
-            .fallbackToDestructiveMigration(true)
-            .build()
-    }
-    
-    single {
-        HttpClient(CIO) {
-            install(HttpRequestRetry) {
-                maxRetries = 4
-                
-                retryOnExceptionIf { _, cause ->
-                    cause is java.net.UnknownHostException ||
-                            cause is java.net.ConnectException ||
-                            cause is java.net.SocketTimeoutException
-                }
-                
-                retryOnServerErrors(maxRetries = 3)
-                
-                exponentialDelay(
-                    baseDelayMs = 300L,
-                    maxDelayMs = 5000L
-                )
-            }
-            
-            install(NetworkMonitorPlugin)
-            
-            install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        Auditor.debug(buildTag(LogScope.NETWORK, LogCat.NET), message)
-                    }
-                }
-            }
-            
-            install(ContentNegotiation) {
-                json(Json {
-                    classDiscriminator = "type"
-                    ignoreUnknownKeys = true
-                    prettyPrint = true
-                    isLenient = true
-                    explicitNulls = false
-                })
-            }
-            
-            install(HttpTimeout) {
-                this@HttpClient.expectSuccess = false
-                requestTimeoutMillis = 60 * 1000
-            }
-            
-            engine {
-                https {
-                    trustManager = object : X509TrustManager {
-                        override fun checkClientTrusted(
-                            chain: Array<X509Certificate>,
-                            authType: String
-                        ) {
-                        }
-                        
-                        override fun checkServerTrusted(
-                            chain: Array<X509Certificate>,
-                            authType: String
-                        ) {
-                        }
-                        
-                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                    }
-                }
-            }
-        }
-    }
-}
+}
