@@ -79,6 +79,20 @@ class RKSIScheduleClient(
         return LocalTime(parts[0], parts[1])
     }
 
+    private fun normalizeName(name: String): String = name
+        .replace(" ", "")
+        .replace("—", "-")
+        .replace("–", "-")
+        .replace("c", "с", ignoreCase = true)
+        .replace("a", "а", ignoreCase = true)
+        .replace("e", "е", ignoreCase = true)
+        .replace("o", "о", ignoreCase = true)
+        .replace("p", "р", ignoreCase = true)
+        .replace("x", "х", ignoreCase = true)
+        .trim()
+        .lowercase()
+
+
     override suspend fun getTeachers(): List<TeacherDto> {
         val response = client.get("$baseUrl/mobileschedule/teachers").bodyAsText()
         return Ksoup.parse(response).select("a[href*=\"teachers\"]")
@@ -108,7 +122,18 @@ class RKSIScheduleClient(
     ): List<DayScheduleDto> = coroutineScope {
         log?.invoke("Запрос расписания РКСИ для ${if (isGroup) "группы" else "преподавателя"}: $target")
 
-        val url = "$baseUrl/mobileschedule/" + (if (isGroup) "groups/" else "teachers/") + target
+        val targetId = if (target.all { it.isDigit() }) {
+            target
+        } else {
+            val cleanT = normalizeName(target)
+            if (isGroup) {
+                getGroups().firstOrNull { normalizeName(it.name) == cleanT }?.id ?: target
+            } else {
+                getTeachers().firstOrNull { normalizeName(it.name).contains(cleanT) || cleanT.contains(normalizeName(it.name)) }?.id ?: target
+            }
+        }
+
+        val url = "$baseUrl/mobileschedule/" + (if (isGroup) "groups/" else "teachers/") + targetId
         val response = client.get(url).bodyAsText()
         val document = Ksoup.parse(response)
         val targetName = document.selectFirst("h3")?.text()?.trim()?.ifEmpty { null } ?: target
@@ -144,10 +169,10 @@ class RKSIScheduleClient(
 
             var lessons = dayElement.getElementsByTag("p").mapNotNull { lessonRaw ->
                 if (lessonRaw.html().contains("href")) return@mapNotNull null
-                val content = lessonRaw.html().split("<br>")
+                val content = lessonRaw.html().split(Regex("<br\\s*/?>"))
                 if (content.size < 3) return@mapNotNull null
 
-                val timeParts = content[0].split("—")
+                val timeParts = content[0].split(Regex("[-—–]"))
                 val startTime = parseTime(timeParts.first().trim())
                 val endTime = parseTime(timeParts.last().trim())
                 val subject = content[1].replace("<.*?>".toRegex(), "").trim()
@@ -252,15 +277,15 @@ class RKSIScheduleClient(
         val subFiles = subItems.files().onEach { it.additionalData["building"] = 2 }
         val allFiles = rootFiles + subFiles
 
-        val cleanTarget = target.replace(" ", "").trim().lowercase()
+        val cleanTarget = normalizeName(target)
         val predicate = { teacher: String, group: String ->
             if (isGroup) {
-                val cleanGroup = group.replace(" ", "").trim().lowercase()
+                val cleanGroup = normalizeName(group)
                 cleanGroup == cleanTarget
             } else {
-                val cleanTeacher = teacher.replace(" ", "").trim().lowercase()
+                val cleanTeacher = normalizeName(teacher)
                 cleanTeacher.contains(cleanTarget) || cleanTarget.contains(cleanTeacher) ||
-                    (target.split(" ").firstOrNull()?.let { cleanTeacher.contains(it.lowercase()) } == true)
+                    (target.split(" ").firstOrNull()?.let { cleanTeacher.contains(normalizeName(it)) } == true)
             }
         }
 

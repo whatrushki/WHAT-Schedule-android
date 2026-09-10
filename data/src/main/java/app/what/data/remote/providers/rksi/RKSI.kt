@@ -29,7 +29,7 @@ class RKSI(
         override fun create(): Institution {
             val client: HttpClient = get()
             val fileCache = AndroidFileCache(get())
-            val provider = RKSIProvider(client, fileCache)
+            val provider = RKSIProvider(client, fileCache, xlsxReader = app.what.schedule.rksi.parser.JvmXlsxReader())
             return RKSI(provider)
         }
         override val metadata: MetaInfo by lazy { RKSIMetadata }

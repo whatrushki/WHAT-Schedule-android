@@ -38,11 +38,12 @@ object RKSIReplacementsParser {
                         val firstCellIndex = i * 3
                         val auditory = row.getOrNull(firstCellIndex)?.trim()?.ifEmpty { null } ?: return@mapNotNull null
                         val teacher = row.getOrNull(firstCellIndex + 2)?.trim()?.ifEmpty { null } ?: return@mapNotNull null
-                        val groups = row.getOrNull(firstCellIndex + 1)
-                            ?.split(if (columns == 1) "+" else ",")
-                            ?.map { it.trim() }
-                            ?.filter { predicate(teacher, it) }
-                            ?.ifEmpty { null } ?: return@mapNotNull null
+                        val rawGroups = row.getOrNull(firstCellIndex + 1)?.trim()?.ifEmpty { null } ?: return@mapNotNull null
+                        val groups = rawGroups
+                            .split(',', '+', '/')
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() && predicate(teacher, it) }
+                            .ifEmpty { null } ?: return@mapNotNull null
 
                         groups.map { groupName ->
                             OneTimeUnitDto(
@@ -92,8 +93,10 @@ object RKSIReplacementsParser {
             val lesson = pair.second
 
             if (replacement == null && lesson != null) {
-                lesson.copy(state = LessonStateDto.REMOVED)
+                // Обычная пара без замен
+                lesson
             } else if (replacement != null && lesson == null) {
+                // Добавленная пара
                 val lessonTime = timeSchedule.firstOrNull { it.number == replacement.number }
                 replacement.copy(
                     state = LessonStateDto.ADDED,
@@ -101,7 +104,8 @@ object RKSIReplacementsParser {
                     endTime = lessonTime?.end ?: minTime,
                     subject = if (replacement.number == 0) "Классный час" else replacement.subject
                 )
-            } else if (replacement != null && lesson != null && !lesson.equalsWithReplacement(replacement)) {
+            } else if (replacement != null && lesson != null) {
+                // Измененная пара
                 val lessonTime = timeSchedule.firstOrNull { it.number == replacement.number }
                 replacement.copy(
                     state = LessonStateDto.CHANGED,
@@ -110,8 +114,8 @@ object RKSIReplacementsParser {
                     subject = lesson.subject.ifEmpty { replacement.subject }
                 )
             } else {
-                lesson
+                null
             }
-        }.sortedBy { it.startTime }
+        }.sortedBy { it.number }
     }
 }
