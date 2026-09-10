@@ -26,7 +26,33 @@ data class Lesson(
         copy(otUnits = otUnits + other.flatMap(Lesson::otUnits))
     
     fun equalsWithReplacement(other: Lesson): Boolean {
-        return otUnits.toSet() == other.otUnits.toSet()
+        if (otUnits.isEmpty() && other.otUnits.isEmpty()) return true
+        if (otUnits.isEmpty() || other.otUnits.isEmpty()) return false
+
+        fun clean(s: String) = s.replace(" ", "")
+            .replace(".", "")
+            .replace("—", "-")
+            .replace("–", "-")
+            .replace("с", "c", ignoreCase = true)
+            .replace("а", "a", ignoreCase = true)
+            .replace("о", "o", ignoreCase = true)
+            .replace("р", "p", ignoreCase = true)
+            .replace("х", "x", ignoreCase = true)
+            .replace("е", "e", ignoreCase = true)
+            .trim()
+            .lowercase()
+
+        fun cleanRoom(r: String): String {
+            val trimmed = r.trim().removeSuffix(".0")
+            return clean(trimmed)
+        }
+
+        return otUnits.all { unit ->
+            other.otUnits.any { otherUnit ->
+                clean(unit.teacher.name) == clean(otherUnit.teacher.name) &&
+                cleanRoom(unit.auditory) == cleanRoom(otherUnit.auditory)
+            }
+        }
     }
 }
 

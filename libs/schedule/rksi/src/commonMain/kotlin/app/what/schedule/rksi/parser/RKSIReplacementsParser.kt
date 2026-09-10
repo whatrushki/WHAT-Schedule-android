@@ -93,8 +93,8 @@ object RKSIReplacementsParser {
             val lesson = pair.second
 
             if (replacement == null && lesson != null) {
-                // Обычная пара без замен
-                lesson
+                // Пары нет в планшетке замен, хотя для группы были замены в этот день -> пара отменена
+                lesson.copy(state = LessonStateDto.REMOVED)
             } else if (replacement != null && lesson == null) {
                 // Добавленная пара
                 val lessonTime = timeSchedule.firstOrNull { it.number == replacement.number }
@@ -105,14 +105,19 @@ object RKSIReplacementsParser {
                     subject = if (replacement.number == 0) "Классный час" else replacement.subject
                 )
             } else if (replacement != null && lesson != null) {
-                // Измененная пара
-                val lessonTime = timeSchedule.firstOrNull { it.number == replacement.number }
-                replacement.copy(
-                    state = LessonStateDto.CHANGED,
-                    startTime = lesson.startTime.takeIf { it != minTime } ?: (lessonTime?.start ?: minTime),
-                    endTime = lesson.endTime.takeIf { it != minTime } ?: (lessonTime?.end ?: minTime),
-                    subject = lesson.subject.ifEmpty { replacement.subject }
-                )
+                if (lesson.equalsWithReplacement(replacement)) {
+                    // Преподаватель и аудитория совпадают с базовым расписанием -> пара НЕ изменена
+                    lesson
+                } else {
+                    // Преподаватель или аудитория изменились -> пара изменена
+                    val lessonTime = timeSchedule.firstOrNull { it.number == replacement.number }
+                    replacement.copy(
+                        state = LessonStateDto.CHANGED,
+                        startTime = lesson.startTime.takeIf { it != minTime } ?: (lessonTime?.start ?: minTime),
+                        endTime = lesson.endTime.takeIf { it != minTime } ?: (lessonTime?.end ?: minTime),
+                        subject = lesson.subject.ifEmpty { replacement.subject }
+                    )
+                }
             } else {
                 null
             }

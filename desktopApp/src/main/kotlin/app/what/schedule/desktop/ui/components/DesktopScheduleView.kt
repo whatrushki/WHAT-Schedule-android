@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.schedule.core.models.DayScheduleDto
@@ -138,8 +139,13 @@ fun DayScheduleCard(day: DayScheduleDto) {
 
 @Composable
 fun LessonItemCard(lesson: LessonDto) {
+    val isRemoved = lesson.state == LessonStateDto.REMOVED
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = if (isRemoved) {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
@@ -151,7 +157,11 @@ fun LessonItemCard(lesson: LessonDto) {
                 "${lesson.number}",
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.primary,
+                color = if (isRemoved) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 modifier = Modifier.width(32.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -159,7 +169,16 @@ fun LessonItemCard(lesson: LessonDto) {
                     lesson.subject.ifBlank { "Пара" },
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = if (isRemoved) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    textDecoration = if (isRemoved) {
+                        TextDecoration.LineThrough
+                    } else {
+                        TextDecoration.None
+                    }
                 )
                 val unit = lesson.otUnits.firstOrNull()
                 val details = listOfNotNull(
@@ -173,13 +192,26 @@ fun LessonItemCard(lesson: LessonDto) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (lesson.state == LessonStateDto.CHANGED || lesson.state == LessonStateDto.ADDED) {
+            if (isRemoved) {
+                Surface(
+                    color = Color(0xFF757575),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        "Отменена",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            } else if (lesson.state == LessonStateDto.CHANGED || lesson.state == LessonStateDto.ADDED) {
                 Surface(
                     color = Color(0xFFE53935),
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        "Замена",
+                        if (lesson.state == LessonStateDto.ADDED) "Добавлена" else "Замена",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,

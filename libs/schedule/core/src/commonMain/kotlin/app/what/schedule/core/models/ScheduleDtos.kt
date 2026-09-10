@@ -37,7 +37,36 @@ data class LessonDto(
 ) {
     infix operator fun plus(other: LessonDto) = copy(otUnits = otUnits + other.otUnits)
     infix operator fun plus(other: List<LessonDto>) = copy(otUnits = otUnits + other.flatMap(LessonDto::otUnits))
-    fun equalsWithReplacement(other: LessonDto): Boolean = otUnits.toSet() == other.otUnits.toSet()
+
+    fun equalsWithReplacement(other: LessonDto): Boolean {
+        if (otUnits.isEmpty() && other.otUnits.isEmpty()) return true
+        if (otUnits.isEmpty() || other.otUnits.isEmpty()) return false
+
+        fun clean(s: String) = s.replace(" ", "")
+            .replace(".", "")
+            .replace("—", "-")
+            .replace("–", "-")
+            .replace("с", "c", ignoreCase = true)
+            .replace("а", "a", ignoreCase = true)
+            .replace("о", "o", ignoreCase = true)
+            .replace("р", "p", ignoreCase = true)
+            .replace("х", "x", ignoreCase = true)
+            .replace("е", "e", ignoreCase = true)
+            .trim()
+            .lowercase()
+
+        fun cleanRoom(r: String): String {
+            val trimmed = r.trim().removeSuffix(".0")
+            return clean(trimmed)
+        }
+
+        return otUnits.all { unit ->
+            other.otUnits.any { otherUnit ->
+                clean(unit.teacher) == clean(otherUnit.teacher) &&
+                cleanRoom(unit.room) == cleanRoom(otherUnit.room)
+            }
+        }
+    }
 }
 
 @Serializable
