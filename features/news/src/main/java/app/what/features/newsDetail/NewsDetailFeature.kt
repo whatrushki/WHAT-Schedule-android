@@ -16,7 +16,9 @@ import app.what.schedule.features.newsDetail.presentation.NewsDetailView
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.koin.core.parameter.parametersOf
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class NewsDetailFeature(
     override val data: NewsDetailProvider
@@ -27,7 +29,7 @@ class NewsDetailFeature(
         parametersOf(
             NewListItem(
                 data.id, data.url, data.bannerUrl, data.title, data.description,
-                LocalDate.now(), emptyList()
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date, emptyList()
             )
         )
     }

@@ -33,10 +33,11 @@ import app.what.schedule.features.insts.dgtu.domain.models.DgtuState
 import app.what.schedule.features.insts.dgtu.domain.models.Mail
 import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.components.Fallback
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import app.what.foundation.utils.DateTimeUtils
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun DgtuMailsPage(
@@ -143,20 +144,16 @@ fun formatName(value: String) = value.split(" ").let {
 }
 
 fun formatDateTime(value: LocalDateTime): String {
-    val today = LocalDate.now()
-    val date = value.toLocalDate()
+    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val date = value.date
     
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-    val shortMonthFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    val timeStr = DateTimeUtils.formatTime(value.time)
+    val shortMonthStr = "${date.dayOfMonth} ${DateTimeUtils.RUSSIAN_MONTHS.getOrElse(date.monthNumber - 1) { "" }.take(3)}"
     
     return when {
-        date == today -> value.format(timeFormatter)
-        date == today.minusDays(1) -> "вчера"
-        date == today.minusDays(2) -> "позавчера"
-        date.year == today.year -> value.format(shortMonthFormatter)
-            .replaceFirstChar { it.uppercaseChar() }
-        
-        else -> value.format(shortMonthFormatter)
-            .replaceFirstChar { it.uppercaseChar() }
+        date == today -> timeStr
+        date.toEpochDays() == today.toEpochDays() - 1 -> "вчера"
+        date.toEpochDays() == today.toEpochDays() - 2 -> "позавчера"
+        else -> shortMonthStr.replaceFirstChar { it.uppercaseChar() }
     }
 }

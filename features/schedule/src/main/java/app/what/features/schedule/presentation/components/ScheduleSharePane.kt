@@ -41,9 +41,7 @@ import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Telegram
 import app.what.schedule.ui.theme.icons.filled.VK
 import app.what.schedule.ui.theme.icons.filled.Whatsapp
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.util.Locale
+import app.what.foundation.utils.DateTimeUtils
 
 
 val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
@@ -89,13 +87,13 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
                             } else selectedDays.add(it)
                         }
                 ) {
+                    val dayOfWeekStr = if (schedules.size > 2) {
+                        DateTimeUtils.RUSSIAN_DAYS_SHORT.getOrElse(it.date.dayOfWeek.ordinal) { "" }
+                    } else {
+                        DateTimeUtils.RUSSIAN_DAYS_FULL.getOrElse(it.date.dayOfWeek.ordinal) { "" }
+                    }
                     Text(
-                        "${it.date.dayOfMonth}" + "\n"
-                                + it.date.dayOfWeek.getDisplayName(
-                            if (schedules.size > 2) TextStyle.SHORT_STANDALONE
-                            else TextStyle.FULL_STANDALONE,
-                            Locale.getDefault()
-                        ),
+                        "${it.date.dayOfMonth}\n$dayOfWeekStr",
                         modifier = Modifier.padding(16.dp, 8.dp),
                         color = contentColor,
                         fontWeight = FontWeight.Medium,
@@ -175,10 +173,8 @@ fun createShareTextFromDaySchedules(
     "\n---------------------------\n\n"
 ) {
     val day = it.date.dayOfMonth
-    val month =
-        it.date.format(DateTimeFormatter.ofPattern("MMMM", Locale.getDefault()))
-    val dayOfWeek =
-        it.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+    val month = DateTimeUtils.RUSSIAN_MONTHS.getOrElse(it.date.monthNumber - 1) { "" }
+    val dayOfWeek = DateTimeUtils.RUSSIAN_DAYS_SHORT.getOrElse(it.date.dayOfWeek.ordinal) { "" }
     
     
     "**$day $month ($dayOfWeek)**\n\n" +

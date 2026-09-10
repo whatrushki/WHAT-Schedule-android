@@ -82,9 +82,8 @@ import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Run
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import app.what.foundation.utils.DateTimeUtils
+import kotlinx.datetime.LocalDateTime
 
 @Composable
 internal fun DGTUMainScreen(
@@ -559,7 +558,7 @@ fun NotificationItem(data: Notification) = Box(
                 )
                 
                 Text(
-                    data.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm")),
+                    DateTimeUtils.formatDateTime(data.date),
                     color = colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                 )
@@ -692,10 +691,7 @@ fun EventListItemView(data: EventListItem, index: Int, onClick: () -> Unit) =
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            data.date.month.getDisplayName(
-                                java.time.format.TextStyle.SHORT,
-                                Locale.getDefault()
-                            ).take(3).uppercase(),
+                            DateTimeUtils.RUSSIAN_MONTHS_NOMINATIVE.getOrElse(data.date.monthNumber - 1) { "" }.take(3).uppercase(),
                             color = accentColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
@@ -768,12 +764,7 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
             Modifier.padding(12.dp)
         ) {
             Text(
-                data.timestamp.format(
-                    DateTimeFormatter.ofPattern(
-                        "d MMMM yyyy",
-                        Locale.getDefault()
-                    )
-                ),
+                DateTimeUtils.formatDate(data.timestamp),
                 fontSize = 14.sp,
                 color = colorScheme.onSurfaceVariant
             )
@@ -791,13 +782,12 @@ fun NewItemView(data: NewListItem, modifier: Modifier = Modifier, onClick: () ->
 }
 
 private fun formatEventDate(start: LocalDateTime, end: LocalDateTime?): String {
-    val dayMonth = start.format(DateTimeFormatter.ofPattern("d MMMM", Locale("ru")))
-        .replaceFirstChar { it.uppercase() }
+    val dayMonth = DateTimeUtils.formatShortDate(start.date).replaceFirstChar { it.uppercase() }
+    val timeStart = DateTimeUtils.formatTime(start.time)
     
-    val timeStart = start.format(DateTimeFormatter.ofPattern("HH:mm"))
-    
-    return if (end != null && end.toLocalDate() == start.toLocalDate()) {
-        "$dayMonth, $timeStart – ${end.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+    return if (end != null && end.date == start.date) {
+        val timeEnd = DateTimeUtils.formatTime(end.time)
+        "$dayMonth, $timeStart – $timeEnd"
     } else {
         "$dayMonth, $timeStart"
     }

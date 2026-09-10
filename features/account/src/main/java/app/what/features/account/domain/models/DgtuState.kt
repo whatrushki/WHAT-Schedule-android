@@ -5,8 +5,8 @@ import app.what.foundation.data.RemoteState
 import app.what.domain.models.NewListItem
 import app.what.domain.models.ScheduleSearch
 import app.what.schedule.dgtu.models.DGTUApi.Events.Initiator
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 data class DgtuState(
     val token: String? = null,

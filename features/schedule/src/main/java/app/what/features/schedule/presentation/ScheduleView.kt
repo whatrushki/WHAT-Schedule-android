@@ -86,13 +86,14 @@ import app.what.schedule.ui.theme.icons.WHATIcons
 import app.what.schedule.ui.theme.icons.filled.Run
 import app.what.schedule.ui.theme.icons.filled.Warn
 import app.what.foundation.utils.Analytics
+import app.what.foundation.utils.DateTimeUtils
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.TextStyle
-import java.time.temporal.ChronoUnit
-import java.util.Calendar
-import java.util.Locale
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,8 +134,10 @@ fun ScheduleView(
         }
         
         val (scheduleType, setScheduleType) = useState<LessonsScheduleType?>(null)
-        val currentDate = LocalDate.now().freeze()
-        val currentTime = useChange(LocalTime.now(), 60) { LocalTime.now() }
+        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.freeze()
+        val currentTime = useChange(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time, 60) {
+            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
+        }
         var showBreaks by useSave(false)
         val scope = rememberCoroutineScope()
         val weeks = state.value.schedules.groupBy { it.date.getWeekNumber() }
@@ -172,7 +175,7 @@ fun ScheduleView(
 
         LaunchedEffect(state.value.schedules) {
             if (state.value.schedules.isEmpty()) return@LaunchedEffect
-            val today = LocalDate.now()
+            val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             val targetIndex = state.value.schedules.indexOfFirst { it.date == today }
                 .takeIf { it != -1 }
                 ?: state.value.schedules.indexOfFirst { it.date >= today }.takeIf { it != -1 }
@@ -288,10 +291,7 @@ fun ScheduleView(
                                     
                                     AnimatedEnter(showBreaks) {
                                         BreakInfo(
-                                            first.endTime.until(
-                                                second.startTime,
-                                                ChronoUnit.MINUTES
-                                            ).toInt(),
+                                            (second.startTime.toSecondOfDay() - first.endTime.toSecondOfDay()) / 60,
                                             currentTime.value in first.startTime..second.startTime && currentDate == first.date
                                         )
                                     }
@@ -365,29 +365,29 @@ fun ScheduleCalendar(
                 val realIndex = schedules.indexOfFirst { it.date == day.date }
                 val selected = daysPagerState.currentPage == realIndex
                 
-                SegmentTab(
-                    selected = selected,
-                    index = realIndex,
-                    count = schedules.size,
-                    icon = null,
-                    label = "${day.date.dayOfMonth}" + (if (thisWeek.value.size > 5) "\n"
-                    else " ") + day.date.dayOfWeek.getDisplayName(
-                        if (thisWeek.value.size > 2) TextStyle.SHORT_STANDALONE
-                        else TextStyle.FULL_STANDALONE,
-                        Locale.getDefault()
-                    )
-                ) {
-                    onClick(realIndex)
+                    val dayOfWeekStr = if (thisWeek.value.size > 2) {
+                        DateTimeUtils.RUSSIAN_DAYS_SHORT.getOrElse(day.date.dayOfWeek.ordinal) { "" }
+                    } else {
+                        DateTimeUtils.RUSSIAN_DAYS_FULL.getOrElse(day.date.dayOfWeek.ordinal) { "" }
+                    }
+                    SegmentTab(
+                        selected = selected,
+                        index = realIndex,
+                        count = schedules.size,
+                        icon = null,
+                        label = "${day.date.dayOfMonth}" + (if (thisWeek.value.size > 5) "\n" else " ") + dayOfWeekStr
+                    ) {
+                        onClick(realIndex)
+                    }
                 }
             }
         }
     }
-}
 
 fun LocalDate.getWeekNumber(): Int {
-    val c = Calendar.getInstance()
-    c.set(year, monthValue.minus(1), dayOfMonth)
-    return c.get(Calendar.WEEK_OF_YEAR)
+    val jan1 = LocalDate(this.year, 1, 1)
+    val jan1DayOfWeek = jan1.dayOfWeek.isoDayNumber
+    return (this.dayOfYear + jan1DayOfWeek - 2) / 7 + 1
 }
 
 @Composable

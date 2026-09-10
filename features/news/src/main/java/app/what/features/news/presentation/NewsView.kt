@@ -42,8 +42,7 @@ import app.what.schedule.features.news.domain.models.NewsState
 import app.what.schedule.ui.components.AsyncImageWithFallback
 import app.what.schedule.ui.components.Fallback
 import app.what.foundation.utils.Analytics
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import app.what.foundation.utils.DateTimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,12 +143,7 @@ fun NewListItemView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                item.timestamp.format(
-                    DateTimeFormatter.ofPattern(
-                        "d MMMM yyyy",
-                        Locale.getDefault()
-                    )
-                ),
+                DateTimeUtils.formatDate(item.timestamp),
                 color = colorScheme.secondary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium

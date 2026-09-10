@@ -64,8 +64,8 @@ import app.what.schedule.ui.theme.icons.filled.Room
 import app.what.schedule.ui.theme.icons.filled.Run
 import com.materialkolor.ktx.DynamicScheme
 import com.materialkolor.toColorScheme
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 enum class ViewType {
     TEACHER, STUDENT
@@ -582,18 +582,18 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
             .background(colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
-        val currentTime = LocalTime.of(10, 45).freeze() // During second lesson
+        val currentTime = LocalTime(10, 45).freeze() // During second lesson
         Gap(12)
         
         // Morning lessons with realistic times
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 1,
                 subject = "Математический анализ",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(8, 30),
-                endTime = LocalTime.of(10, 0),
+                startTime = LocalTime(8, 30),
+                endTime = LocalTime(10, 0),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -616,12 +616,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Current lesson (in progress at 10:45)
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 2,
                 subject = "Базы данных",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(10, 30),
-                endTime = LocalTime.of(12, 0),
+                startTime = LocalTime(10, 30),
+                endTime = LocalTime(12, 0),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -649,12 +649,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Changed lesson (room changed)
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 3,
                 subject = "Программирование на Kotlin",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(12, 15),
-                endTime = LocalTime.of(13, 45),
+                startTime = LocalTime(12, 15),
+                endTime = LocalTime(13, 45),
                 state = LessonState.CHANGED,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -677,12 +677,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Additional lesson
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 4,
                 subject = "Факультатив: Машинное обучение",
                 type = LessonType.ADDITIONAL,
-                startTime = LocalTime.of(14, 45),
-                endTime = LocalTime.of(16, 15),
+                startTime = LocalTime(14, 45),
+                endTime = LocalTime(16, 15),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -701,12 +701,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Cancelled lesson (REMOVED state)
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 5,
                 subject = "Философия",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(16, 30),
-                endTime = LocalTime.of(18, 0),
+                startTime = LocalTime(16, 30),
+                endTime = LocalTime(18, 0),
                 state = LessonState.REMOVED,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -725,12 +725,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Teacher view example with multiple groups
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 1,
                 subject = "Физика",
                 type = LessonType.COMMON,
-                startTime = LocalTime.of(8, 30),
-                endTime = LocalTime.of(10, 0),
+                startTime = LocalTime(8, 30),
+                endTime = LocalTime(10, 0),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(
@@ -761,12 +761,12 @@ fun LessonPreview() = MaterialTheme(DynamicScheme(Color(0xFF682C78), true).toCol
         // Class hour
         LessonUI(
             data = Lesson(
-                date = LocalDate.now(),
+                date = LocalDate(2026, 9, 1),
                 number = 2,
                 subject = "Классный час",
                 type = LessonType.CLASS_HOUR,
-                startTime = LocalTime.of(10, 30),
-                endTime = LocalTime.of(11, 15),
+                startTime = LocalTime(10, 30),
+                endTime = LocalTime(11, 15),
                 state = LessonState.COMMON,
                 otUnits = listOf(
                     OneTimeUnit(

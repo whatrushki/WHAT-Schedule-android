@@ -70,9 +70,8 @@ import app.what.schedule.ui.theme.icons.filled.Features
 import app.what.schedule.ui.theme.icons.filled.Question
 import app.what.schedule.ui.theme.icons.filled.Quote
 import app.what.foundation.utils.Analytics
+import app.what.foundation.utils.DateTimeUtils
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
@@ -141,12 +140,7 @@ fun NewsDetailView(
                     
                     state.newDetailInfo?.timestamp?.let {
                         Text(
-                            it.format(
-                                DateTimeFormatter.ofPattern(
-                                    "d MMMM yyyy",
-                                    Locale.getDefault()
-                                )
-                            ),
+                            DateTimeUtils.formatDate(it),
                             color = colorScheme.secondary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,

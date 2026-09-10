@@ -23,7 +23,10 @@ import app.what.schedule.features.insts.dgtu.domain.models.EventDetailItem
 import app.what.schedule.features.insts.dgtu.domain.models.EventListItem
 import app.what.schedule.features.insts.dgtu.domain.models.Mail
 import app.what.schedule.features.insts.dgtu.domain.models.Notification
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import java.util.Locale
 
 class DgtuController(
@@ -193,8 +196,9 @@ class DgtuController(
         ) {
             val response = accountService.getEvents(appValues.dgtuToken.get()!!)
             
+            val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             val data = response.data.events.mapNotNull {
-                if (it.dateStart.toLocalDate() < LocalDate.now()) null
+                if (it.dateStart.date < today) null
                 else EventListItem(
                     it.eventId,
                     it.dateStart,
