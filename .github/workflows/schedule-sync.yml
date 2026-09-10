@@ -1,0 +1,80 @@
+name: Sync Schedule Data for Web
+
+on:
+  schedule:
+    # РКСИ (частые изменения и планшетки замен):
+    # 07:00, 10:00, 13:00, 16:00, 19:00 МСК (UTC+3) -> 04:00, 07:00, 10:00, 13:00, 16:00 UTC
+    # Ночью (с 19:01 до 06:59 МСК) запросы СТРОГО ОТКЛЮЧЕНЫ.
+    - cron: '0 4,7,10,13,16 * * *'
+    # Остальные ВУЗы (ДГТУ, ИУБиП, РИНХ):
+    # 07:00 и 18:00 МСК (UTC+3) -> 04:00 и 15:00 UTC
+    - cron: '0 4,15 * * *'
+
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target institution (rksi, others, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - rksi
+          - others
+
+jobs:
+  sync_schedule:
+    name: Parse & Sync Schedule Data
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Determine Sync Target
+        id: determine_target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "target=${{ github.event.inputs.target }}" >> $GITHUB_OUTPUT
+          else
+            # Cron check: at 07:00, 10:00, 13:00, 16:00, 19:00 UTC?
+            # UTC hour:
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" -eq "04" ]; then
+              # 07:00 MSK (04:00 UTC): sync both RKSI and others
+              echo "target=all" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" -eq "15" ]; then
+              # 18:00 MSK (15:00 UTC): sync others
+              echo "target=others" >> $GITHUB_OUTPUT
+            else
+              # 10:00, 13:00, 16:00, 19:00 MSK: sync RKSI replacements & schedule
+              echo "target=rksi" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run Schedule Sync CLI
+        run: |
+          ./gradlew :tools:schedule-sync:run --args="--target ${{ steps.determine_target.outputs.target }} --out .github/schedule"
+
+      - name: Commit & Push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/schedule/
+          if git diff --staged --quiet; then
+            echo "No schedule changes to commit."
+          else
+            git commit -m "[CI] Update schedule data ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git push
+          fi
