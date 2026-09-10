@@ -1,4 +1,4 @@
-﻿package app.what.data.remote.providers.rksi.services
+package app.what.data.remote.providers.rksi.services
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.capitalize as capitalizeFirstChar
@@ -14,7 +14,10 @@ import com.fleeksoft.ksoup.nodes.Element
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class RKSINewsService(
     private val baseUrl: String = "https://www.rksi.ru",
@@ -40,9 +43,9 @@ class RKSINewsService(
             val date = try {
                 val spanText = element.getElementsByTag("span").firstOrNull()?.text() ?: ""
                 val tmp = spanText.split(".").map(String::toInt)
-                LocalDate.of(tmp[2], tmp[1], tmp[0])
+                LocalDate(tmp[2], tmp[1], tmp[0])
             } catch (_: Exception) {
-                LocalDate.now()
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             }
             val tags = emptyList<NewTag>()
 
@@ -63,9 +66,9 @@ class RKSINewsService(
         val date = try {
             val dateStr = document.getElementsByTag("h1").text().split(" ").last().drop(1).dropLast(1)
             val tmp = dateStr.split(".").map(String::toInt)
-            LocalDate.of(tmp[2], tmp[1], tmp[0])
+            LocalDate(tmp[2], tmp[1], tmp[0])
         } catch (_: Exception) {
-            LocalDate.now()
+            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         }
 
         val mainElem = document.getElementsByTag("main").firstOrNull()

@@ -1,41 +1,36 @@
 package app.what.schedule.data.remote.utils
 
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.STRING)
-    
+
     override fun serialize(encoder: Encoder, value: LocalDateTime) {
-        encoder.encodeString(formatter.format(value))
+        encoder.encodeString(value.toString())
     }
-    
+
     override fun deserialize(decoder: Decoder): LocalDateTime {
-        return LocalDateTime.parse(decoder.decodeString(), formatter)
+        return LocalDateTime.parse(decoder.decodeString())
     }
 }
 
 object LocalDateSerializer : KSerializer<LocalDate> {
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-    
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.STRING)
-    
+        PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
+
     override fun serialize(encoder: Encoder, value: LocalDate) {
-        encoder.encodeString(formatter.format(value))
+        encoder.encodeString(value.toString())
     }
-    
+
     override fun deserialize(decoder: Decoder): LocalDate {
-        return LocalDate.parse(decoder.decodeString(), formatter)
+        return LocalDate.parse(decoder.decodeString())
     }
 }

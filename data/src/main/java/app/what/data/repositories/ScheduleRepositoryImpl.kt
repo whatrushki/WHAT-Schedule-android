@@ -13,7 +13,7 @@ import app.what.schedule.data.remote.api.AdditionalData
 import app.what.schedule.data.remote.api.InstitutionManager
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import kotlinx.coroutines.CoroutineScope
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 class ScheduleRepositoryImpl(
     private val db: AppDatabase,

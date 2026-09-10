@@ -3,7 +3,10 @@ package app.what.data.mappers
 import androidx.compose.ui.text.AnnotatedString
 import app.what.domain.models.*
 import app.what.schedule.core.models.*
-import java.time.LocalDateTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 fun GroupDto.toDomain(): Group = Group(name = name, id = id)
 fun TeacherDto.toDomain(): Teacher = Teacher(name = name, id = id)
@@ -57,7 +60,7 @@ fun List<DayScheduleDto>.toDomainResponse(): ScheduleResponse {
     if (isEmpty()) return ScheduleResponse.Empty
     return ScheduleResponse.Available.FromSource(
         schedules = map { it.toDomain() },
-        lastModified = LocalDateTime.now()
+        lastModified = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     )
 }
 

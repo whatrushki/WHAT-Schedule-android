@@ -1,6 +1,9 @@
 package app.what.domain.models
 
-import java.time.LocalDateTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 data class MetaInfo(
     val id: String,
@@ -74,7 +77,7 @@ fun List<ScheduleResponse>.sum(): ScheduleResponse {
     
     val hasFromSource = this.any { it is ScheduleResponse.Available.FromSource }
     val hasFromCache = this.any { it is ScheduleResponse.Available.FromCache }
-    val lastModified = latestModified ?: LocalDateTime.now()
+    val lastModified = latestModified ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     
     return when {
         hasFromSource -> ScheduleResponse.Available.FromSource(allSchedules, lastModified)

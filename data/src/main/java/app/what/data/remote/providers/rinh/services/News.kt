@@ -13,7 +13,10 @@ import com.fleeksoft.ksoup.nodes.Element
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class RINHNewsService(
     private val baseUrl: String = "https://rsue.ru",
@@ -35,9 +38,9 @@ class RINHNewsService(
             val date = try {
                 val dateText = element.getElementById("news-date")?.text() ?: ""
                 val tmp = dateText.split(" ")
-                LocalDate.of(tmp[2].toInt(), parseMonth(tmp[1]), tmp[0].toInt())
+                LocalDate(tmp[2].toInt(), parseMonth(tmp[1]), tmp[0].toInt())
             } catch (_: Exception) {
-                LocalDate.now()
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             }
             val tags = emptyList<NewTag>()
 
@@ -56,9 +59,9 @@ class RINHNewsService(
         val date = try {
             val dateText = document.getElementById("date-news")?.text() ?: ""
             val tmp = dateText.split(" ")
-            LocalDate.of(tmp[2].toInt(), parseMonth(tmp[1]), tmp[0].toInt())
+            LocalDate(tmp[2].toInt(), parseMonth(tmp[1]), tmp[0].toInt())
         } catch (_: Exception) {
-            LocalDate.now()
+            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         }
         val tags = emptyList<NewTag>()
 

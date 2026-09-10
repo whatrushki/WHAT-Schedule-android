@@ -10,9 +10,12 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 fun List<GoogleDriveParser.Item>.files() =
     filterIsInstance<GoogleDriveParser.Item.File>()
@@ -73,16 +76,17 @@ class GoogleDriveParser(
                         val isFolder = href.contains("/folders/") || entry.select(".drive-sprite-folder").isNotEmpty() || '.' !in name
                         val dateText = entry.selectFirst(".flip-entry-last-modified")?.text()?.trim() ?: ""
                         
+                        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
                         val date = try {
                             if (":" in dateText) {
                                 val timePart = dateText.replace("[^0-9:]".toRegex(), "")
                                 val raw = timePart.split(":").map(String::toInt)
-                                LocalDate.now().atTime(raw.getOrElse(0) { 0 }, raw.getOrElse(1) { 0 })
+                                LocalDateTime(today.year, today.monthNumber, today.dayOfMonth, raw.getOrElse(0) { 0 }, raw.getOrElse(1) { 0 })
                             } else {
-                                LocalDate.now().atStartOfDay()
+                                LocalDateTime(today.year, today.monthNumber, today.dayOfMonth, 0, 0)
                             }
                         } catch (_: Exception) {
-                            LocalDate.now().atStartOfDay()
+                            LocalDateTime(today.year, today.monthNumber, today.dayOfMonth, 0, 0)
                         }
                         
                         if (isFolder) Item.Folder(id, name, date)
@@ -90,12 +94,13 @@ class GoogleDriveParser(
                     }
                 } else {
                     // Fallback to legacy parser if embedded view has no flip-entry
+                    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+                    val defaultDate = LocalDateTime(today.year, today.monthNumber, today.dayOfMonth, 0, 0)
                     items = document.getElementsByAttributeValue("data-target", "doc").mapNotNull {
                         val id = it.attr("data-id")
                         val name = it.selectFirst("strong")?.text() ?: return@mapNotNull null
-                        val date = LocalDate.now().atStartOfDay()
-                        if ('.' in name) Item.File(id, name, date)
-                        else Item.Folder(id, name, date)
+                        if ('.' in name) Item.File(id, name, defaultDate)
+                        else Item.Folder(id, name, defaultDate)
                     }
                 }
             }

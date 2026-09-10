@@ -2,8 +2,8 @@ package app.what.domain.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 data class DaySchedule(
     val date: LocalDate,

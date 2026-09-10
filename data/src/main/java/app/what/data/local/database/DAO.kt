@@ -7,7 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import java.time.LocalDate
+import kotlinx.datetime.*
 
 @Dao
 interface RequestsDAO {
@@ -45,7 +45,7 @@ interface RequestsDAO {
     suspend fun selectLastWithData(
         institutionId: String,
         query: String,
-        afterDate: LocalDate = LocalDate.MIN
+        afterDate: LocalDate = LocalDate(1970, 1, 1)
     ): RequestSDBO?
     
     @Transaction
@@ -72,7 +72,7 @@ interface RequestsDAO {
     suspend fun selectLast(
         institutionId: String,
         query: String,
-        afterDate: LocalDate = LocalDate.MIN
+        afterDate: LocalDate = LocalDate(1970, 1, 1)
     ): RequestDBO?
     
     @Update
@@ -80,7 +80,7 @@ interface RequestsDAO {
     
     
     @Query("DELETE FROM requests WHERE requests.createdAt < :currentDate")
-    suspend fun deleteOld(currentDate: LocalDate = LocalDate.now())
+    suspend fun deleteOld(currentDate: LocalDate = kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date)
     
     @Delete
     suspend fun delete(request: RequestDBO)

@@ -1,4 +1,4 @@
-﻿package app.what.data.remote.providers.dgtu.services
+package app.what.data.remote.providers.dgtu.services
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
@@ -13,7 +13,10 @@ import com.fleeksoft.ksoup.nodes.Element
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class DGTUNewsService(
     private val baseUrl: String = "https://donstu.ru",
@@ -36,9 +39,9 @@ class DGTUNewsService(
             val date = try {
                 val tmp = element.getElementsByTag("time").attr("datetime")
                     .split(" ").first().split(".").map(String::toInt)
-                LocalDate.of(tmp[2], tmp[1], tmp[0])
+                LocalDate(tmp[2], tmp[1], tmp[0])
             } catch (_: Exception) {
-                LocalDate.now()
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             }
             val tags = element.getElementsByClass("tag")
                 .map { NewTag(it.text(), it.attr("href").split("=").last()) }
@@ -58,9 +61,9 @@ class DGTUNewsService(
         val date = try {
             val tmp = document.getElementsByTag("time").attr("datetime")
                 .split(" ").first().split(".").map(String::toInt)
-            LocalDate.of(tmp[2], tmp[1], tmp[0])
+            LocalDate(tmp[2], tmp[1], tmp[0])
         } catch (_: Exception) {
-            LocalDate.now()
+            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         }
         val tags = document.getElementsByClass("detail-hero__card").firstOrNull()
             ?.getElementsByClass("tag")

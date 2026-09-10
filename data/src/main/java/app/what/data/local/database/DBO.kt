@@ -9,9 +9,12 @@ import androidx.room.Relation
 import app.what.domain.models.LessonState
 import app.what.domain.models.LessonType
 import app.what.domain.models.LessonsScheduleType
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Entity(tableName = "requests")
 data class RequestDBO(
@@ -20,7 +23,7 @@ data class RequestDBO(
     val institutionId: String,
     val query: String,
     val lastModified: LocalDateTime,
-    val createdAt: LocalDate = LocalDate.now(),
+    val createdAt: LocalDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date,
 )
 
 @Entity(

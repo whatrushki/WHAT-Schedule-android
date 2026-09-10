@@ -54,8 +54,7 @@ dependencies {
     implementation(libs.bundles.koin)
 
     implementation(libs.ksoup.lite)
-    implementation(libs.poi)
-    implementation(libs.poi.ooxml)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.firebase.bom))

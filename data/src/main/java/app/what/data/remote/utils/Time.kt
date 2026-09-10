@@ -1,7 +1,6 @@
 package app.what.schedule.data.remote.utils
 
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalTime
 
 fun parseMonth(month: String) = when (month.lowercase()) {
     "января" -> 1
@@ -19,8 +18,10 @@ fun parseMonth(month: String) = when (month.lowercase()) {
     else -> 1
 }
 
-fun parseTime(timeString: String): LocalTime =
-    LocalTime.parse(timeString.trim(), DateTimeFormatter.ofPattern("H:mm"))
+fun parseTime(timeString: String): LocalTime {
+    val parts = timeString.trim().split(":")
+    return LocalTime(parts[0].toInt(), parts[1].toInt())
+}
 
 fun formatTime(time: LocalTime): String =
     time.hour.toString().padStart(2, '0') + ":" +
