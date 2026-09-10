@@ -1,36 +1,56 @@
-﻿package app.what.foundation.utils
+package app.what.foundation.utils
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 
 object DateTimeUtils {
-    val FULL_DATE_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault())
+    val RUSSIAN_MONTHS = listOf(
+        "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    )
 
-    val SHORT_DATE_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("d MMMM", Locale.getDefault())
+    val RUSSIAN_MONTHS_NOMINATIVE = listOf(
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    )
 
-    val TIME_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("HH:mm")
+    val RUSSIAN_DAYS_SHORT = listOf(
+        "пн", "вт", "ср", "чт", "пт", "сб", "вс"
+    )
 
-    val DOT_DATE_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    val RUSSIAN_DAYS_FULL = listOf(
+        "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"
+    )
 
-    val DATE_TIME_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+    fun formatDate(date: LocalDate?): String {
+        if (date == null) return ""
+        val monthStr = RUSSIAN_MONTHS.getOrElse(date.monthNumber - 1) { "" }
+        return "${date.dayOfMonth} $monthStr ${date.year}"
+    }
 
-    fun formatDate(date: LocalDate?): String =
-        date?.format(FULL_DATE_FORMATTER) ?: ""
+    fun formatShortDate(date: LocalDate?): String {
+        if (date == null) return ""
+        val monthStr = RUSSIAN_MONTHS.getOrElse(date.monthNumber - 1) { "" }
+        return "${date.dayOfMonth} $monthStr"
+    }
 
-    fun formatShortDate(date: LocalDate?): String =
-        date?.format(SHORT_DATE_FORMATTER) ?: ""
+    fun formatTime(time: LocalTime?): String {
+        if (time == null) return ""
+        val h = time.hour.toString().padStart(2, '0')
+        val m = time.minute.toString().padStart(2, '0')
+        return "$h:$m"
+    }
 
-    fun formatTime(time: LocalTime?): String =
-        time?.format(TIME_FORMATTER) ?: ""
+    fun formatDotDate(date: LocalDate?): String {
+        if (date == null) return ""
+        val d = date.dayOfMonth.toString().padStart(2, '0')
+        val m = date.monthNumber.toString().padStart(2, '0')
+        return "$d.$m.${date.year}"
+    }
 
-    fun formatDateTime(dateTime: LocalDateTime?): String =
-        dateTime?.format(DATE_TIME_FORMATTER) ?: ""
+    fun formatDateTime(dateTime: LocalDateTime?): String {
+        if (dateTime == null) return ""
+        return "${formatDotDate(dateTime.date)} ${formatTime(dateTime.time)}"
+    }
 }

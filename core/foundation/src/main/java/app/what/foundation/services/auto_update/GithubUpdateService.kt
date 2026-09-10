@@ -20,7 +20,8 @@ class GitHubUpdateService(
     suspend fun checkForUpdates(
         owner: String,
         repo: String,
-        currentVersion: String
+        currentVersion: String,
+        assetMatcher: (String) -> Boolean = { it.endsWith(".apk") }
     ): UpdateResult {
         return try {
             val releases = httpClient.get {
@@ -44,17 +45,16 @@ class GitHubUpdateService(
             Auditor.debug("d", "${latestVersion > currentVersionParsed}")
 
             if (latestVersion > currentVersionParsed) {
-                val apkAsset = latestRelease.assets.firstOrNull { it.name.endsWith(".apk") }
-
-                if (apkAsset == null) {
-                    return UpdateResult.Error("APK not found in release assets")
-                }
+                val matchedAsset = latestRelease.assets.firstOrNull { assetMatcher(it.name) }
+                val downloadUrl = matchedAsset?.browserDownloadUrl
+                    ?: "https://github.com/$owner/$repo/releases/tag/${latestRelease.tagName}"
+                val fileSize = matchedAsset?.size ?: 0L
 
                 val updateInfo = UpdateInfo(
                     version = latestRelease.tagName,
                     releaseNotes = latestRelease.body,
-                    downloadUrl = apkAsset.browserDownloadUrl,
-                    fileSize = apkAsset.size
+                    downloadUrl = downloadUrl,
+                    fileSize = fileSize
                 )
 
                 UpdateResult.Available(updateInfo)

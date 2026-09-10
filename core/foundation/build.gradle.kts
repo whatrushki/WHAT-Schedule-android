@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.materialKolor)
     implementation(libs.bundles.coil)
     implementation(libs.bundles.koin)
+    api(libs.kotlinx.datetime)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
