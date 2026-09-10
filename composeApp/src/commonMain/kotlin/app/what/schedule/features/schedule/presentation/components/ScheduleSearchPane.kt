@@ -1,0 +1,293 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
+package app.what.schedule.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.shapes
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.what.foundation.data.RemoteState
+import app.what.foundation.ui.Gap
+import app.what.foundation.ui.SegmentTab
+import app.what.foundation.ui.animations.rememberShimmer
+import app.what.foundation.ui.capplyIf
+import app.what.foundation.ui.useState
+import app.what.foundation.ui.components.SearchBox
+import app.what.foundation.ui.components.AnimatedIconTitle
+import app.what.foundation.ui.components.Fallback
+import app.what.domain.models.ScheduleSearch
+import app.what.schedule.ui.theme.icons.WHATIcons
+import app.what.schedule.ui.theme.icons.filled.Crown
+import app.what.schedule.ui.theme.icons.filled.Group
+import app.what.schedule.ui.theme.icons.filled.Person
+
+interface ScheduleSearchData {
+    val scheduleSearches: List<ScheduleSearch>
+    val selectedSearch: ScheduleSearch?
+    val scheduleSearchesState: RemoteState get() = RemoteState.Idle
+}
+
+@Composable
+fun ScheduleSearchPane(
+    state: State<ScheduleSearchData>,
+    onClick: (ScheduleSearch) -> Unit,
+    onLongClick: (ScheduleSearch) -> Unit,
+    onRefresh: (() -> Unit)? = null
+) {
+    val (query, setQuery) = useState("")
+    val (selectedTab, setSelectedTab) = useState(0)
+    val favoriteList = remember(state.value) { state.value.scheduleSearches.filter { it.favorite } }
+    val list = remember(selectedTab, state.value, query) {
+        (if (selectedTab == 0) state.value.scheduleSearches.filterIsInstance<ScheduleSearch.Group>() else state.value.scheduleSearches.filterIsInstance<ScheduleSearch.Teacher>())
+            .filter { !it.favorite && it.name.lowercase().contains(query.lowercase()) }
+            .sortedBy { it.name }
+    }
+    val shimmer = rememberShimmer()
+    
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(horizontal = 8.dp)
+    ) {
+        item(span = { GridItemSpan(2) }) {
+            Column {
+                SearchBox(
+                    query = query,
+                    setQuery = setQuery,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                
+                Gap(8)
+                
+                AnimatedIconTitle(
+                    WHATIcons.Crown,
+                    "Избранное",
+                    Modifier.padding(12.dp, 8.dp)
+                )
+            }
+        }
+        
+        if (favoriteList.isEmpty()) {
+            if (state.value.scheduleSearchesState !is RemoteState.Loading && state.value.scheduleSearchesState !is RemoteState.Error) {
+                item(span = { GridItemSpan(2) }) {
+                    Text(
+                        "У вас пока нет избранных. Зажмите чтобы добавить",
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.secondary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 30.dp)
+                    )
+                }
+            }
+        } else searchBlocks(
+            favoriteList,
+            true,
+            state.value.selectedSearch?.name ?: "",
+            onClick,
+            onLongClick
+        )
+        
+        item(span = { GridItemSpan(2) }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            ) {
+                AnimatedIconTitle(
+                    if (selectedTab == 0) WHATIcons.Group else WHATIcons.Person,
+                    if (selectedTab == 0) "Группы" else "Преподаватели"
+                )
+                
+                SingleChoiceSegmentedButtonRow {
+                    SegmentTab(
+                        index = 0,
+                        count = 2,
+                        selected = selectedTab == 0,
+                        icon = WHATIcons.Group,
+                        label = null,
+                        onClick = { setSelectedTab(0) }
+                    )
+                    
+                    Gap(8)
+                    
+                    SegmentTab(
+                        index = 1,
+                        count = 2,
+                        selected = selectedTab == 1,
+                        icon = WHATIcons.Person,
+                        label = null,
+                        onClick = { setSelectedTab(1) }
+                    )
+                }
+            }
+        }
+        
+        
+        if (state.value.scheduleSearchesState is RemoteState.Loading && list.isEmpty()) {
+            items(12) {
+                SearchItemShimmer(
+                    shimmer = shimmer,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
+        } else if (state.value.scheduleSearchesState is RemoteState.Error && list.isEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                Fallback(
+                    text = "Не удалось загрузить данные.\nЕсли у вас включен VPN, попробуйте отключить его",
+                    showImage = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    action = if (onRefresh != null) "Обновить" to onRefresh else null
+                )
+            }
+        } else {
+            searchBlocks(
+                list,
+                false,
+                state.value.selectedSearch?.name ?: "",
+                onClick,
+                onLongClick
+            )
+        }
+    }
+}
+
+fun LazyGridScope.searchBlocks(
+    list: List<ScheduleSearch>,
+    favorite: Boolean,
+    state: String?,
+    onClick: (ScheduleSearch) -> Unit,
+    onLongClick: (ScheduleSearch) -> Unit
+) {
+    itemsIndexed(
+        list,
+        key = { index, it ->
+            val type = when (it) {
+                is ScheduleSearch.Group -> "group"
+                is ScheduleSearch.Teacher -> "teacher"
+            }
+            val idPart = it.id.ifBlank { it.name }
+            val base = "${type}_${idPart}_$index"
+            if (favorite) "fav_$base" else base
+        }
+    ) { _, it ->
+        SearchItemChip(
+            name = it.name,
+            selected = state == it.name,
+            favorite = favorite,
+            modifier = Modifier
+                .animateItem()
+                .padding(horizontal = 8.dp),
+            onLongClick = { onLongClick(it) },
+            onClick = { onClick(it) }
+        )
+    }
+}
+
+@Composable
+private fun SearchItemChip(
+    name: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    favorite: Boolean = false,
+    onLongClick: () -> Unit = {},
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    
+    val containerColor = if (selected) colorScheme.primary
+    else if (favorite) colorScheme.secondaryContainer
+    else Color.Transparent
+    
+    val contentColor = if (selected) colorScheme.onPrimary
+    else if (favorite) colorScheme.onSecondaryContainer
+    else colorScheme.primary
+    
+    
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.padding(vertical = 3.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .capplyIf(!favorite && !selected) {
+                    border(1.dp, colorScheme.outlineVariant, shapes.small)
+                }
+                .clip(shapes.small)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                )
+                .background(containerColor)
+        ) {
+            Text(
+                text = name,
+                color = contentColor,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchItemShimmer(
+    shimmer: Brush,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.padding(vertical = 3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+                .clip(shapes.small)
+                .background(shimmer)
+        )
+    }
+}

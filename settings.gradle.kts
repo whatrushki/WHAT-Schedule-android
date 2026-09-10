@@ -31,7 +31,7 @@ rootProject.name = "WHAT-Schedule"
 include(":app")
 include(":core:foundation")
 include(":core:navigation")
-include(":core:ui")
+include(":composeApp")
 include(":domain")
 include(":data")
 include(":features:main")
