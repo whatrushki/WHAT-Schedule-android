@@ -74,6 +74,8 @@ import app.what.foundation.ui.controllers.rememberDialogController
 import app.what.foundation.network.monitor.NetworkMonitor
 import app.what.foundation.network.monitor.NetworkRequest
 import app.what.foundation.network.monitor.StatusCategory
+import app.what.foundation.utils.ShareData
+import app.what.foundation.utils.rememberShareManager
 import app.what.schedule.features.dev.presentation.components.Filter
 import app.what.schedule.features.dev.presentation.components.FilteredList
 import io.ktor.client.plugins.api.SendingRequest
@@ -107,6 +109,7 @@ fun NetworksPane(
     modifier: Modifier = Modifier
 ) {
     val dialog = rememberDialogController()
+    val shareManager = rememberShareManager()
     FilteredList(
         "Сетевые запросы",
         values = NetworkMonitor.requests,
@@ -117,7 +120,15 @@ fun NetworksPane(
                     NetworkRequestDialog(it)
                 }
             }
-        }, exportValues = NetworkMonitor::exportRequests,
+        },
+        exportValues = {
+            shareManager.share(
+                ShareData.Text(
+                    text = NetworkMonitor.exportRequests(),
+                    title = "Сетевые логи"
+                )
+            )
+        },
         clearValues = NetworkMonitor::clearRequests,
         setIsMonitoringPaused = NetworkMonitor::setMonitoringPause,
         isMonitoringPaused = NetworkMonitor.isMonitoringPaused,
@@ -432,6 +443,7 @@ fun NetworkRequestDialog(
         
         HorizontalPager(
             state = pagerState,
+            verticalAlignment = Alignment.Top,
             modifier = Modifier.weight(1f)
         ) { page ->
             when (page) {

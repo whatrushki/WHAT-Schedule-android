@@ -28,11 +28,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.what.foundation.ui.Gap
-import app.what.foundation.ui.Show
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useStateList
-import app.what.foundation.utils.ShareUtils
-import app.what.foundation.utils.ShareVariant
+import app.what.foundation.utils.ShareChannel
+import app.what.foundation.utils.ShareChannelsRow
+import app.what.foundation.utils.ShareData
+import app.what.foundation.utils.executeShare
 import app.what.domain.models.DaySchedule
 import app.what.domain.models.LessonState
 import app.what.domain.models.LessonType
@@ -108,62 +109,19 @@ val ScheduleExportPane = @Composable { scheduleSearch: ScheduleSearch?,
         
         Gap(12)
         
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Gap(12)
-            
-            listOf(
-                Triple(
-                    Icons.Default.MoreVert,
-                    colorScheme.secondaryContainer,
-                    ShareVariant.SystemDefault
-                ),
-                Triple(WHATIcons.Telegram, Color(0xFF2AABEE), ShareVariant.Telegram),
-                Triple(WHATIcons.VK, Color(0xFF2196F3), ShareVariant.VK),
-                Triple(WHATIcons.Whatsapp, Color(0xFF4CAF50), ShareVariant.WhatsApp),
-            ).forEach {
-                ShareButton(
-                    icon = it.first,
-                    color = it.second,
-                    if (it.third == ShareVariant.SystemDefault) colorScheme.onSecondaryContainer else Color.White,
-                    if (it.third == ShareVariant.Telegram) 46 else 34
-                ) {
-                    ShareUtils.share(
-                        context, it.third,
-                        createShareTextFromDaySchedules(
-                            scheduleSearch,
-                            selectedDays.sortedBy { it.date })
-                    )
-                }
-                
-                Gap(8)
+        ShareChannelsRow(
+            channels = ShareChannel.defaultChannels,
+            onChannelClick = { channel ->
+                val text = createShareTextFromDaySchedules(
+                    scheduleSearch,
+                    selectedDays.sortedBy { it.date }
+                )
+                executeShare(context, channel, ShareData.Text(text, "Расписание"))
             }
-            
-            Gap(4)
-        }
+        )
         
         Gap(16)
     }
-}
-
-@Composable
-fun ShareButton(
-    icon: ImageVector,
-    color: Color,
-    background: Color = Color.White,
-    iconSize: Int = 34,
-    onClick: () -> Unit
-) = Box(
-    contentAlignment = Alignment.Center,
-    modifier = Modifier
-        .size(68.dp)
-        .clip(shapes.medium)
-        .background(color)
-        .bclick(block = onClick)
-) {
-    icon.Show(background, iconSize)
 }
 
 fun createShareTextFromDaySchedules(

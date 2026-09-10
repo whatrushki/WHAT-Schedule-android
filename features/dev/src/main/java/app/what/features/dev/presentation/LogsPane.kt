@@ -31,6 +31,8 @@ import app.what.foundation.services.LogLevel
 import app.what.foundation.ui.Gap
 import app.what.foundation.ui.bclick
 import app.what.foundation.ui.useState
+import app.what.foundation.utils.ShareData
+import app.what.foundation.utils.rememberShareManager
 import app.what.schedule.features.dev.presentation.components.Filter
 import app.what.schedule.features.dev.presentation.components.FilteredList
 import app.what.schedule.ui.theme.icons.WHATIcons
@@ -165,13 +167,21 @@ fun LogsPane(
     modifier: Modifier = Modifier,
 ) {
     val logs by Auditor.collectLogs()
-    
+    val shareManager = rememberShareManager()
+
     FilteredList(
         title = "Логи приложения",
         values = logs,
         vKey = { it.id },
         vContent = { LogItem(it) },
-        exportValues = {},
+        exportValues = {
+            shareManager.share(
+                ShareData.Text(
+                    text = Auditor.exportLogs(),
+                    title = "Логи приложения"
+                )
+            )
+        },
         clearValues = Auditor::clearLogs,
         setIsMonitoringPaused = Auditor::setIsLoggingPaused,
         isMonitoringPaused = Auditor.isLoggingPaused,

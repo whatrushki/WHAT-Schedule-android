@@ -148,6 +148,20 @@ class AppLogger private constructor(context: Context) {
         scope.launch { synchronized(logFile) { if (logFile.exists()) logFile.delete() } }
     }
 
+    fun exportLogs(): String {
+        return if (logFile.exists()) {
+            try {
+                logFile.readText().ifEmpty {
+                    _logFlow.value.joinToString("\n") { it.toFormattedString() }
+                }
+            } catch (_: Exception) {
+                _logFlow.value.joinToString("\n") { it.toFormattedString() }
+            }
+        } else {
+            _logFlow.value.joinToString("\n") { it.toFormattedString() }
+        }
+    }
+
     fun debug(tag: String, msg: String) = log(LogLevel.DEBUG, tag, msg)
     fun info(tag: String, msg: String) = log(LogLevel.INFO, tag, msg)
     fun warn(tag: String, msg: String) = log(LogLevel.WARNING, tag, msg)
