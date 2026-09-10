@@ -1,13 +1,5 @@
 package app.what.schedule.desktop.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,15 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import app.what.schedule.core.models.DayScheduleDto
 import app.what.schedule.desktop.model.SearchItem
 import app.what.schedule.desktop.model.UniType
-import app.what.schedule.desktop.ui.components.DesktopHeaderBar
-import app.what.schedule.desktop.ui.components.DesktopScheduleView
-import app.what.schedule.desktop.ui.components.DesktopSearchSidebar
 import app.what.schedule.desktop.ui.components.UpdateBanner
 import app.what.schedule.desktop.updater.DesktopAppUpdateManager
 import app.what.schedule.dgtu.DGTUScheduleClient
@@ -31,19 +17,27 @@ import app.what.schedule.iubip.IUBIPScheduleClient
 import app.what.schedule.rinh.RINHScheduleClient
 import app.what.schedule.rksi.RKSIScheduleClient
 import app.what.schedule.rksi.parser.JvmXlsxReader
+import app.what.ui.components.SearchDrawerItem
+import app.what.ui.components.UniversityOption
+import app.what.ui.screens.AdaptiveScheduleScreen
+import app.what.ui.theme.WHATTheme
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.launch
 
 @Composable
 fun DesktopApp(httpClient: HttpClient, updateManager: DesktopAppUpdateManager) {
     var selectedUni by remember { mutableStateOf(UniType.RKSI) }
-    var searchQuery by remember { mutableStateOf("") }
     var searchItems by remember { mutableStateOf<List<SearchItem>>(emptyList()) }
     var selectedItem by remember { mutableStateOf<SearchItem?>(null) }
     var scheduleDays by remember { mutableStateOf<List<DayScheduleDto>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
+    var isSearchLoading by remember { mutableStateOf(false) }
+    var isScheduleLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    val universities = remember {
+        UniType.entries.map { UniversityOption(it.name, it.title) }
+    }
 
     val rksiClient = remember { RKSIScheduleClient(client = httpClient, xlsxReader = JvmXlsxReader()) }
     val dgtuClient = remember { DGTUScheduleClient(httpClient) }
@@ -51,7 +45,7 @@ fun DesktopApp(httpClient: HttpClient, updateManager: DesktopAppUpdateManager) {
     val rinhClient = remember { RINHScheduleClient(httpClient) }
 
     LaunchedEffect(selectedUni) {
-        isLoading = true
+        isSearchLoading = true
         errorMessage = null
         selectedItem = null
         scheduleDays = emptyList()
@@ -78,13 +72,13 @@ fun DesktopApp(httpClient: HttpClient, updateManager: DesktopAppUpdateManager) {
         } catch (e: Exception) {
             errorMessage = "Ошибка загрузки списка: ${e.message}"
         } finally {
-            isLoading = false
+            isSearchLoading = false
         }
     }
 
     fun loadSchedule(item: SearchItem) {
         selectedItem = item
-        isLoading = true
+        isScheduleLoading = true
         errorMessage = null
         scope.launch {
             try {
@@ -109,56 +103,39 @@ fun DesktopApp(httpClient: HttpClient, updateManager: DesktopAppUpdateManager) {
             } catch (e: Exception) {
                 errorMessage = "Ошибка загрузки расписания: ${e.message}"
             } finally {
-                isLoading = false
+                isScheduleLoading = false
             }
         }
     }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFF6C63FF),
-            secondary = Color(0xFF03DAC6),
-            background = Color(0xFF121218),
-            surface = Color(0xFF1E1E2A),
-            surfaceVariant = Color(0xFF282838),
-            onPrimary = Color.White,
-            onSurface = Color(0xFFE2E2E8)
-        )
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize()) {
+    WHATTheme {
+        AdaptiveScheduleScreen(
+            universities = universities,
+            selectedUniversityId = selectedUni.name,
+            onSelectUniversity = { uniName ->
+                val uni = UniType.entries.firstOrNull { it.name == uniName } ?: UniType.RKSI
+                selectedUni = uni
+            },
+            searchItems = searchItems.map { SearchDrawerItem(it.id, it.title, it.isTeacher) },
+            selectedItem = selectedItem?.let { SearchDrawerItem(it.id, it.title, it.isTeacher) },
+            onSelectItem = { drawerItem ->
+                val item = searchItems.firstOrNull { it.id == drawerItem.id && it.isTeacher == drawerItem.isTeacher }
+                    ?: SearchItem(drawerItem.id, drawerItem.title, drawerItem.isTeacher)
+                loadSchedule(item)
+            },
+            isSearchLoading = isSearchLoading,
+            scheduleDays = scheduleDays,
+            isScheduleLoading = isScheduleLoading,
+            errorMessage = errorMessage,
+            onRefresh = {
+                selectedItem?.let { loadSchedule(it) }
+            },
+            headerBanner = {
                 UpdateBanner(
                     updateInfo = updateManager.updateInfo,
                     onUpdateClick = { updateManager.handleAction() }
                 )
-
-                DesktopHeaderBar(
-                    selectedUni = selectedUni,
-                    onSelectUni = { selectedUni = it }
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    DesktopSearchSidebar(
-                        searchQuery = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        searchItems = searchItems,
-                        selectedItem = selectedItem,
-                        isLoading = isLoading,
-                        onSelectItem = { loadSchedule(it) }
-                    )
-
-                    DesktopScheduleView(
-                        scheduleDays = scheduleDays,
-                        isLoading = isLoading,
-                        errorMessage = errorMessage,
-                        selectedItem = selectedItem,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
             }
-        }
+        )
     }
 }

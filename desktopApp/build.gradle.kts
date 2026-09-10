@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":libs:schedule:dgtu"))
     implementation(project(":libs:schedule:iubip"))
     implementation(project(":libs:schedule:rinh"))
+    implementation(project(":core:ui"))
 
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
